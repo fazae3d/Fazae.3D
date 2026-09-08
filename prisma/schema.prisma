@@ -1,0 +1,247 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  customer
+  admin
+}
+
+enum ProductType {
+  pronta_entrega
+  sob_encomenda
+}
+
+enum SaleChannel {
+  online
+  presencial
+  whatsapp
+}
+
+enum CustomRequestStatus {
+  novo
+  em_contato
+  orcamento_enviado
+  fechado
+  perdido
+}
+
+enum ProductionStage {
+  nao_aplicavel // pedido não precisa de produção (já tinha em estoque)
+  inicio // venda confirmada, aguardando produção
+  em_producao
+  finalizado
+}
+
+model User {
+  id                  String    @id @default(cuid())
+  name                String
+  email               String    @unique
+  passwordHash        String
+  role                UserRole  @default(customer)
+  resetToken          String?
+  resetTokenExpiresAt DateTime?
+  createdAt           DateTime  @default(now())
+  addresses           Address[]
+}
+
+model Address {
+  id           String  @id @default(cuid())
+  userId       String
+  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label        String
+  recipient    String
+  cpf          String
+  street       String
+  number       String
+  complement   String?
+  neighborhood String
+  city         String
+  state        String
+  zip          String
+
+  @@index([userId])
+}
+
+model Category {
+  slug        String    @id
+  name        String
+  description String
+  icon        String?
+  products    Product[]
+}
+
+model Material {
+  slug   String @id
+  name   String
+  /**
+   * Available colors for this material — [{ name: "Preto", hex: "#111111" }, ...]
+   */
+  colors Json
+}
+
+model Product {
+  slug                    String                 @id
+  name                    String
+  categorySlug            String
+  category                Category               @relation(fields: [categorySlug], references: [slug])
+  type                    ProductType
+  description             String
+  /**
+   * Null means "sob consulta" — common for sob_encomenda pieces without a fixed price.
+   */
+  price                   Float?
+  compareAtPrice          Float?
+  /**
+   * Material/color options for this product — [{ material: "PLA", colors: ["Preto", "Branco"] }, ...]
+   */
+  materials               Json
+  scaleOptions            String[]               @default([])
+  weightGrams             Int?
+  dimensions              String?
+  /**
+   * Only shown/used when type is sob_encomenda.
+   */
+  estimatedProductionDays Int?
+  /**
+   * Only meaningful for pronta_entrega — sob_encomenda pieces are made to order.
+   */
+  stock                   Int                    @default(0)
+  images                  String[]               @default([])
+  tags                    String[]               @default([])
+  isNew                   Boolean                @default(false)
+  isBestSeller            Boolean                @default(false)
+  relatedSlugs            String[]               @default([])
+  /**
+   * Mão de obra/custos fixos por peça — usado no cálculo de custo de produção.
+   */
+  laborCost               Float?
+  materialUsages          ProductMaterialUsage[]
+
+  @@index([categorySlug])
+  @@index([type])
+}
+
+model RawMaterial {
+  id          String                 @id @default(cuid())
+  name        String // "Filamento PLA Preto 1kg"
+  unit        String // "g" | "ml" | "un"
+  stock       Float                  @default(0)
+  costPerUnit Float // custo por 1 unidade de `unit`
+  minStock    Float? // aviso de estoque baixo
+  createdAt   DateTime               @default(now())
+  usages      ProductMaterialUsage[]
+}
+
+model ProductMaterialUsage {
+  id            String      @id @default(cuid())
+  productSlug   String
+  product       Product     @relation(fields: [productSlug], references: [slug], onDelete: Cascade)
+  rawMaterialId String
+  rawMaterial   RawMaterial @relation(fields: [rawMaterialId], references: [id])
+  quantity      Float // consumo por unidade produzida, na unit do insumo
+
+  @@unique([productSlug, rawMaterialId])
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String   @unique // identificador principal (venda por WhatsApp)
+  email     String?
+  notes     String?
+  tags      String[] @default([])
+  createdAt DateTime @default(now())
+}
+
+/**
+ * Lead captured by the "Fazer orçamento" form at /personalizado.
+ */
+model CustomOrderRequest {
+  id                   String              @id @default(cuid())
+  createdAt            DateTime            @default(now())
+  name                 String
+  phone                String
+  email                String?
+  description          String
+  referenceProductSlug String?
+  referenceFileUrl     String?
+  materialPreference   String?
+  colorPreference      String?
+  quantity             Int                 @default(1)
+  desiredDeadline      String?
+  status               CustomRequestStatus @default(novo)
+  adminNotes           String?
+  /**
+   * Set once the admin closes the sale from this lead — links to the resulting Order.
+   */
+  linkedOrderId        String?
+
+  @@index([status])
+}
+
+model Order {
+  id                 String          @id
+  createdAt          DateTime        @default(now())
+  channel            SaleChannel     @default(online)
+  /**
+   * Set when this order originated from a CustomOrderRequest closed manually by the admin.
+   */
+  originRequestId    String?
+  userEmail          String?
+  customerName       String?
+  customerPhone      String?
+  items              Json
+  subtotal           Float
+  shipping           Float
+  discount           Float
+  couponCode         String?
+  total              Float
+  paymentMethod      String
+  address            Json?
+  status             String
+  tracking           String?
+  productionStage    ProductionStage @default(nao_aplicavel)
+  productionDeadline DateTime?
+  /**
+   * Sinal já recebido — saldo a receber é calculado (total - depositAmount), não armazenado.
+   */
+  depositAmount      Float           @default(0)
+
+  @@index([userEmail])
+}
+
+model Coupon {
+  code        String  @id
+  type        String
+  value       Float
+  minSubtotal Float?
+  usageLimit  Int?
+  usageCount  Int     @default(0)
+  active      Boolean @default(true)
+}
+
+/**
+ * Singleton row (always id = 1) holding store-wide settings edited in /admin/configuracoes.
+ */
+model Settings {
+  id                      Int     @id @default(1)
+  freeShippingThreshold   Float
+  whatsappNumber          String
+  /**
+   * Template for the message pre-filled when a "Fazer orçamento" link opens WhatsApp.
+   */
+  whatsappMessageTemplate String?
+  /**
+   * Editable intro copy shown at the top of /personalizado.
+   */
+  customOrderIntroText    String?
+}

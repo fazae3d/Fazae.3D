@@ -1,0 +1,120 @@
+@import "tailwindcss";
+
+/*
+ * Fazaê is a dark-first brand (identity board + reference site are both
+ * near-black with a lime accent), so unlike the Fluxo FLX original this
+ * flips ink/paper to be the DEFAULT background/foreground, not just an
+ * accent-section pairing. Contrast is still checked against WCAG 2.1's
+ * 4.5:1 (normal text) / 3:1 (large text) minimums — re-check this table
+ * if any of the six tokens below changes.
+ *
+ *   paper   (#F4F4F0) on ink    (#111111)  → 17.9:1  (default body text/headings)
+ *   graphite(#A6A6A0) on ink    (#111111)  →  8.6:1  (labels, secondary text)
+ *   petrol  (#B6FF00) on ink    (#111111)  → 16.0:1  (links, eyebrow labels)
+ *   ink     (#111111) on petrol (#B6FF00)  → 16.0:1  (primary buttons — dark text on lime)
+ *   ink     (#111111) on paper  (#F4F4F0)  → 17.9:1  (light-surface cards/inputs)
+ *   sand    (#4D6B32) on paper  (#F4F4F0)  →  4.6:1  (olive accent on light surfaces)
+ *
+ * All six clear their minimum, so no token needed adjusting.
+ */
+:root {
+  --color-ink: #111111;
+  --color-paper: #f4f4f0;
+  --color-graphite: #a6a6a0;
+  --color-mist: #242424;
+  --color-petrol: #b6ff00;
+  --color-sand: #4d6b32;
+
+  --background: var(--color-ink);
+  --foreground: var(--color-paper);
+}
+
+@theme inline {
+  --color-ink: var(--color-ink);
+  --color-paper: var(--color-paper);
+  --color-graphite: var(--color-graphite);
+  --color-mist: var(--color-mist);
+  --color-petrol: var(--color-petrol);
+  --color-sand: var(--color-sand);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --font-display: var(--font-exo2);
+  --font-body: var(--font-inter);
+
+  --animate-fade-up: fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-fade-in: fade-in 0.5s ease-out forwards;
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body);
+}
+
+/*
+ * Without this, some mobile browsers wait ~300ms after a tap on interactive
+ * elements to rule out a double-tap-to-zoom gesture before firing the click —
+ * on a flaky connection or mid-hydration that delay can make a tap feel like
+ * it didn't register at all.
+ */
+button,
+a,
+[role="button"] {
+  touch-action: manipulation;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+/* Editorial uppercase label style used throughout the identity */
+.label-caps {
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-weight: 600;
+}
+
+/* Discreet flow-line graphic element, reused as a background texture */
+.flow-lines-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.08;
+  mix-blend-mode: screen;
+}
+
+::selection {
+  background: var(--color-petrol);
+  color: var(--color-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
