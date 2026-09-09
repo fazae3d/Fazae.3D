@@ -70,7 +70,7 @@ export default function Home() {
     <>
       <Hero />
 
-      <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
         <div className="mb-12 flex flex-wrap items-end justify-between gap-6">
           <SectionHeading
             eyebrow="Catálogo"
@@ -95,7 +95,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="como-funciona" className="bg-ink py-20">
+      <section id="como-funciona" className="bg-ink py-12 sm:py-16 lg:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <SectionHeading
             align="center"
@@ -136,7 +136,7 @@ export default function Home() {
             ))}
           </div>
 
-          <div className="mt-20 grid grid-cols-1 items-center gap-8 border-t border-paper/10 pt-16 lg:grid-cols-2 lg:gap-16">
+          <div className="mt-10 grid grid-cols-1 items-center gap-6 border-t border-paper/10 pt-10 sm:mt-14 sm:gap-8 sm:pt-12 lg:mt-20 lg:grid-cols-2 lg:gap-16 lg:pt-16">
             <div>
               <p className="label-caps flex items-center gap-2 text-xs text-petrol">
                 <span aria-hidden>▸</span> Não encontrou o que procurava?
@@ -177,7 +177,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="relative overflow-hidden bg-ink py-28 text-paper">
+      <section className="relative overflow-hidden bg-ink py-12 text-paper sm:py-16 lg:py-20">
         <FlowLines className="flow-lines-bg absolute inset-0 h-full w-full" variant="light" />
         <img
           src="/essence-fmark.png"
