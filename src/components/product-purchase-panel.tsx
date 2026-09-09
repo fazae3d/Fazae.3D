@@ -216,6 +216,8 @@ function ProntaEntregaPanel({ product, header }: { product: Product; header: Rea
         <QuantityStepper value={quantity} onChange={setQuantity} max={soldOut ? 1 : product.stock} />
         {soldOut ? (
           <p className="text-xs text-graphite">Esgotado</p>
+        ) : quantity >= product.stock ? (
+          <p className="text-xs text-sand">Máximo em estoque: {product.stock}</p>
         ) : lowStock ? (
           <p className="text-xs text-sand">Últimas {product.stock} peças</p>
         ) : (
@@ -277,7 +279,7 @@ function ProntaEntregaPanel({ product, header }: { product: Product; header: Rea
       </div>
 
       {showStickyBar && !soldOut && canBuy && product.price !== undefined && (
-        <div className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t border-mist bg-paper/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-4px_16px_rgba(0,0,0,0.4)] backdrop-blur-sm lg:hidden">
+        <div className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t border-paper/15 bg-ink/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-4px_16px_rgba(0,0,0,0.4)] backdrop-blur-sm lg:hidden">
           <div className="min-w-0 flex-1">
             <p className="truncate text-xs text-graphite">{product.name}</p>
             <p className="text-sm text-petrol">{formatPrice(pixPrice(product.price))} no Pix</p>

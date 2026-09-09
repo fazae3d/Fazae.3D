@@ -48,7 +48,7 @@ export function TrackingForm({ initialOrderId = "" }: { initialOrderId?: string 
         <input
           value={orderId}
           onChange={(e) => setOrderId(e.target.value)}
-          placeholder="Número do pedido (ex: CRI-123456)"
+          placeholder="Número do pedido (ex: FAZ-123456)"
           className="flex-1 border border-paper/15 bg-mist px-3 py-3 text-base text-paper outline-none placeholder:text-paper/40 focus:border-petrol sm:text-sm"
         />
         {isGuest && (

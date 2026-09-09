@@ -22,13 +22,20 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
 
   const onSubmit = async (data: LoginInput) => {
     setFormError(null);
-    const result = await signIn("credentials", { ...data, redirect: false });
-    if (result?.error) {
-      setFormError("E-mail ou senha incorretos.");
-      return;
+    // signIn() can reject outright (network hiccup, etc.) instead of resolving
+    // with { error } — without this catch, a failed login left the form
+    // showing nothing at all instead of a message.
+    try {
+      const result = await signIn("credentials", { ...data, redirect: false });
+      if (result?.error) {
+        setFormError("E-mail ou senha incorretos.");
+        return;
+      }
+      router.push(callbackUrl);
+      router.refresh();
+    } catch {
+      setFormError("Não foi possível entrar agora. Tente novamente.");
     }
-    router.push(callbackUrl);
-    router.refresh();
   };
 
   return (
