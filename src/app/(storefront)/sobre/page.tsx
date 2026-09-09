@@ -8,21 +8,20 @@ export const metadata: Metadata = {
   description: "Conheça a Fazaê: impressão 3D própria, peças prontas e sob encomenda em Natal/RN.",
 };
 
-function PrinterIcon() {
+function BoltIcon() {
   return (
     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M6 8V3h12v5" />
-      <path d="M6 18H4a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2" />
-      <path d="M6 14h12v7H6z" />
+      <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" />
     </svg>
   );
 }
 
-function RulerIcon() {
+function TargetIcon() {
   return (
-    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3.5 15.5 15.5 3.5a1.4 1.4 0 0 1 2 0l3 3a1.4 1.4 0 0 1 0 2L8.5 20.5a1.4 1.4 0 0 1-2 0l-3-3a1.4 1.4 0 0 1 0-2Z" />
-      <path d="m14 5 2 2M11 8l2 2M8 11l2 2M5 14l2 2" />
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="5.2" />
+      <circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none" />
     </svg>
   );
 }
@@ -36,35 +35,38 @@ function BulbIcon() {
   );
 }
 
-function LeafIcon() {
+function PuzzleIcon() {
   return (
     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M5 20c8 0 14-6 14-14V5h-1C10 5 5 10 5 18v2Z" />
-      <path d="M5 20c2-6 5-9 9-11" />
+      <path d="M9 4h4a1 1 0 0 1 1 1v1.2a1.8 1.8 0 1 0 0 3.6V11a1 1 0 0 1-1 1h-2.2a1.8 1.8 0 1 1-3.6 0H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h1.2a1.8 1.8 0 1 0 3.6 0V5a1 1 0 0 1 1-1Z" />
     </svg>
   );
 }
 
 const VALUES = [
   {
-    title: "Tecnologia",
-    description: "Impressoras e materiais atualizados para peças com acabamento consistente.",
-    icon: <PrinterIcon />,
+    title: "Inovação",
+    tagline: "Tecnologia para transformar possibilidades em realidade.",
+    description: "Exploramos a impressão 3D para criar produtos diferentes, funcionais e cada vez melhores.",
+    icon: <BoltIcon />,
   },
   {
-    title: "Precisão",
-    description: "Cada peça é conferida antes de sair daqui: medida, acabamento e cor.",
-    icon: <RulerIcon />,
+    title: "Qualidade",
+    tagline: "Do primeiro detalhe ao produto final.",
+    description: "Cuidamos de cada etapa para entregar peças com bom acabamento, precisão e consistência.",
+    icon: <TargetIcon />,
   },
   {
     title: "Criatividade",
-    description: "Do esboço mais simples a um arquivo 3D pronto, a gente ajuda a materializar.",
+    tagline: "Pensar diferente faz parte do nosso processo.",
+    description: "Buscamos novas formas, soluções e possibilidades para transformar ideias em produtos que surpreendem.",
     icon: <BulbIcon />,
   },
   {
-    title: "Produção sob demanda",
-    description: "Imprimimos o que é pedido, sem estoque parado, gerando menos desperdício de material.",
-    icon: <LeafIcon />,
+    title: "Feito para você",
+    tagline: "Nem tudo precisa sair de uma prateleira.",
+    description: "Criamos sob demanda e também desenvolvemos peças personalizadas para quem procura algo único.",
+    icon: <PuzzleIcon />,
   },
 ];
 
@@ -86,17 +88,17 @@ export default function SobrePage() {
 
       <section className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
         <Breadcrumb items={[{ label: "Início", href: "/" }, { label: "Sobre a Fazaê" }]} />
-        <SectionHeading eyebrow="Quem somos" title="Impressão 3D, do jeito que você imagina" className="mb-6" />
+        <SectionHeading
+          eyebrow="Quem somos"
+          title="Criamos com propósito, impressão 3D do jeito que você imagina"
+          className="mb-6"
+        />
         <div className="space-y-4 text-graphite">
+          <p>Não é só sobre transformar plástico em objetos.</p>
           <p>
-            A Fazaê nasceu da união entre criatividade, tecnologia e imaginação. Imprimimos cada peça aqui mesmo,
-            com nossas próprias impressoras. Nada é revendido ou terceirizado.
+            É sobre criar produtos que tenham uma razão para existir, seja para resolver um problema, transformar
+            um ambiente, presentear alguém ou simplesmente trazer algo diferente para o seu dia.
           </p>
-          <p>
-            Trabalhamos com dois formatos: peças de catálogo prontas para envio imediato, e peças sob encomenda,
-            feitas do seu jeito depois de combinar material, cor e prazo com você pelo WhatsApp.
-          </p>
-          <p>Não vendemos apenas produtos impressos. Nós materializamos criatividade.</p>
         </div>
       </section>
 
@@ -109,7 +111,8 @@ export default function SobrePage() {
                 <div className="text-petrol">{value.icon}</div>
                 <p className="font-display mt-3 text-lg">{value.title}</p>
                 <span className="mt-2 block h-0.5 w-6 bg-petrol" />
-                <p className="mt-3 text-sm text-graphite">{value.description}</p>
+                <p className="mt-3 text-sm font-bold text-paper">{value.tagline}</p>
+                <p className="mt-1.5 text-sm text-graphite">{value.description}</p>
               </div>
             ))}
           </div>
