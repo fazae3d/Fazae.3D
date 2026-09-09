@@ -39,14 +39,6 @@ const STEPS = [
   },
 ];
 
-function CheckIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="m4 12 5 5L20 6" />
-    </svg>
-  );
-}
-
 function ShieldCheckIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -57,10 +49,10 @@ function ShieldCheckIcon({ className }: { className?: string }) {
 }
 
 const TRUST_BADGES = [
-  "Projeto personalizado",
-  "Feito sob medida",
-  "Produção em 3D",
-  "Envio para todo o Brasil",
+  { label: "Projeto personalizado", icon: "/trust-badges/icon-personalizado.png" },
+  { label: "Feito sob medida", icon: "/trust-badges/icon-medida.png" },
+  { label: "Produção em 3D", icon: "/trust-badges/icon-producao.png" },
+  { label: "Envio para todo o Brasil", icon: "/trust-badges/icon-envio.png" },
 ];
 
 const ESSENCE_TAGLINE = "Criatividade, Tecnologia & Design.";
@@ -154,9 +146,9 @@ export default function Home() {
               </p>
               <ul className="mt-6 grid grid-cols-2 gap-x-6 gap-y-3">
                 {TRUST_BADGES.map((badge) => (
-                  <li key={badge} className="flex items-center gap-2 text-xs text-paper/75">
-                    <CheckIcon className="h-4 w-4 shrink-0 text-petrol" />
-                    {badge}
+                  <li key={badge.label} className="flex items-center gap-2 text-xs text-paper/75">
+                    <img src={badge.icon} alt="" className="h-5 w-5 shrink-0 object-contain" />
+                    {badge.label}
                   </li>
                 ))}
               </ul>
