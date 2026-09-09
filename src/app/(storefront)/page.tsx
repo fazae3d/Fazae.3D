@@ -103,10 +103,13 @@ export default function Home() {
             title="Como funciona"
             className="mx-auto mb-14"
           />
-          <div className="flex w-full flex-col items-center gap-6 sm:flex-row sm:items-start sm:justify-center sm:gap-x-6 lg:gap-x-10">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:flex sm:w-full sm:flex-row sm:items-start sm:justify-center sm:gap-x-6 lg:gap-x-10">
             {STEPS.map((step, i) => (
-              <div key={step.n} className="flex items-start gap-3">
-                <div className="w-40 text-center sm:w-52">
+              <div
+                key={step.n}
+                className={`flex items-start justify-center gap-3 ${i === STEPS.length - 1 ? "col-span-2" : ""}`}
+              >
+                <div className="w-32 text-center sm:w-52">
                   <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-full border border-petrol/50 font-display text-sm font-bold text-petrol sm:h-10 sm:w-10 sm:text-base">
                     {step.n}
                   </div>
@@ -133,7 +136,7 @@ export default function Home() {
             ))}
           </div>
 
-          <div className="mt-20 grid grid-cols-1 items-center gap-12 border-t border-paper/10 pt-16 lg:grid-cols-2 lg:gap-16">
+          <div className="mt-20 grid grid-cols-1 items-center gap-8 border-t border-paper/10 pt-16 lg:grid-cols-2 lg:gap-16">
             <div>
               <p className="label-caps flex items-center gap-2 text-xs text-petrol">
                 <span aria-hidden>▸</span> Não encontrou o que procurava?
