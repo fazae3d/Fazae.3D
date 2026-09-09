@@ -41,7 +41,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
         <button
           type="button"
           onClick={() => router.push("/login")}
-          className="label-caps bg-petrol py-4 text-xs text-ink transition-colors hover:bg-paper"
+          className="label-caps rounded-full bg-petrol py-4 text-xs text-ink transition-colors hover:bg-paper"
         >
           Ir para o login
         </button>
@@ -78,7 +78,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="label-caps bg-petrol py-4 text-xs text-ink transition-colors hover:bg-paper disabled:opacity-60"
+        className="label-caps rounded-full bg-petrol py-4 text-xs text-ink transition-colors hover:bg-paper disabled:opacity-60"
       >
         {isSubmitting ? "Salvando..." : "Redefinir senha"}
       </button>

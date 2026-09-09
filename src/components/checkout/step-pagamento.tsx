@@ -101,7 +101,7 @@ export function StepPagamento({
             type="button"
             onClick={simulatePayment}
             disabled={processing}
-            className="label-caps bg-petrol px-8 py-4 text-xs text-ink transition-colors hover:bg-paper disabled:opacity-60"
+            className="label-caps rounded-full bg-petrol px-8 py-4 text-xs text-ink transition-colors hover:bg-paper disabled:opacity-60"
           >
             {processing ? "Confirmando pagamento..." : "Simular pagamento aprovado"}
           </button>
@@ -116,7 +116,7 @@ export function StepPagamento({
             type="button"
             onClick={simulatePayment}
             disabled={processing}
-            className="label-caps bg-petrol px-8 py-4 text-xs text-ink transition-colors hover:bg-paper disabled:opacity-60"
+            className="label-caps rounded-full bg-petrol px-8 py-4 text-xs text-ink transition-colors hover:bg-paper disabled:opacity-60"
           >
             {processing ? "Confirmando pagamento..." : "Simular pagamento aprovado"}
           </button>
@@ -159,7 +159,7 @@ export function StepPagamento({
           <button
             type="submit"
             disabled={processing}
-            className="label-caps bg-petrol py-4 text-xs text-ink transition-colors hover:bg-paper disabled:opacity-60"
+            className="label-caps rounded-full bg-petrol py-4 text-xs text-ink transition-colors hover:bg-paper disabled:opacity-60"
           >
             {processing ? "Confirmando pagamento..." : `Pagar ${formatPrice(total)}`}
           </button>
@@ -169,7 +169,7 @@ export function StepPagamento({
       <button
         type="button"
         onClick={onBack}
-        className="label-caps self-start border border-paper/15 px-8 py-4 text-xs text-graphite transition-colors hover:border-petrol hover:text-petrol"
+        className="label-caps self-start rounded-full border border-paper/15 px-8 py-4 text-xs text-graphite transition-colors hover:border-petrol hover:text-petrol"
       >
         Voltar
       </button>

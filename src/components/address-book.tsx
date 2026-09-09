@@ -135,14 +135,14 @@ function AddressForm({
         <button
           type="button"
           onClick={onCancel}
-          className="label-caps border border-paper/15 px-6 py-3 text-xs text-graphite transition-colors hover:border-petrol hover:text-petrol"
+          className="label-caps rounded-full border border-paper/15 px-6 py-3 text-xs text-graphite transition-colors hover:border-petrol hover:text-petrol"
         >
           Cancelar
         </button>
         <button
           type="submit"
           disabled={isSubmitting}
-          className="label-caps flex-1 bg-petrol py-3 text-xs text-ink transition-colors hover:bg-paper disabled:opacity-60"
+          className="label-caps flex-1 rounded-full bg-petrol py-3 text-xs text-ink transition-colors hover:bg-paper disabled:opacity-60"
         >
           {isSubmitting ? "Salvando..." : "Salvar endereço"}
         </button>
@@ -278,7 +278,7 @@ export function AddressBook({ initialAddresses }: { initialAddresses: Address[] 
       <button
         type="button"
         onClick={() => setMode("add")}
-        className="label-caps border border-petrol px-5 py-3 text-xs text-petrol transition-colors hover:bg-petrol hover:text-ink"
+        className="label-caps rounded-full border border-petrol px-5 py-3 text-xs text-petrol transition-colors hover:bg-petrol hover:text-ink"
       >
         Adicionar endereço
       </button>

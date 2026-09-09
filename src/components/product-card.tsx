@@ -61,7 +61,7 @@ export function ProductCard({ product }: { product: Product }) {
               type="button"
               onClick={handleQuickAdd}
               disabled={adding}
-              className="label-caps flex w-full items-center justify-center gap-1.5 bg-petrol py-2.5 text-[11px] text-ink transition-colors hover:bg-paper disabled:opacity-70"
+              className="label-caps flex w-full items-center justify-center gap-1.5 rounded-full bg-petrol py-2.5 text-[11px] text-ink transition-colors hover:bg-paper disabled:opacity-70"
             >
               {adding && (
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

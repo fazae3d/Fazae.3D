@@ -49,7 +49,7 @@ export function ContactForm() {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="label-caps self-start bg-petrol px-8 py-4 text-xs text-ink transition-colors hover:bg-paper disabled:opacity-60"
+        className="label-caps self-start rounded-full bg-petrol px-8 py-4 text-xs text-ink transition-colors hover:bg-paper disabled:opacity-60"
       >
         {isSubmitting ? "Enviando..." : "Enviar mensagem"}
       </button>

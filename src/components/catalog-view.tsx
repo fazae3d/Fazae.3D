@@ -281,7 +281,7 @@ function CatalogViewInner({ products, categories = [], fixedCategory, initialFil
           <button
             type="button"
             onClick={() => setMobileFiltersOpen(false)}
-            className="label-caps w-full bg-petrol py-3.5 text-xs text-ink transition-colors hover:bg-paper"
+            className="label-caps w-full rounded-full bg-petrol py-3.5 text-xs text-ink transition-colors hover:bg-paper"
           >
             Ver {filtered.length} produtos
           </button>

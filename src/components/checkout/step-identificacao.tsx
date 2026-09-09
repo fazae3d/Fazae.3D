@@ -47,7 +47,7 @@ export function StepIdentificacao({
         <button
           type="button"
           onClick={() => onNext(null)}
-          className="label-caps self-start bg-petrol px-8 py-4 text-xs text-ink transition-colors hover:bg-paper"
+          className="label-caps self-start rounded-full bg-petrol px-8 py-4 text-xs text-ink transition-colors hover:bg-paper"
         >
           Continuar para endereço
         </button>
@@ -77,7 +77,7 @@ export function StepIdentificacao({
       </div>
       <button
         type="submit"
-        className="label-caps self-start bg-petrol px-8 py-4 text-xs text-ink transition-colors hover:bg-paper"
+        className="label-caps self-start rounded-full bg-petrol px-8 py-4 text-xs text-ink transition-colors hover:bg-paper"
       >
         Continuar para endereço
       </button>

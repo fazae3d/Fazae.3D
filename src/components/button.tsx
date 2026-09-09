@@ -11,7 +11,7 @@ const VARIANT_CLASSES: Record<Variant, string> = {
 };
 
 const BASE =
-  "label-caps inline-flex items-center justify-center gap-2 px-7 py-3.5 text-xs transition-colors duration-300";
+  "label-caps inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5 text-xs transition-colors duration-300";
 
 type CommonProps = {
   variant?: Variant;

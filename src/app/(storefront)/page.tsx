@@ -103,7 +103,7 @@ export default function Home() {
             title="Como funciona"
             className="mx-auto mb-14"
           />
-          <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:flex sm:w-full sm:flex-row sm:items-start sm:justify-center sm:gap-x-6 lg:gap-x-10">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:flex sm:w-full sm:flex-row sm:items-start sm:justify-center sm:gap-x-6 lg:gap-x-10">
             {STEPS.map((step, i) => (
               <div
                 key={step.n}

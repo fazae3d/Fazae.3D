@@ -56,7 +56,7 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="label-caps bg-petrol py-4 text-xs text-ink transition-colors hover:bg-paper disabled:opacity-60"
+        className="label-caps rounded-full bg-petrol py-4 text-xs text-ink transition-colors hover:bg-paper disabled:opacity-60"
       >
         {isSubmitting ? "Entrando..." : "Entrar"}
       </button>
@@ -69,7 +69,7 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
       <button
         type="button"
         onClick={() => signIn("google", { callbackUrl })}
-        className="label-caps flex items-center justify-center gap-2.5 border border-paper/15 py-4 text-xs text-paper transition-colors hover:border-petrol"
+        className="label-caps flex items-center justify-center gap-2.5 rounded-full border border-paper/15 py-4 text-xs text-paper transition-colors hover:border-petrol"
       >
         <GoogleIcon />
         Continuar com Google

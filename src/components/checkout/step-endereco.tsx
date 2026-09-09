@@ -114,13 +114,13 @@ export function StepEndereco({
         <button
           type="button"
           onClick={onBack}
-          className="label-caps border border-paper/15 px-8 py-4 text-xs text-graphite transition-colors hover:border-petrol hover:text-petrol"
+          className="label-caps rounded-full border border-paper/15 px-8 py-4 text-xs text-graphite transition-colors hover:border-petrol hover:text-petrol"
         >
           Voltar
         </button>
         <button
           type="submit"
-          className="label-caps flex-1 bg-petrol py-4 text-xs text-ink transition-colors hover:bg-paper"
+          className="label-caps flex-1 rounded-full bg-petrol py-4 text-xs text-ink transition-colors hover:bg-paper"
         >
           Continuar para entrega
         </button>

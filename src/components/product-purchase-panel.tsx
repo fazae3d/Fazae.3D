@@ -238,7 +238,7 @@ function ProntaEntregaPanel({ product, header }: { product: Product; header: Rea
               type="button"
               onClick={handleAddToCart}
               disabled={added}
-              className="label-caps flex items-center justify-center gap-2 bg-petrol py-4 text-xs text-ink transition-colors hover:bg-paper disabled:opacity-80"
+              className="label-caps flex items-center justify-center gap-2 rounded-full bg-petrol py-4 text-xs text-ink transition-colors hover:bg-paper disabled:opacity-80"
             >
               {added ? (
                 <>
@@ -255,7 +255,7 @@ function ProntaEntregaPanel({ product, header }: { product: Product; header: Rea
               type="button"
               onClick={handleBuyNow}
               disabled={buying}
-              className="label-caps border border-paper/25 py-4 text-xs text-paper transition-colors hover:border-petrol hover:text-petrol disabled:opacity-60"
+              className="label-caps rounded-full border border-paper/25 py-4 text-xs text-paper transition-colors hover:border-petrol hover:text-petrol disabled:opacity-60"
             >
               {buying ? "Redirecionando..." : "Comprar agora"}
             </button>
@@ -286,7 +286,7 @@ function ProntaEntregaPanel({ product, header }: { product: Product; header: Rea
             type="button"
             onClick={handleAddToCart}
             disabled={added}
-            className="label-caps shrink-0 bg-petrol px-5 py-3 text-[11px] text-ink transition-colors hover:bg-paper disabled:opacity-80"
+            className="label-caps shrink-0 rounded-full bg-petrol px-5 py-3 text-[11px] text-ink transition-colors hover:bg-paper disabled:opacity-80"
           >
             {added ? "Adicionado ✓" : "Adicionar"}
           </button>

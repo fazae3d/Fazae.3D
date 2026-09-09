@@ -63,7 +63,7 @@ export function ForgotPasswordForm() {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="label-caps bg-petrol py-4 text-xs text-ink transition-colors hover:bg-paper disabled:opacity-60"
+        className="label-caps rounded-full bg-petrol py-4 text-xs text-ink transition-colors hover:bg-paper disabled:opacity-60"
       >
         {isSubmitting ? "Enviando..." : "Enviar link de recuperação"}
       </button>
