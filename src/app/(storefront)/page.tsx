@@ -103,18 +103,18 @@ export default function Home() {
             title="Como funciona"
             className="mx-auto mb-14"
           />
-          <div className="flex w-full flex-col items-center gap-10 sm:flex-row sm:items-start sm:justify-center sm:gap-x-6 lg:gap-x-10">
+          <div className="flex w-full flex-col items-center gap-6 sm:flex-row sm:items-start sm:justify-center sm:gap-x-6 lg:gap-x-10">
             {STEPS.map((step, i) => (
               <div key={step.n} className="flex items-start gap-3">
-                <div className="w-48 text-center sm:w-52">
-                  <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full border border-petrol/50 font-display text-base font-bold text-petrol">
+                <div className="w-40 text-center sm:w-52">
+                  <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-full border border-petrol/50 font-display text-sm font-bold text-petrol sm:h-10 sm:w-10 sm:text-base">
                     {step.n}
                   </div>
-                  <div className="mx-auto mt-5 flex h-36 w-40 items-center justify-center sm:h-44 sm:w-48">
+                  <div className="mx-auto mt-3 flex h-20 w-24 items-center justify-center sm:mt-5 sm:h-44 sm:w-48">
                     <img src={step.image} alt="" className="max-h-full max-w-full object-contain" />
                   </div>
-                  <p className="mt-5 text-base font-bold text-paper">{step.title}</p>
-                  <p className="mt-1.5 text-sm text-paper/60">{step.description}</p>
+                  <p className="mt-3 text-sm font-bold text-paper sm:mt-5 sm:text-base">{step.title}</p>
+                  <p className="mt-1 text-xs text-paper/60 sm:mt-1.5 sm:text-sm">{step.description}</p>
                 </div>
                 {i < STEPS.length - 1 && (
                   <svg
@@ -176,6 +176,12 @@ export default function Home() {
 
       <section className="relative overflow-hidden bg-ink py-28 text-paper">
         <FlowLines className="flow-lines-bg absolute inset-0 h-full w-full" variant="light" />
+        <img
+          src="/essence-fmark.png"
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 h-full w-full object-cover opacity-10 lg:hidden"
+        />
         <div className="relative mx-auto grid max-w-7xl grid-cols-1 items-stretch gap-12 px-4 sm:px-6 lg:grid-cols-2 lg:gap-16 lg:px-8">
           <div>
             <p className="label-caps text-xs text-petrol">Nossa essência</p>
@@ -203,7 +209,7 @@ export default function Home() {
           <img
             src="/essence-fmark.png"
             alt="Marca Fazaê impressa em 3D ao lado de uma impressora em funcionamento"
-            className="h-full min-h-[280px] w-full object-cover"
+            className="hidden h-full min-h-[280px] w-full object-cover lg:block"
             style={{
               maskImage:
                 "radial-gradient(ellipse 75% 75% at 50% 50%, black 55%, transparent 100%)",

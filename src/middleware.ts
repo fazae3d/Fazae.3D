@@ -6,12 +6,7 @@ import { authConfig } from "@/auth.config";
 // bcrypt + Prisma, which the Edge Runtime middleware runs in can't load.
 const { auth } = NextAuth(authConfig);
 
-// TEMPORARY (dev only): no database is connected yet, so nobody can log in
-// — this bypasses the /admin login gate entirely so the panel can still be
-// reached and worked on. Flip this back to `false` (or delete the block
-// below) once the real database/login is wired up and before this ever
-// goes anywhere public. Never ship with this `true`.
-const ADMIN_AUTH_DISABLED = true;
+const ADMIN_AUTH_DISABLED = false;
 
 export default auth((req) => {
   const isLoggedIn = Boolean(req.auth);

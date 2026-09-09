@@ -5,4 +5,4 @@
  * that checks it) once the real database/login is wired up. Never ship
  * with this `true` — see also the matching flag in src/middleware.ts.
  */
-export const ADMIN_AUTH_DISABLED = true;
+export const ADMIN_AUTH_DISABLED = false;
