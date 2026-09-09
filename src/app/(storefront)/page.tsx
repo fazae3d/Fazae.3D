@@ -87,14 +87,8 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="como-funciona" className="relative overflow-hidden bg-ink py-12 sm:py-16 lg:py-20">
-        <img
-          src="/bg-texture.jpg"
-          alt=""
-          aria-hidden="true"
-          className="absolute inset-0 h-full w-full object-cover opacity-[0.15]"
-        />
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <section id="como-funciona" className="py-12 sm:py-16 lg:py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <SectionHeading
             align="center"
             eyebrow="Da ideia à matéria"
