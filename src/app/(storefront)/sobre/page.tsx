@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { ButtonLink } from "@/components/button";
-import { PlaceholderPhoto } from "@/components/placeholder-photo";
 import { SectionHeading } from "@/components/section-heading";
 
 export const metadata: Metadata = {
@@ -73,7 +72,11 @@ export default function SobrePage() {
   return (
     <div>
       <section className="relative flex h-72 items-end overflow-hidden bg-ink text-paper sm:h-96">
-        <PlaceholderPhoto tone="ink" className="absolute inset-0 h-full w-full" demoTag={false} />
+        <img
+          src="/sobre-hero.png"
+          alt="Impressora 3D da Fazaê imprimindo um vaso geométrico verde"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-ink/90 to-transparent" />
         <div className="relative mx-auto w-full max-w-7xl px-4 pb-10 sm:px-6 lg:px-8">
           <p className="label-caps text-xs text-petrol">Institucional</p>
