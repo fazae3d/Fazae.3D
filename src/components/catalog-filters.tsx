@@ -107,7 +107,7 @@ export function CatalogFilters({
                 key={cat.slug}
                 type="button"
                 onClick={() => toggleCategory(cat.slug)}
-                className={`label-caps border px-3.5 py-2 text-[11px] transition-colors ${
+                className={`label-caps rounded-full border px-3.5 py-2 text-[11px] transition-colors ${
                   state.categories.includes(cat.slug)
                     ? "border-petrol bg-petrol text-ink"
                     : "border-paper/15 text-graphite hover:border-petrol hover:text-petrol"
@@ -129,7 +129,7 @@ export function CatalogFilters({
                 key={material}
                 type="button"
                 onClick={() => toggleMaterial(material)}
-                className={`label-caps border px-3.5 py-2 text-[11px] transition-colors ${
+                className={`label-caps rounded-full border px-3.5 py-2 text-[11px] transition-colors ${
                   state.materials.includes(material)
                     ? "border-petrol bg-petrol text-ink"
                     : "border-paper/15 text-graphite hover:border-petrol hover:text-petrol"
@@ -152,7 +152,7 @@ export function CatalogFilters({
                 type="button"
                 onClick={() => toggleColor(color)}
                 aria-pressed={state.colors.includes(color)}
-                className={`label-caps border px-3 py-1.5 text-[11px] transition-colors ${
+                className={`label-caps rounded-full border px-3 py-1.5 text-[11px] transition-colors ${
                   state.colors.includes(color)
                     ? "border-petrol bg-petrol text-ink"
                     : "border-paper/15 text-graphite hover:border-petrol hover:text-petrol"
@@ -171,19 +171,21 @@ export function CatalogFilters({
           <input
             type="number"
             inputMode="numeric"
-            placeholder={`R$ ${priceBounds.min}`}
+            placeholder="Mín"
+            aria-label={`Preço mínimo (ex: ${priceBounds.min})`}
             value={state.minPrice ?? ""}
             onChange={(e) => onChange({ ...state, minPrice: e.target.value === "" ? null : Number(e.target.value) })}
-            className="w-full min-w-0 border border-paper/15 bg-mist px-2.5 py-2 text-base text-paper outline-none placeholder:text-paper/40 focus:border-petrol sm:text-xs"
+            className="w-full min-w-0 border border-paper/15 bg-mist px-2.5 py-2 text-base text-paper outline-none transition-colors placeholder:text-paper/40 focus:border-petrol sm:text-sm"
           />
           <span className="shrink-0 text-xs text-graphite">até</span>
           <input
             type="number"
             inputMode="numeric"
-            placeholder={`R$ ${priceBounds.max}`}
+            placeholder="Máx"
+            aria-label={`Preço máximo (ex: ${priceBounds.max})`}
             value={state.maxPrice ?? ""}
             onChange={(e) => onChange({ ...state, maxPrice: e.target.value === "" ? null : Number(e.target.value) })}
-            className="w-full min-w-0 border border-paper/15 bg-mist px-2.5 py-2 text-base text-paper outline-none placeholder:text-paper/40 focus:border-petrol sm:text-xs"
+            className="w-full min-w-0 border border-paper/15 bg-mist px-2.5 py-2 text-base text-paper outline-none transition-colors placeholder:text-paper/40 focus:border-petrol sm:text-sm"
           />
         </div>
       </div>

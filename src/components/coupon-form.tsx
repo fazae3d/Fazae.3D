@@ -60,13 +60,13 @@ export function CouponForm() {
           value={code}
           onChange={(e) => setCode(e.target.value)}
           placeholder="Cupom de desconto"
-          className="flex-1 border border-paper/15 bg-mist px-3 py-2.5 text-sm text-paper outline-none placeholder:text-paper/40 focus:border-petrol"
+          className="flex-1 rounded-full border border-paper/15 bg-mist px-4 py-2.5 text-sm text-paper outline-none placeholder:text-paper/40 focus:border-petrol"
         />
         <button
           type="button"
           onClick={handleApply}
           disabled={loading}
-          className="label-caps flex items-center justify-center gap-2 border border-petrol px-4 py-2.5 text-xs text-petrol transition-colors hover:bg-petrol hover:text-ink disabled:opacity-60"
+          className="label-caps flex items-center justify-center gap-2 rounded-full border border-petrol px-4 py-2.5 text-xs text-petrol transition-colors hover:bg-petrol hover:text-ink disabled:opacity-60"
         >
           {loading && (
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className="animate-spin">

@@ -70,11 +70,13 @@ export default function CheckoutPage() {
 
   if (lines.length === 0 && step !== "confirmacao") {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-20 text-center sm:px-6 lg:px-8">
-        <p className="text-graphite">Seu carrinho está vazio. Adicione produtos antes de finalizar a compra.</p>
-        <ButtonLink href="/loja" variant="primary" className="mt-6 inline-flex">
-          Explorar loja
-        </ButtonLink>
+      <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
+        <div className="border border-paper/15 px-6 py-20 text-center">
+          <p className="text-graphite">Seu carrinho está vazio.</p>
+          <ButtonLink href="/loja" variant="primary" className="mt-6 inline-flex">
+            Explorar loja
+          </ButtonLink>
+        </div>
       </div>
     );
   }
@@ -115,6 +117,7 @@ export default function CheckoutPage() {
                 freeShippingThreshold={settings.freeShippingThreshold}
                 initial={shipping?.key}
                 freeOverride={freeShippingFromCoupon}
+                onSelect={setShipping}
                 onNext={(option) => {
                   setShipping(option);
                   setStep("pagamento");

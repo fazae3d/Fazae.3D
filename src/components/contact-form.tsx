@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { contactAction } from "@/app/(storefront)/contato/actions";
@@ -7,6 +8,7 @@ import { FormField } from "./form-field";
 import { contactSchema, type ContactInput } from "@/lib/validation";
 
 export function ContactForm() {
+  const [sentToEmail, setSentToEmail] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
@@ -16,13 +18,15 @@ export function ContactForm() {
 
   const onSubmit = async (data: ContactInput) => {
     await contactAction(data);
+    setSentToEmail(data.email);
     reset();
   };
 
   if (isSubmitSuccessful) {
     return (
       <div className="border border-petrol/40 bg-petrol/10 p-6 text-sm text-paper">
-        Mensagem enviada. Nossa equipe responde por aqui assim que possível.
+        Mensagem enviada! Nossa equipe vai responder em até 1 dia útil no e-mail{" "}
+        <strong>{sentToEmail}</strong>.
       </div>
     );
   }

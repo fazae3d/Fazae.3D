@@ -1,13 +1,15 @@
 import type { Product } from "@/lib/types";
 import { ProductCard } from "./product-card";
 
-export function ProductGrid({ products }: { products: Product[] }) {
+export function ProductGrid({
+  products,
+  emptyMessage = "Nenhum produto encontrado para os filtros selecionados.",
+}: {
+  products: Product[];
+  emptyMessage?: string;
+}) {
   if (products.length === 0) {
-    return (
-      <p className="py-16 text-center text-sm text-graphite">
-        Nenhum produto encontrado para os filtros selecionados.
-      </p>
-    );
+    return <p className="py-16 text-center text-sm text-graphite">{emptyMessage}</p>;
   }
 
   return (

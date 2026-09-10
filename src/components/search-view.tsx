@@ -41,7 +41,7 @@ export function SearchView({ initialQuery = "" }: { initialQuery?: string }) {
           <p className="mb-6 text-sm text-graphite">
             {results.length} resultado{results.length === 1 ? "" : "s"} para &ldquo;{query}&rdquo;
           </p>
-          <ProductGrid products={results} />
+          <ProductGrid products={results} emptyMessage={`Nenhum resultado para "${query}".`} />
         </>
       )}
     </div>
