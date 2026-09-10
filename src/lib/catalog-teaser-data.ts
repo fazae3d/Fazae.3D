@@ -19,7 +19,7 @@ export type CatalogTeaserItem = {
  */
 export const CATALOG_TEASER: CatalogTeaserItem[] = [
   { slug: "caveira-geo", categorySlug: "decoracao", title: "Peças que transformam", tone: "ink", photo: "/teaser/decoracao.jpg" },
-  { slug: "dragao-articulado", categorySlug: "geek-pop", title: "Ideias fora do comum", tone: "street" },
+  { slug: "dragao-articulado", categorySlug: "geek-pop", title: "Ideias fora do comum", tone: "street", photo: "/teaser/geek-pop.jpg" },
   { slug: "vaso-prisma", categorySlug: "casa-decor", title: "Leve sua criatividade com você", tone: "fitness", photo: "/teaser/casa-decor.jpg", categoryLabel: "Chaveiros" },
   { slug: "suporte-pulse", categorySlug: "utilidades", title: "Soluções que fazem sentido", tone: "ink", photo: "/teaser/utilidades.jpg" },
   { slug: "organizador-modular", categorySlug: "casa-decor", title: "Organizador Modular", tone: "ink" },
