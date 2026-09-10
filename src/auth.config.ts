@@ -24,10 +24,26 @@ export const authConfig = {
     // resolves custom fields to `unknown` instead of the augmented type).
     // Annotating the params explicitly sidesteps that inference and gets
     // the real Session/JWT shape, including `role`.
-    async jwt({ token, user }: { token: JWT; user?: { id?: string; role?: "customer" | "admin" } | null }) {
+    async jwt({
+      token,
+      user,
+      trigger,
+      session,
+    }: {
+      token: JWT;
+      user?: { id?: string; role?: "customer" | "admin" } | null;
+      trigger?: "signIn" | "signUp" | "update";
+      session?: { name?: string };
+    }) {
       if (user) {
         if (user.id) token.id = user.id;
         token.role = user.role;
+      }
+      // Lets the client push a fresh name into the token right after an
+      // in-place profile edit, via useSession().update({ name }) — without
+      // this, the JWT keeps the name it had at login until the next sign-in.
+      if (trigger === "update" && session?.name) {
+        token.name = session.name;
       }
       return token;
     },

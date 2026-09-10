@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { auth } from "@/auth";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { SignOutButton } from "@/components/sign-out-button";
+import { PersonalDataForm } from "@/components/personal-data-form";
 import { findUserByEmail } from "@/server/repositories/user-repository";
 import { withReadFallback } from "@/lib/db-fallback";
 
@@ -28,10 +29,10 @@ export default async function ContaPage() {
       <div className="grid grid-cols-1 gap-10 sm:grid-cols-2">
         <section>
           <p className="label-caps mb-3 text-xs text-graphite">Dados pessoais</p>
-          <div className="border border-paper/15 p-6 text-sm">
-            <p className="text-paper">{session?.user?.name}</p>
-            <p className="mt-1 text-graphite">{session?.user?.email}</p>
-          </div>
+          <PersonalDataForm
+            name={user?.name ?? session?.user?.name ?? ""}
+            email={session?.user?.email ?? ""}
+          />
         </section>
 
         <section>

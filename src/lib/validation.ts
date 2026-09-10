@@ -22,6 +22,12 @@ export const signupSchema = z
 
 export type SignupInput = z.infer<typeof signupSchema>;
 
+export const profileSchema = z.object({
+  name: z.string().min(2, "Informe seu nome completo."),
+});
+
+export type ProfileInput = z.infer<typeof profileSchema>;
+
 export const forgotPasswordSchema = z.object({
   email: z.string().min(1, "Informe seu e-mail.").email("E-mail inválido."),
 });

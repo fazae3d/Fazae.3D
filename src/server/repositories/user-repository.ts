@@ -94,6 +94,17 @@ export async function findOrCreateOAuthUser({ name, email }: { name: string; ema
   return toDemoUser(row);
 }
 
+export async function updateUserName(email: string, name: string): Promise<DemoUser | null> {
+  const user = await findUserByEmail(email);
+  if (!user) return null;
+  const row = await db.user.update({
+    where: { id: user.id },
+    data: { name },
+    include: { addresses: true },
+  });
+  return toDemoUser(row);
+}
+
 export async function verifyPassword(email: string, password: string): Promise<DemoUser | null> {
   const user = await findUserByEmail(email);
   if (!user) return null;
