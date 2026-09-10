@@ -19,7 +19,9 @@ export function ContactForm() {
   const onSubmit = async (data: ContactInput) => {
     await contactAction(data);
     setSentToEmail(data.email);
-    reset();
+    // reset() clears isSubmitSuccessful too by default — keep it, or the
+    // success message below never gets a chance to render.
+    reset(undefined, { keepIsSubmitSuccessful: true });
   };
 
   if (isSubmitSuccessful) {
