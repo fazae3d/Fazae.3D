@@ -82,6 +82,7 @@ export default function Home() {
               category={getCategory(item.categorySlug)?.label ?? item.categorySlug}
               title={item.title}
               tone={item.tone}
+              photo={item.photo}
             />
           ))}
         </div>

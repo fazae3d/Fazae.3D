@@ -5,6 +5,8 @@ export type CatalogTeaserItem = {
   categorySlug: string;
   title: string;
   tone: PlaceholderTone;
+  /** Overrides the product-linked art with a specific photo for this homepage tile only. */
+  photo?: string;
 };
 
 /**
@@ -14,7 +16,7 @@ export type CatalogTeaserItem = {
  * in src/components/illustrations/.
  */
 export const CATALOG_TEASER: CatalogTeaserItem[] = [
-  { slug: "caveira-geo", categorySlug: "decoracao", title: "Capacete Geo", tone: "ink" },
+  { slug: "caveira-geo", categorySlug: "decoracao", title: "Capacete Geo", tone: "ink", photo: "/teaser/decoracao.webp" },
   { slug: "dragao-articulado", categorySlug: "geek-pop", title: "Losango Suspenso", tone: "street" },
   { slug: "vaso-prisma", categorySlug: "casa-decor", title: "Vaso Prisma", tone: "fitness" },
   { slug: "suporte-pulse", categorySlug: "utilidades", title: "Suporte Hex Pulse", tone: "ink" },
