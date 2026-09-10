@@ -101,11 +101,11 @@ export default function Home() {
                 key={step.n}
                 className={`flex items-start justify-center gap-3 ${i === STEPS.length - 1 ? "col-span-2" : ""}`}
               >
-                <div className="w-32 text-center sm:w-52">
+                <div className="w-36 text-center sm:w-52">
                   <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-full border border-petrol/50 font-display text-sm font-bold text-petrol sm:h-10 sm:w-10 sm:text-base">
                     {step.n}
                   </div>
-                  <div className="mx-auto mt-3 flex h-20 w-24 items-center justify-center sm:mt-5 sm:h-44 sm:w-48">
+                  <div className="mx-auto mt-3 flex h-28 w-32 items-center justify-center sm:mt-5 sm:h-44 sm:w-48">
                     <img src={step.image} alt="" className="max-h-full max-w-full object-contain" />
                   </div>
                   <p className="mt-3 text-sm font-bold text-paper sm:mt-5 sm:text-base">{step.title}</p>
