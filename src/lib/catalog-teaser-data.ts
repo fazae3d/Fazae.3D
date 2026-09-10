@@ -18,7 +18,7 @@ export type CatalogTeaserItem = {
 export const CATALOG_TEASER: CatalogTeaserItem[] = [
   { slug: "caveira-geo", categorySlug: "decoracao", title: "Capacete Geo", tone: "ink", photo: "/teaser/decoracao.jpg" },
   { slug: "dragao-articulado", categorySlug: "geek-pop", title: "Losango Suspenso", tone: "street" },
-  { slug: "vaso-prisma", categorySlug: "casa-decor", title: "Vaso Prisma", tone: "fitness" },
+  { slug: "vaso-prisma", categorySlug: "casa-decor", title: "Vaso Prisma", tone: "fitness", photo: "/teaser/casa-decor.jpg" },
   { slug: "suporte-pulse", categorySlug: "utilidades", title: "Suporte Hex Pulse", tone: "ink" },
   { slug: "organizador-modular", categorySlug: "casa-decor", title: "Organizador Modular", tone: "ink" },
   { slug: "gancho-parede-x3", categorySlug: "utilidades", title: "Suporte para Fita", tone: "street" },
