@@ -16,7 +16,7 @@ export type CatalogTeaserItem = {
  * in src/components/illustrations/.
  */
 export const CATALOG_TEASER: CatalogTeaserItem[] = [
-  { slug: "caveira-geo", categorySlug: "decoracao", title: "Capacete Geo", tone: "ink", photo: "/teaser/decoracao.webp" },
+  { slug: "caveira-geo", categorySlug: "decoracao", title: "Capacete Geo", tone: "ink", photo: "/teaser/decoracao.jpg" },
   { slug: "dragao-articulado", categorySlug: "geek-pop", title: "Losango Suspenso", tone: "street" },
   { slug: "vaso-prisma", categorySlug: "casa-decor", title: "Vaso Prisma", tone: "fitness" },
   { slug: "suporte-pulse", categorySlug: "utilidades", title: "Suporte Hex Pulse", tone: "ink" },
