@@ -79,7 +79,7 @@ export default function Home() {
               key={item.slug}
               href={`/loja?categoria=${item.categorySlug}`}
               slug={item.slug}
-              category={getCategory(item.categorySlug)?.label ?? item.categorySlug}
+              category={item.categoryLabel ?? getCategory(item.categorySlug)?.label ?? item.categorySlug}
               title={item.title}
               tone={item.tone}
               photo={item.photo}

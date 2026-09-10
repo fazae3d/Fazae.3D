@@ -7,6 +7,8 @@ export type CatalogTeaserItem = {
   tone: PlaceholderTone;
   /** Overrides the product-linked art with a specific photo for this homepage tile only. */
   photo?: string;
+  /** Overrides the category's own label for this homepage tile only (link still points to the real category). */
+  categoryLabel?: string;
 };
 
 /**
@@ -16,10 +18,10 @@ export type CatalogTeaserItem = {
  * in src/components/illustrations/.
  */
 export const CATALOG_TEASER: CatalogTeaserItem[] = [
-  { slug: "caveira-geo", categorySlug: "decoracao", title: "Capacete Geo", tone: "ink", photo: "/teaser/decoracao.jpg" },
-  { slug: "dragao-articulado", categorySlug: "geek-pop", title: "Losango Suspenso", tone: "street" },
-  { slug: "vaso-prisma", categorySlug: "casa-decor", title: "Vaso Prisma", tone: "fitness", photo: "/teaser/casa-decor.jpg" },
-  { slug: "suporte-pulse", categorySlug: "utilidades", title: "Suporte Hex Pulse", tone: "ink" },
+  { slug: "caveira-geo", categorySlug: "decoracao", title: "Peças que transformam", tone: "ink", photo: "/teaser/decoracao.jpg" },
+  { slug: "dragao-articulado", categorySlug: "geek-pop", title: "Ideias fora do comum", tone: "street" },
+  { slug: "vaso-prisma", categorySlug: "casa-decor", title: "Leve sua criatividade com você", tone: "fitness", photo: "/teaser/casa-decor.jpg", categoryLabel: "Chaveiros" },
+  { slug: "suporte-pulse", categorySlug: "utilidades", title: "Soluções que fazem sentido", tone: "ink" },
   { slug: "organizador-modular", categorySlug: "casa-decor", title: "Organizador Modular", tone: "ink" },
   { slug: "gancho-parede-x3", categorySlug: "utilidades", title: "Suporte para Fita", tone: "street" },
   { slug: "miniatura-rpg-guerreiro", categorySlug: "geek-pop", title: "Cão Low Poly", tone: "ink" },
