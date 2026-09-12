@@ -122,6 +122,25 @@ export type AdditionalCost = {
   value: number;
 };
 
+/**
+ * "equipamento" é investimento (capex) — entra no payback, não no DRE operacional.
+ * "material" cobre insumos/matéria-prima; "embalagem" e "operacional" são despesa recorrente.
+ */
+export type ExpenseCategory = "equipamento" | "material" | "embalagem" | "operacional";
+
+/** Registro de compra/gasto real — base do módulo Finanças. */
+export type Expense = {
+  id: string;
+  description: string;
+  category: ExpenseCategory;
+  quantity?: number;
+  unitValue?: number;
+  totalValue: number;
+  purchaseDate: string;
+  notes?: string;
+  createdAt: string;
+};
+
 /** "Insumo" — raw material/supply consumed to produce pieces. */
 export type RawMaterial = {
   id: string;

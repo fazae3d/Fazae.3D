@@ -17,6 +17,7 @@ export const NAV_LINKS = [
   { href: "/admin/pedidos", label: "Pedidos" },
   { href: "/admin/vendas/nova", label: "Lançar venda" },
   { href: "/admin/clientes", label: "Clientes" },
+  { href: "/admin/financas", label: "Finanças" },
   { href: "/admin/configuracoes", label: "Configurações" },
 ];
 

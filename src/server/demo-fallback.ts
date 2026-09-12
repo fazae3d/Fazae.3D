@@ -5,6 +5,7 @@ import type {
   Customer,
   CustomerWithStats,
   DemoUser,
+  Expense,
   Order,
   ProductMaterialUsageWithMaterial,
   RawMaterial,
@@ -31,6 +32,8 @@ export const fallbackMaterials: Material[] = seedMaterials();
 export const fallbackCoupons: Coupon[] = seedCoupons();
 
 export const fallbackAdditionalCosts: AdditionalCost[] = [];
+
+export const fallbackExpenses: Expense[] = [];
 
 export const fallbackUsers: DemoUser[] = seedUsers();
 

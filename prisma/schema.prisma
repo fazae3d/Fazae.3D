@@ -268,3 +268,31 @@ model AdditionalCost {
   name  String
   value Float
 }
+
+/**
+ * "equipamento" é investimento (capex) — entra no cálculo de payback, não no DRE operacional.
+ * "material" cobre insumos/matéria-prima; "embalagem" e "operacional" (aluguel, energia,
+ * marketing, assinaturas...) são despesa operacional recorrente.
+ */
+enum ExpenseCategory {
+  equipamento
+  material
+  embalagem
+  operacional
+}
+
+/** Registro de compras/gastos reais — base do módulo Finanças (/admin/financas). */
+model Expense {
+  id           String          @id @default(cuid())
+  description  String
+  category     ExpenseCategory
+  quantity     Float?
+  unitValue    Float?
+  totalValue   Float
+  purchaseDate DateTime
+  notes        String?
+  createdAt    DateTime        @default(now())
+
+  @@index([purchaseDate])
+  @@index([category])
+}
