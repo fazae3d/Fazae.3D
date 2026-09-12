@@ -6,6 +6,7 @@ import { fallbackCategories, fallbackProducts } from "@/server/demo-fallback";
 import { matchesSearch } from "@/lib/search";
 import { formatPrice } from "@/lib/format";
 import { DeleteProductButton } from "@/components/admin/delete-product-button";
+import { SelectField } from "@/components/select-field";
 import { ProductThumb } from "@/components/product-thumb";
 import type { Product } from "@/lib/types";
 
@@ -74,38 +75,31 @@ export default async function AdminProductsPage({
           placeholder="Buscar por produto ou categoria"
           className="min-w-[220px] flex-1 border border-mist px-3 py-2.5 text-base outline-none focus:border-petrol sm:text-sm"
         />
-        <select
+        <SelectField
           name="category"
           defaultValue={categoryFilter}
-          className="border border-mist bg-paper px-3 py-2.5 text-base outline-none focus:border-petrol sm:text-sm"
-        >
-          <option value="">Todas as categorias</option>
-          {categories.map((c) => (
-            <option key={c.slug} value={c.slug}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-        <select
+          className="min-w-[180px] border border-mist bg-paper px-3 py-2.5 text-sm focus:border-petrol"
+          options={[
+            { value: "", label: "Todas as categorias" },
+            ...categories.map((c) => ({ value: c.slug, label: c.name })),
+          ]}
+        />
+        <SelectField
           name="status"
           defaultValue={statusFilter}
-          className="border border-mist bg-paper px-3 py-2.5 text-base outline-none focus:border-petrol sm:text-sm"
-        >
-          <option value="">Todos os status</option>
-          <option value="ativo">Ativo</option>
-          <option value="esgotado">Esgotado</option>
-        </select>
-        <select
+          className="min-w-[160px] border border-mist bg-paper px-3 py-2.5 text-sm focus:border-petrol"
+          options={[
+            { value: "", label: "Todos os status" },
+            { value: "ativo", label: "Ativo" },
+            { value: "esgotado", label: "Esgotado" },
+          ]}
+        />
+        <SelectField
           name="sort"
           defaultValue={sort}
-          className="border border-mist bg-paper px-3 py-2.5 text-base outline-none focus:border-petrol sm:text-sm"
-        >
-          {(Object.keys(SORT_LABELS) as SortKey[]).map((key) => (
-            <option key={key} value={key}>
-              {SORT_LABELS[key]}
-            </option>
-          ))}
-        </select>
+          className="min-w-[160px] border border-mist bg-paper px-3 py-2.5 text-sm focus:border-petrol"
+          options={(Object.keys(SORT_LABELS) as SortKey[]).map((key) => ({ value: key, label: SORT_LABELS[key] }))}
+        />
         <button
           type="submit"
           className="label-caps border border-ink px-5 py-2.5 text-xs transition-colors hover:bg-ink hover:text-paper"

@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useFieldArray, useForm } from "react-hook-form";
+import { Controller, useFieldArray, useForm } from "react-hook-form";
+import { Select } from "@/components/select";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { productFormSchema, type ProductFormInput } from "@/lib/admin-validation";
 import type { Category, Material, Product } from "@/lib/types";
@@ -206,14 +207,20 @@ export function ProductForm({
           <label className={labelClass()} htmlFor="categorySlug">
             Categoria
           </label>
-          <select id="categorySlug" className={inputClass(Boolean(errors.categorySlug))} {...register("categorySlug")}>
-            <option value="">Selecione…</option>
-            {categories.map((c) => (
-              <option key={c.slug} value={c.slug}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+          <Controller
+            name="categorySlug"
+            control={control}
+            render={({ field }) => (
+              <Select
+                id="categorySlug"
+                className={inputClass(Boolean(errors.categorySlug))}
+                value={field.value ?? ""}
+                onChange={field.onChange}
+                placeholder="Selecione…"
+                options={categories.map((c) => ({ value: c.slug, label: c.name }))}
+              />
+            )}
+          />
           {errors.categorySlug && <p className="text-xs text-red-600">{errors.categorySlug.message}</p>}
         </div>
 
@@ -372,16 +379,18 @@ export function ProductForm({
               return (
                 <div key={field.id} className="border border-mist p-3">
                   <div className="flex items-center gap-2">
-                    <select
-                      className={`flex-1 ${inputClass()}`}
-                      {...register(`materials.${index}.material`)}
-                    >
-                      {materials.map((m) => (
-                        <option key={m.slug} value={m.name}>
-                          {m.name}
-                        </option>
-                      ))}
-                    </select>
+                    <Controller
+                      name={`materials.${index}.material`}
+                      control={control}
+                      render={({ field }) => (
+                        <Select
+                          className={`flex-1 ${inputClass()}`}
+                          value={field.value ?? ""}
+                          onChange={field.onChange}
+                          options={materials.map((m) => ({ value: m.name, label: m.name }))}
+                        />
+                      )}
+                    />
                     <button
                       type="button"
                       onClick={() => materialFields.remove(index)}
@@ -447,16 +456,18 @@ export function ProductForm({
               const rawMaterial = rawMaterialById.get(selectedId);
               return (
                 <div key={field.id} className="flex items-center gap-2">
-                  <select
-                    className={`flex-1 ${inputClass()}`}
-                    {...register(`materialUsages.${index}.rawMaterialId`)}
-                  >
-                    {rawMaterials.map((rm) => (
-                      <option key={rm.id} value={rm.id}>
-                        {rm.name} ({rm.unit})
-                      </option>
-                    ))}
-                  </select>
+                  <Controller
+                    name={`materialUsages.${index}.rawMaterialId`}
+                    control={control}
+                    render={({ field }) => (
+                      <Select
+                        className={`flex-1 ${inputClass()}`}
+                        value={field.value ?? ""}
+                        onChange={field.onChange}
+                        options={rawMaterials.map((rm) => ({ value: rm.id, label: `${rm.name} (${rm.unit})` }))}
+                      />
+                    )}
+                  />
                   <input
                     type="number"
                     step="0.01"

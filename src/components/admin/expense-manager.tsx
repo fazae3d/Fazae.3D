@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createExpenseAction, deleteExpenseAction } from "@/app/admin/financas/actions";
+import { Select } from "@/components/select";
 import { formatPrice } from "@/lib/format";
 import type { Expense, ExpenseCategory } from "@/server/types";
 
@@ -89,18 +90,12 @@ export function ExpenseManager({ expenses }: { expenses: Expense[] }) {
           <label className="label-caps text-[11px] text-graphite" htmlFor="exp-category">
             Categoria
           </label>
-          <select
+          <Select
             id="exp-category"
             value={category}
-            onChange={(e) => setCategory(e.target.value as ExpenseCategory)}
-            className="border border-mist bg-transparent px-3 py-2 text-sm outline-none focus:border-petrol"
-          >
-            {CATEGORY_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            onChange={(v) => setCategory(v as ExpenseCategory)}
+            options={CATEGORY_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label }))}
+          />
         </div>
         <div className="flex flex-col gap-1.5">
           <label className="label-caps text-[11px] text-graphite" htmlFor="exp-date">

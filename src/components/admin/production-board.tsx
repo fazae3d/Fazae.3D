@@ -6,6 +6,7 @@ import type { ProductionStage } from "@/generated/prisma/client";
 import { formatPrice } from "@/lib/format";
 import { updateProductionAction } from "@/app/admin/producao/actions";
 import { KanbanBoard, type KanbanColumn } from "@/components/admin/kanban-board";
+import { Select } from "@/components/select";
 
 const STAGE_COLUMNS: KanbanColumn[] = [
   { key: "inicio", label: "Início" },
@@ -188,17 +189,15 @@ export function ProductionBoard({ orders: initialOrders }: { orders: Order[] }) 
                     </td>
                     <td className="px-4 py-3">{formatPrice(order.total - (order.depositAmount ?? 0))}</td>
                     <td className="px-4 py-3">
-                      <select
+                      <Select
                         value={order.productionStage ?? "inicio"}
-                        onChange={(e) => handleUpdate(order.id, { stage: e.target.value as ProductionStage })}
-                        className="border border-mist bg-paper px-2 py-1.5 text-xs outline-none focus:border-petrol"
-                      >
-                        {STAGE_COLUMNS.map((col) => (
-                          <option key={col.key} value={col.key}>
-                            {STAGE_LABELS[col.key as ProductionStage]}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(v) => handleUpdate(order.id, { stage: v as ProductionStage })}
+                        className="border border-mist bg-paper px-2 py-1.5 text-xs focus:border-petrol"
+                        options={STAGE_COLUMNS.map((col) => ({
+                          value: col.key,
+                          label: STAGE_LABELS[col.key as ProductionStage],
+                        }))}
+                      />
                     </td>
                     <td className="px-4 py-3">
                       <button

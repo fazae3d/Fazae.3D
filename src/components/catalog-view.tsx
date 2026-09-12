@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ProductGrid } from "./product-grid";
 import { CatalogFilters, SORT_OPTIONS, type CatalogFilterState, type SortOption } from "./catalog-filters";
+import { Select } from "@/components/select";
 import type { Category, Product } from "@/lib/types";
 
 const PAGE_SIZE = 12;
@@ -195,17 +196,14 @@ function CatalogViewInner({ products, categories = [], fixedCategory, initialFil
 
           <label className="ml-auto flex items-center gap-2 text-xs text-graphite lg:ml-0">
             <span className="label-caps hidden text-[11px] sm:inline">Ordenar por</span>
-            <select
+            <Select
               value={state.sort}
-              onChange={(e) => setState({ ...state, sort: e.target.value as SortOption })}
+              onChange={(v) => setState({ ...state, sort: v as SortOption })}
               className="border border-paper/15 bg-mist px-2 py-1.5 text-xs text-paper"
-            >
-              {SORT_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+              menuClassName="border border-paper/15 bg-mist text-paper"
+              hoverClassName="hover:bg-paper/10"
+              options={SORT_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label }))}
+            />
           </label>
         </div>
 

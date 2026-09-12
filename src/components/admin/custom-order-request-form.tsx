@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { updateCustomOrderRequestAction } from "@/app/admin/encomendas/actions";
+import { Select } from "@/components/select";
 import type { CustomOrderRequest, CustomRequestStatus } from "@/lib/types";
 
 const ALL_STATUSES: CustomRequestStatus[] = ["novo", "em_contato", "orcamento_enviado", "fechado", "perdido"];
@@ -39,17 +40,12 @@ export function CustomOrderRequestForm({ request }: { request: CustomOrderReques
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex flex-col gap-1">
           <label className="label-caps text-[10px] text-graphite">Status</label>
-          <select
+          <Select
             value={status}
-            onChange={(e) => setStatus(e.target.value as CustomRequestStatus)}
-            className="border border-mist px-2.5 py-2 text-xs outline-none focus:border-petrol"
-          >
-            {ALL_STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {STATUS_LABELS[s]}
-              </option>
-            ))}
-          </select>
+            onChange={(v) => setStatus(v as CustomRequestStatus)}
+            className="border border-mist px-2.5 py-2 text-xs focus:border-petrol"
+            options={ALL_STATUSES.map((s) => ({ value: s, label: STATUS_LABELS[s] }))}
+          />
         </div>
 
         <button

@@ -2,9 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { rawMaterialFormSchema, type RawMaterialFormInput } from "@/lib/admin-validation";
+import { Select } from "@/components/select";
 import type { RawMaterial } from "@/server/types";
 
 const UNIT_OPTIONS = ["g", "ml", "un", "kg", "l", "cm", "m"];
@@ -33,6 +34,7 @@ export function RawMaterialForm({
 
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<RawMaterialFormInput>({
@@ -73,13 +75,19 @@ export function RawMaterialForm({
           <label className={labelClass()} htmlFor="unit">
             Unidade
           </label>
-          <select id="unit" className={inputClass(Boolean(errors.unit))} {...register("unit")}>
-            {UNIT_OPTIONS.map((unit) => (
-              <option key={unit} value={unit}>
-                {unit}
-              </option>
-            ))}
-          </select>
+          <Controller
+            name="unit"
+            control={control}
+            render={({ field }) => (
+              <Select
+                id="unit"
+                className={inputClass(Boolean(errors.unit))}
+                value={field.value ?? ""}
+                onChange={field.onChange}
+                options={UNIT_OPTIONS.map((unit) => ({ value: unit, label: unit }))}
+              />
+            )}
+          />
           {errors.unit && <p className="text-xs text-red-600">{errors.unit.message}</p>}
         </div>
       </div>

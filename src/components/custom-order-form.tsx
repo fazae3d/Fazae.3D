@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { FormField } from "./form-field";
+import { SelectField } from "@/components/select-field";
 import { DEFAULT_WHATSAPP_NUMBER, getWhatsAppLink } from "@/lib/site-config";
 
 const MATERIALS = ["Não sei / quero sugestão", "PLA", "PETG", "ABS", "Resina"];
@@ -73,18 +74,15 @@ export function CustomOrderForm() {
           <label htmlFor="material" className="label-caps text-[11px] text-graphite">
             Material
           </label>
-          <select
+          <SelectField
             id="material"
             name="material"
             defaultValue={MATERIALS[0]}
             className="border border-paper/15 bg-mist px-3 py-2.5 text-base text-paper outline-none transition-colors focus:border-petrol sm:text-sm"
-          >
-            {MATERIALS.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
-          </select>
+            menuClassName="border border-paper/15 bg-mist text-paper"
+            hoverClassName="hover:bg-paper/10"
+            options={MATERIALS.map((m) => ({ value: m, label: m }))}
+          />
         </div>
         <FormField id="color" name="color" label="Cor desejada (opcional)" placeholder="Ex: preto fosco" />
         <FormField id="quantity" name="quantity" label="Quantidade" type="number" min={1} defaultValue={1} />

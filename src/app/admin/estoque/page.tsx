@@ -6,6 +6,7 @@ import { fallbackProducts } from "@/server/demo-fallback";
 import { matchesSearch } from "@/lib/search";
 import { ProductThumb } from "@/components/product-thumb";
 import { StockQuickEdit } from "@/components/admin/stock-quick-edit";
+import { SelectField } from "@/components/select-field";
 import type { Product } from "@/lib/types";
 
 type SortKey = "stock-asc" | "stock-desc" | "name";
@@ -60,17 +61,12 @@ export default async function AdminStockPage({
           placeholder="Buscar por produto, marca ou categoria"
           className="min-w-[240px] flex-1 border border-mist px-3 py-2.5 text-base outline-none focus:border-petrol sm:text-sm"
         />
-        <select
+        <SelectField
           name="sort"
           defaultValue={sort}
-          className="border border-mist bg-paper px-3 py-2.5 text-base outline-none focus:border-petrol sm:text-sm"
-        >
-          {(Object.keys(SORT_LABELS) as SortKey[]).map((key) => (
-            <option key={key} value={key}>
-              {SORT_LABELS[key]}
-            </option>
-          ))}
-        </select>
+          className="min-w-[180px] border border-mist bg-paper px-3 py-2.5 text-sm focus:border-petrol"
+          options={(Object.keys(SORT_LABELS) as SortKey[]).map((key) => ({ value: key, label: SORT_LABELS[key] }))}
+        />
         <button
           type="submit"
           className="label-caps border border-ink px-5 py-2.5 text-xs transition-colors hover:bg-ink hover:text-paper"

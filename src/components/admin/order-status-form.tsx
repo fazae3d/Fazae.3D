@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { updateOrderStatusAction } from "@/app/admin/pedidos/actions";
+import { Select } from "@/components/select";
 import type { Order, OrderStatus } from "@/server/types";
 
 const ALL_STATUSES: OrderStatus[] = [
@@ -38,17 +39,12 @@ export function OrderStatusForm({ order }: { order: Order }) {
     <div className="flex flex-wrap items-end gap-3">
       <div className="flex flex-col gap-1">
         <label className="label-caps text-[10px] text-graphite">Status</label>
-        <select
+        <Select
           value={status}
-          onChange={(e) => setStatus(e.target.value as OrderStatus)}
-          className="border border-mist px-2.5 py-2 text-xs outline-none focus:border-petrol"
-        >
-          {ALL_STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
+          onChange={(v) => setStatus(v as OrderStatus)}
+          className="border border-mist px-2.5 py-2 text-xs focus:border-petrol"
+          options={ALL_STATUSES.map((s) => ({ value: s, label: s }))}
+        />
       </div>
 
       <div className="flex flex-col gap-1">

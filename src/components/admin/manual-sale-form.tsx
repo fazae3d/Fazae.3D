@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createManualSaleAction } from "@/app/admin/vendas/actions";
+import { Select } from "@/components/select";
 import { formatPrice } from "@/lib/format";
 import type { Product } from "@/lib/types";
 import type { OrderStatus, PaymentMethod } from "@/server/types";
@@ -194,13 +195,13 @@ export function ManualSaleForm({ products }: { products: Product[] }) {
         <label className={labelClass()} htmlFor="status">
           Status do pedido
         </label>
-        <select id="status" value={status} onChange={(e) => setStatus(e.target.value as OrderStatus)} className={inputClass()}>
-          {STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
+        <Select
+          id="status"
+          value={status}
+          onChange={(v) => setStatus(v as OrderStatus)}
+          className={inputClass()}
+          options={STATUSES.map((s) => ({ value: s, label: s }))}
+        />
       </div>
 
       <div>
@@ -216,41 +217,29 @@ export function ManualSaleForm({ products }: { products: Product[] }) {
             return (
               <div key={index} className="border border-mist p-3">
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-[2fr_1fr_1fr]">
-                  <select
+                  <Select
                     value={item.productSlug}
-                    onChange={(e) => handleProductChange(index, e.target.value)}
+                    onChange={(v) => handleProductChange(index, v)}
                     className={inputClass()}
-                  >
-                    {products.map((p) => (
-                      <option key={p.slug} value={p.slug}>
-                        {p.name} ({p.price !== undefined ? formatPrice(p.price) : "sob consulta"}) · {p.stock} un.
-                      </option>
-                    ))}
-                  </select>
-                  <select
+                    options={products.map((p) => ({
+                      value: p.slug,
+                      label: `${p.name} (${p.price !== undefined ? formatPrice(p.price) : "sob consulta"}) · ${p.stock} un.`,
+                    }))}
+                  />
+                  <Select
                     value={item.material}
-                    onChange={(e) => handleMaterialChange(index, item.productSlug, e.target.value)}
+                    onChange={(v) => handleMaterialChange(index, item.productSlug, v)}
                     className={inputClass()}
-                  >
-                    {product?.materials.map((m) => (
-                      <option key={m.material} value={m.material}>
-                        {m.material}
-                      </option>
-                    ))}
-                  </select>
-                  <select
+                    options={(product?.materials ?? []).map((m) => ({ value: m.material, label: m.material }))}
+                  />
+                  <Select
                     value={item.color}
-                    onChange={(e) => updateItem(index, { color: e.target.value })}
+                    onChange={(v) => updateItem(index, { color: v })}
                     className={inputClass()}
-                  >
-                    {product?.materials
-                      .find((m) => m.material === item.material)
-                      ?.colors.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                  </select>
+                    options={(
+                      product?.materials.find((m) => m.material === item.material)?.colors ?? []
+                    ).map((c) => ({ value: c, label: c }))}
+                  />
                 </div>
                 <div className="mt-2 flex flex-wrap items-end gap-2">
                   <div className="flex flex-col gap-1">
