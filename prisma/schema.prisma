@@ -206,6 +206,13 @@ model Order {
   couponCode         String?
   total              Float
   paymentMethod      String
+  /**
+   * Status bruto do gateway de pagamento (Mercado Pago): "pending" | "approved" | "in_process" | "rejected".
+   * Distinto de `status` (fluxo do pedido em si) — pedidos via Pix/boleto ficam "pending" até o webhook confirmar.
+   */
+  paymentStatus      String          @default("pending")
+  /** Id do pagamento no Mercado Pago — usado para reconciliar o webhook com o pedido. */
+  mpPaymentId        String?         @unique
   address            Json?
   status             String
   tracking           String?

@@ -21,6 +21,8 @@ function toOrder(row: OrderRow): Order {
     couponCode: row.couponCode ?? undefined,
     tracking: row.tracking ?? undefined,
     paymentMethod: row.paymentMethod as Order["paymentMethod"],
+    paymentStatus: row.paymentStatus as Order["paymentStatus"],
+    mpPaymentId: row.mpPaymentId ?? undefined,
     status: row.status as Order["status"],
     items: row.items as Order["items"],
     address: (row.address as Order["address"]) ?? undefined,
@@ -115,6 +117,24 @@ export async function updateOrderStatus(
   const updated = await db.order.update({
     where: { id },
     data: { status, ...(tracking !== undefined ? { tracking: tracking || null } : {}) },
+  });
+  return { success: true, order: toOrder(updated) };
+}
+
+/**
+ * Reconciles a Mercado Pago webhook notification with the order it belongs
+ * to — looked up by `mpPaymentId` (set at order-creation time from the
+ * gateway's synchronous response), never trusted from the webhook body itself.
+ */
+export async function updateOrderPaymentStatus(
+  mpPaymentId: string,
+  data: { paymentStatus: string; status?: OrderStatus },
+): Promise<UpdateOrderResult> {
+  const existing = await db.order.findUnique({ where: { mpPaymentId } });
+  if (!existing) return { success: false, error: "Pedido não encontrado para esse pagamento." };
+  const updated = await db.order.update({
+    where: { mpPaymentId },
+    data: { paymentStatus: data.paymentStatus, ...(data.status ? { status: data.status } : {}) },
   });
   return { success: true, order: toOrder(updated) };
 }

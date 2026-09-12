@@ -17,7 +17,8 @@ import { formatPrice } from "@/lib/format";
 import { DEFAULT_WHATSAPP_NUMBER, SITE_URL } from "@/lib/site-config";
 import { withReadFallback } from "@/lib/db-fallback";
 import { fallbackProducts } from "@/server/demo-fallback";
-import type { Order } from "@/server/types";
+import { createMercadoPagoPayment, mapPaymentTypeToMethod } from "@/lib/mercadopago";
+import type { Order, OrderStatus } from "@/server/types";
 
 const CHECKOUT_LIMIT = 15;
 const CHECKOUT_WINDOW_MS = 10 * 60 * 1000;
@@ -33,12 +34,16 @@ const checkoutInputSchema = z.object({
   items: z.array(checkoutItemSchema).min(1),
   address: addressSchema,
   shippingMethod: z.enum(["padrao", "expressa"]),
-  paymentMethod: z.enum(["pix", "cartao", "boleto"]),
   couponCode: z.string().optional(),
   guestEmail: z.string().email().optional(),
 });
 
 export type CreateOrderResult = { success: true; order: Order } | { success: false; error: string };
+
+/** A payment left "pending"/"in_process" by Mercado Pago (Pix, boleto, some cards) isn't a failure — the order is still created, awaiting the webhook to confirm it. */
+function statusForPayment(paymentStatus: string): OrderStatus {
+  return paymentStatus === "approved" ? "Pagamento aprovado" : "Pedido recebido";
+}
 
 /**
  * Prices, category names and shipping cost are all re-resolved server-side
@@ -46,7 +51,10 @@ export type CreateOrderResult = { success: true; order: Order } | { success: fal
  * the checkout UI sends only slug/material/color/quantity plus the chosen
  * shipping method and coupon code.
  */
-export async function createOrderAction(input: unknown): Promise<CreateOrderResult> {
+export async function processCheckoutPaymentAction(
+  input: unknown,
+  brickFormData: unknown,
+): Promise<CreateOrderResult> {
   // Every call — success or failure — counts, so a script can't retry its
   // way past a declined card by hammering this action.
   const ip = await getClientIp();
@@ -59,7 +67,10 @@ export async function createOrderAction(input: unknown): Promise<CreateOrderResu
   if (!parsed.success) {
     return { success: false, error: "Dados de checkout inválidos." };
   }
-  const { items, address, shippingMethod, paymentMethod, couponCode, guestEmail } = parsed.data;
+  if (!brickFormData || typeof brickFormData !== "object") {
+    return { success: false, error: "Dados de pagamento inválidos." };
+  }
+  const { items, address, shippingMethod, couponCode, guestEmail } = parsed.data;
 
   // Guests can check out with just an e-mail — no account required. When a
   // session exists it always wins, so a logged-in user can't be spoofed
@@ -146,8 +157,32 @@ export async function createOrderAction(input: unknown): Promise<CreateOrderResu
   const shipping = freeShippingFromCoupon ? 0 : computeShippingCost(shippingMethod, subtotal, freeShippingThreshold);
   const total = round2(Math.max(0, subtotal - discount) + shipping);
 
+  // Order id is generated up front (a pure/local helper, no DB write) so it
+  // can be sent to Mercado Pago as the external_reference before the order
+  // itself exists — the webhook and this id then always agree.
+  const orderId = generateOrderId();
+
+  const paymentResult = await createMercadoPagoPayment({
+    transactionAmount: total,
+    description: `Pedido Fazaê ${orderId}`,
+    externalReference: orderId,
+    payerEmail: email,
+    formData: brickFormData as Record<string, unknown>,
+  });
+
+  if (!paymentResult.success) {
+    return { success: false, error: paymentResult.error };
+  }
+  if (paymentResult.status === "rejected") {
+    return {
+      success: false,
+      error: "Pagamento recusado. Verifique os dados informados ou tente outro método de pagamento.",
+    };
+  }
+
+  const orderStatus = statusForPayment(paymentResult.status);
   const order: Order = {
-    id: generateOrderId(),
+    id: orderId,
     createdAt: new Date().toISOString(),
     channel: "online",
     userEmail: email,
@@ -157,9 +192,11 @@ export async function createOrderAction(input: unknown): Promise<CreateOrderResu
     discount,
     couponCode: appliedCouponCode,
     total,
-    paymentMethod,
+    paymentMethod: mapPaymentTypeToMethod(paymentResult.paymentTypeId),
+    paymentStatus: paymentResult.status as Order["paymentStatus"],
+    mpPaymentId: paymentResult.id,
     address: { ...address, id: `addr-${Date.now()}`, label: "Entrega" },
-    status: "Pagamento aprovado",
+    status: orderStatus,
   };
 
   // TODO(fase DB): remove o fallback quando a Fazaê tiver o próprio banco — sem Supabase, o pedido não é
@@ -173,10 +210,14 @@ export async function createOrderAction(input: unknown): Promise<CreateOrderResu
         `<li>${item.quantity}x ${escapeHtml(item.name)} (${escapeHtml(item.material)}, ${escapeHtml(item.color)}) · ${formatPrice(item.price * item.quantity)}</li>`,
     )
     .join("");
+  const statusLine =
+    orderStatus === "Pagamento aprovado"
+      ? "<p>Seu pedido foi confirmado e o pagamento aprovado!</p>"
+      : "<p>Recebemos seu pedido — assim que o pagamento for confirmado (Pix/boleto), você recebe uma nova notificação.</p>";
   await sendEmail({
     to: email,
-    subject: `Fazaê: pedido ${savedOrder.id} confirmado`,
-    html: `<p>Seu pedido foi confirmado!</p><ul>${itemsHtml}</ul><p><strong>Total: ${formatPrice(total)}</strong></p><p>Acompanhe o status em ${SITE_URL}/conta/pedidos</p>`,
+    subject: `Fazaê: pedido ${savedOrder.id} recebido`,
+    html: `${statusLine}<ul>${itemsHtml}</ul><p><strong>Total: ${formatPrice(total)}</strong></p><p>Acompanhe o status em ${SITE_URL}/conta/pedidos</p>`,
   });
 
   return { success: true, order: savedOrder };

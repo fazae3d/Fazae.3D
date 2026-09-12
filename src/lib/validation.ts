@@ -66,20 +66,6 @@ export const savedAddressSchema = addressSchema.extend({
 
 export type SavedAddressInput = z.infer<typeof savedAddressSchema>;
 
-export const cardPaymentSchema = z.object({
-  cardName: z.string().min(2, "Informe o nome impresso no cartão."),
-  cardNumber: z
-    .string()
-    .min(13, "Número de cartão inválido.")
-    .max(19, "Número de cartão inválido."),
-  cardExpiry: z
-    .string()
-    .regex(/^(0[1-9]|1[0-2])\/\d{2}$/, "Use o formato MM/AA."),
-  cardCvv: z.string().regex(/^\d{3,4}$/, "CVV inválido."),
-});
-
-export type CardPaymentInput = z.infer<typeof cardPaymentSchema>;
-
 export const contactSchema = z.object({
   name: z.string().min(2, "Informe seu nome."),
   email: z.string().min(1, "Informe seu e-mail.").email("E-mail inválido."),

@@ -15,8 +15,7 @@ import { useCart } from "@/contexts/cart-context";
 import { useStoreSettings } from "@/hooks/use-store-settings";
 import { computeShippingCost } from "@/lib/shipping";
 import type { AddressInput } from "@/lib/validation";
-import type { Order, PaymentMethod } from "@/server/types";
-import { createOrderAction } from "./actions";
+import type { Order } from "@/server/types";
 
 export default function CheckoutPage() {
   const { lines, subtotal, coupon, discount, freeShippingFromCoupon, clearCart } = useCart();
@@ -33,40 +32,27 @@ export default function CheckoutPage() {
   // Recomputed live (not just captured once on the "entrega" step) so a coupon
   // applied or removed afterward — the coupon form stays reachable from every
   // step's sidebar — is reflected immediately, instead of the displayed total
-  // silently drifting from what createOrderAction ends up charging.
+  // silently drifting from what processCheckoutPaymentAction ends up charging.
   const shippingCost = shipping
     ? freeShippingFromCoupon
       ? 0
       : computeShippingCost(shipping.key, subtotal, settings.freeShippingThreshold)
     : null;
 
-  const handlePaid = async (method: PaymentMethod) => {
-    if (!address || !shipping) return;
-
-    setOrderError(null);
-    const result = await createOrderAction({
-      items: lines.map((l) => ({
-        productSlug: l.productSlug,
-        material: l.material,
-        color: l.color,
-        quantity: l.quantity,
-      })),
-      address,
-      shippingMethod: shipping.key,
-      paymentMethod: method,
-      couponCode: coupon?.code,
-      guestEmail: guestEmail ?? undefined,
-    });
-
-    if (!result.success) {
-      setOrderError(result.error);
-      return;
-    }
-
-    clearCart();
-    setOrder(result.order);
-    setStep("confirmacao");
-  };
+  const checkoutInput = address && shipping
+    ? {
+        items: lines.map((l) => ({
+          productSlug: l.productSlug,
+          material: l.material,
+          color: l.color,
+          quantity: l.quantity,
+        })),
+        address,
+        shippingMethod: shipping.key,
+        couponCode: coupon?.code,
+        guestEmail: guestEmail ?? undefined,
+      }
+    : null;
 
   if (lines.length === 0 && step !== "confirmacao") {
     return (
@@ -125,12 +111,19 @@ export default function CheckoutPage() {
                 onBack={() => setStep("endereco")}
               />
             )}
-            {step === "pagamento" && shipping && (
+            {step === "pagamento" && shipping && checkoutInput && (
               <>
                 {orderError && <p className="mb-4 text-sm text-red-600">{orderError}</p>}
                 <StepPagamento
                   total={Math.max(0, subtotal - discount) + (shippingCost ?? 0)}
-                  onPaid={handlePaid}
+                  checkoutInput={checkoutInput}
+                  payerEmail={session?.user?.email ?? guestEmail ?? ""}
+                  onSuccess={(paidOrder) => {
+                    clearCart();
+                    setOrder(paidOrder);
+                    setStep("confirmacao");
+                  }}
+                  onError={setOrderError}
                   onBack={() => setStep("entrega")}
                 />
               </>

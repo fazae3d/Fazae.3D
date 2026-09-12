@@ -41,6 +41,9 @@ export type OrderStatus =
 
 export type PaymentMethod = "pix" | "cartao" | "boleto";
 
+/** Raw Mercado Pago payment status — "pending"/"in_process" until a webhook (Pix/boleto) or the initial response (cartão) confirms it. */
+export type PaymentStatus = "pending" | "approved" | "in_process" | "rejected" | "cancelled";
+
 export type SaleChannel = "online" | "presencial" | "whatsapp";
 
 export type ProductionStage = "nao_aplicavel" | "inicio" | "em_producao" | "finalizado";
@@ -72,6 +75,10 @@ export type Order = {
   couponCode?: string;
   total: number;
   paymentMethod: PaymentMethod;
+  /** Raw gateway status, distinct from `status` (the order's own fulfillment status). Defaults to "pending". */
+  paymentStatus?: PaymentStatus;
+  /** Mercado Pago payment id — set for online orders, used to reconcile the webhook with this order. */
+  mpPaymentId?: string;
   /** Only online orders (delivered) have a shipping address; manual sales don't. */
   address?: Address;
   status: OrderStatus;

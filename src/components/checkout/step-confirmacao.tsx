@@ -3,6 +3,11 @@ import { formatPrice } from "@/lib/format";
 import type { Order } from "@/server/types";
 
 export function StepConfirmacao({ order, isGuest = false }: { order: Order; isGuest?: boolean }) {
+  const isApproved = order.status === "Pagamento aprovado";
+  const paymentPhrase = isApproved
+    ? "o pagamento foi aprovado (ambiente de testes)"
+    : "o pagamento está sendo confirmado (Pix/boleto, ambiente de testes) — você recebe um aviso assim que for aprovado";
+
   return (
     <div className="flex flex-col items-center border border-paper/15 px-6 py-16 text-center">
       <span className="mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-petrol text-2xl text-ink">
@@ -12,8 +17,8 @@ export function StepConfirmacao({ order, isGuest = false }: { order: Order; isGu
       <h2 className="font-display mt-3 text-3xl text-paper">Pedido {order.id}</h2>
       <p className="mt-3 max-w-md text-graphite">
         {isGuest
-          ? `Recebemos seu pedido e o pagamento foi aprovado no ambiente de testes. Guarde o número acima para acompanhar pelo rastreamento com o e-mail ${order.userEmail}.`
-          : "Recebemos seu pedido e o pagamento foi aprovado no ambiente de testes. Você pode acompanhar o status em Meus pedidos."}
+          ? `Recebemos seu pedido e ${paymentPhrase}. Guarde o número acima para acompanhar pelo rastreamento com o e-mail ${order.userEmail}.`
+          : `Recebemos seu pedido e ${paymentPhrase}. Você pode acompanhar o status em Meus pedidos.`}
       </p>
       <p className="mt-4 text-lg text-paper">{formatPrice(order.total)}</p>
 
