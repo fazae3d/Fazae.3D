@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { getAllCategories, getAllProducts } from "@/lib/demo-data";
 import { LOW_STOCK_THRESHOLD, isSoldOut } from "@/lib/badges";
 import { formatPrice } from "@/lib/format";
@@ -8,6 +9,7 @@ import {
   paymentBreakdown,
   periodComparison,
   revenueByDay,
+  revenueSplit,
   statusBreakdown,
   topProducts,
 } from "@/lib/admin-stats";
@@ -31,31 +33,100 @@ function formatDeadline(iso: string) {
   return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
 }
 
+function DollarIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className={className}>
+      <path d="M12 2v20M17 6.5c0-1.93-2.24-3.5-5-3.5S7 4.57 7 6.5 9.24 10 12 10s5 1.57 5 3.5-2.24 3.5-5 3.5-5-1.57-5-3.5" />
+    </svg>
+  );
+}
+
+function TagIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M12.6 2.9 3.6 11.9a2 2 0 0 0 0 2.8l5.7 5.7a2 2 0 0 0 2.8 0l9-9a2 2 0 0 0 .59-1.42V4a1 1 0 0 0-1-1h-5.87a2 2 0 0 0-1.42.59Z" />
+      <circle cx="16.5" cy="7.5" r="1.2" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function BoxIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="m3.5 7.5 8.5-4 8.5 4-8.5 4-8.5-4Z" />
+      <path d="M3.5 7.5v9l8.5 4 8.5-4v-9M12 11.5v9" />
+    </svg>
+  );
+}
+
+function AlertIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M12 3 2 20h20L12 3Z" />
+      <path d="M12 10v4" />
+      <circle cx="12" cy="17" r="0.6" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function XCircleIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className={className}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="m9 9 6 6m0-6-6 6" />
+    </svg>
+  );
+}
+
+function ClockIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3.5 2" />
+    </svg>
+  );
+}
+
 function StatTile({
   label,
   value,
   sublabel,
+  secondaryValue,
   trend,
+  icon,
 }: {
   label: string;
   value: string;
   sublabel?: string;
+  /** e.g. "+R$ 120,00 em aberto" — shown in amber under the main value. */
+  secondaryValue?: string;
   trend?: { pct: number | null; hasCurrent: boolean };
+  icon?: ReactNode;
 }) {
   return (
     <div className="border border-mist p-5">
-      <p className="label-caps text-[11px] text-graphite">{label}</p>
-      <div className="mt-2 flex items-baseline gap-2">
-        <p className="font-display text-2xl">{value}</p>
-        {trend && trend.pct !== null && (
-          <span className={`label-caps text-[10px] ${trend.pct >= 0 ? "text-petrol" : "text-red-600"}`}>
-            {trend.pct >= 0 ? "▲" : "▼"} {Math.abs(trend.pct).toFixed(0)}%
-          </span>
+      <div className="flex items-center gap-3">
+        {icon && (
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-petrol/10 text-petrol">
+            {icon}
+          </div>
         )}
-        {trend && trend.pct === null && trend.hasCurrent && (
-          <span className="label-caps text-[10px] text-petrol">Novo</span>
-        )}
+        <div>
+          <p className="label-caps text-[11px] text-graphite">{label}</p>
+          <div className="mt-1 flex items-baseline gap-2">
+            <p className="font-display text-2xl">{value}</p>
+            {trend && trend.pct !== null && (
+              <span className={`label-caps text-[10px] ${trend.pct >= 0 ? "text-petrol" : "text-red-600"}`}>
+                {trend.pct >= 0 ? "▲" : "▼"} {Math.abs(trend.pct).toFixed(0)}%
+              </span>
+            )}
+            {trend && trend.pct === null && trend.hasCurrent && (
+              <span className="label-caps text-[10px] text-petrol">Novo</span>
+            )}
+          </div>
+        </div>
       </div>
+      {secondaryValue && <p className="mt-2 text-xs text-amber-500">{secondaryValue}</p>}
       {sublabel && <p className="mt-1 text-xs text-graphite">{sublabel}</p>}
     </div>
   );
@@ -78,6 +149,7 @@ export default async function AdminDashboardPage() {
 
   const revenue = round2(orders.reduce((sum, o) => sum + o.total, 0));
   const averageTicket = orders.length > 0 ? round2(revenue / orders.length) : 0;
+  const { confirmed: confirmedRevenue, pending: pendingRevenue } = revenueSplit(orders);
 
   const soldOut = products.filter(isSoldOut);
   const lowStock = products.filter((p) => !isSoldOut(p) && p.stock <= LOW_STOCK_THRESHOLD);
@@ -122,21 +194,35 @@ export default async function AdminDashboardPage() {
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         <StatTile
-          label="Faturamento"
-          value={formatPrice(revenue)}
+          icon={<DollarIcon className="h-4.5 w-4.5" />}
+          label="Faturamento confirmado"
+          value={formatPrice(confirmedRevenue)}
+          secondaryValue={pendingRevenue > 0 ? `+${formatPrice(pendingRevenue)} em aberto` : undefined}
           sublabel={`${orders.length} pedido(s)`}
           trend={{ pct: revenueTrend.pct, hasCurrent: revenueTrend.current > 0 }}
         />
-        <StatTile label="Ticket médio" value={formatPrice(averageTicket)} />
-        <StatTile label="Produtos" value={String(products.length)} sublabel={`${categories.length} categoria(s)`} />
-        <StatTile label="Estoque baixo" value={String(lowStock.length)} sublabel={`≤ ${LOW_STOCK_THRESHOLD} peças`} />
-        <StatTile label="Esgotados" value={String(soldOut.length)} />
+        <StatTile icon={<TagIcon className="h-4.5 w-4.5" />} label="Ticket médio" value={formatPrice(averageTicket)} />
         <StatTile
+          icon={<BoxIcon className="h-4.5 w-4.5" />}
+          label="Produtos"
+          value={String(products.length)}
+          sublabel={`${categories.length} categoria(s)`}
+        />
+        <StatTile
+          icon={<AlertIcon className="h-4.5 w-4.5" />}
+          label="Estoque baixo"
+          value={String(lowStock.length)}
+          sublabel={`≤ ${LOW_STOCK_THRESHOLD} peças`}
+        />
+        <StatTile icon={<XCircleIcon className="h-4.5 w-4.5" />} label="Esgotados" value={String(soldOut.length)} />
+        <StatTile
+          icon={<ClockIcon className="h-4.5 w-4.5" />}
           label="A receber (produção)"
           value={formatPrice(receivableInProduction)}
           sublabel={`${activeProductionOrders.length} pedido(s) em produção`}
         />
         <StatTile
+          icon={<AlertIcon className="h-4.5 w-4.5" />}
           label="Insumos com estoque baixo"
           value={String(lowStockRawMaterials.length)}
           sublabel={`de ${rawMaterials.length} insumo(s)`}

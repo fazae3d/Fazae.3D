@@ -107,6 +107,19 @@ export type StoreSettings = {
   whatsappNumber: string;
   whatsappMessageTemplate?: string;
   customOrderIntroText?: string;
+  /** Pré-preenchem a calculadora de precificação — nunca gravados automaticamente no produto. */
+  defaultProfitMarginPct?: number;
+  averageFailureRatePct?: number;
+  printerCostPerHour?: number;
+  energyCostPerHour?: number;
+  defaultMaterialCostPerGram?: number;
+};
+
+/** Custo extra nomeado e reutilizável (argola, ímã, embalagem...) — somado ad-hoc na calculadora de precificação. */
+export type AdditionalCost = {
+  id: string;
+  name: string;
+  value: number;
 };
 
 /** "Insumo" — raw material/supply consumed to produce pieces. */

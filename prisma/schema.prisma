@@ -251,4 +251,20 @@ model Settings {
    * Editable intro copy shown at the top of /personalizado.
    */
   customOrderIntroText    String?
+  /**
+   * Pré-preenchem a calculadora de precificação (/admin/precificacao) — nunca gravados
+   * automaticamente no produto, só servem de ponto de partida editável.
+   */
+  defaultProfitMarginPct     Float @default(30)
+  averageFailureRatePct      Float @default(5)
+  printerCostPerHour         Float @default(0)
+  energyCostPerHour          Float @default(0)
+  defaultMaterialCostPerGram Float @default(0)
+}
+
+/** Custo extra nomeado e reutilizável (argola, ímã, embalagem...) — somado ad-hoc na calculadora de precificação. */
+model AdditionalCost {
+  id    String @id @default(cuid())
+  name  String
+  value Float
 }

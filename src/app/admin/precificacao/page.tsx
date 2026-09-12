@@ -1,8 +1,11 @@
 import { getProduct } from "@/lib/demo-data";
 import { computeMaterialCost } from "@/server/repositories/product-material-usage-repository";
+import { getSettings } from "@/server/repositories/settings-repository";
+import { getAllAdditionalCosts } from "@/server/repositories/additional-cost-repository";
 import { PricingCalculator } from "@/components/admin/pricing-calculator";
 import { withReadFallback } from "@/lib/db-fallback";
-import { fallbackProductMaterialUsages, fallbackProducts } from "@/server/demo-fallback";
+import { fallbackAdditionalCosts, fallbackProductMaterialUsages, fallbackProducts } from "@/server/demo-fallback";
+import { DEFAULT_WHATSAPP_NUMBER } from "@/lib/site-config";
 
 export default async function AdminPricingPage({
   searchParams,
@@ -15,6 +18,14 @@ export default async function AdminPricingPage({
   let productName: string | undefined;
   let initialMaterialCost = 0;
   let initialLaborCost: number | undefined;
+
+  const [settings, additionalCosts] = await Promise.all([
+    withReadFallback(() => getSettings(), {
+      freeShippingThreshold: 299.9,
+      whatsappNumber: DEFAULT_WHATSAPP_NUMBER,
+    }),
+    withReadFallback(() => getAllAdditionalCosts(), fallbackAdditionalCosts),
+  ]);
 
   if (slug) {
     const product = await withReadFallback(
@@ -39,7 +50,13 @@ export default async function AdminPricingPage({
       <p className="mb-8 text-sm text-graphite">
         Ferramenta de apoio para sugerir um preço de venda. Os valores não são salvos no produto.
       </p>
-      <PricingCalculator productName={productName} initialMaterialCost={initialMaterialCost} initialLaborCost={initialLaborCost} />
+      <PricingCalculator
+        productName={productName}
+        initialMaterialCost={initialMaterialCost}
+        initialLaborCost={initialLaborCost}
+        defaults={settings}
+        additionalCosts={additionalCosts}
+      />
     </div>
   );
 }

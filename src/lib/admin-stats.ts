@@ -30,6 +30,24 @@ export function revenueByDay(orders: Order[], days: number): DayRevenue[] {
   return buckets;
 }
 
+export type RevenueSplit = { confirmed: number; pending: number };
+
+/**
+ * "Confirmado" = pagamento já aprovado (ou etapa posterior de produção/envio);
+ * "em aberto" = pedido recebido mas aguardando confirmação (Pix/boleto pendente,
+ * ou venda manual ainda não fechada). Pedidos cancelados não entram em nenhum dos dois.
+ */
+export function revenueSplit(orders: Order[]): RevenueSplit {
+  let confirmed = 0;
+  let pending = 0;
+  for (const order of orders) {
+    if (order.status === "Cancelado") continue;
+    if (order.status === "Pedido recebido") pending += order.total;
+    else confirmed += order.total;
+  }
+  return { confirmed: round2(confirmed), pending: round2(pending) };
+}
+
 export type PeriodComparison = { current: number; previous: number; pct: number | null };
 
 /** Revenue in the last `days` days vs. the `days` before that. `pct` is null when there's no baseline to compare against. */
