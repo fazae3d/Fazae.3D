@@ -188,7 +188,7 @@ export default async function AdminDashboardPage() {
 
       {showingFallbackData && (
         <div className="mb-6 border border-sand/50 bg-sand/10 px-4 py-3 text-xs text-sand">
-          Não foi possível conectar ao banco de dados agora — os números abaixo são dados de exemplo, não reais.
+          Não foi possível conectar ao banco de dados agora. Os números abaixo são dados de exemplo, não reais.
         </div>
       )}
 

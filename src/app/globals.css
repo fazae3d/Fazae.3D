@@ -84,6 +84,15 @@ body {
   --color-paper: #111111;
   --color-ink: #f4f4f0;
   --color-mist: #2f2f2f;
+  /* Without this, native form controls (select's own dropdown popup, date
+     pickers) keep rendering with the browser's light-mode chrome — white
+     background, dark text — regardless of our custom dark tokens above,
+     making <select> options unreadable once opened. */
+  color-scheme: dark;
+}
+
+[data-admin-theme="light"] {
+  color-scheme: light;
 }
 
 /*

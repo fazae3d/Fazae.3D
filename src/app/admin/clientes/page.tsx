@@ -92,10 +92,10 @@ export default async function AdminCustomersPage({
                     </Link>
                   </td>
                   <td className="px-4 py-3 text-graphite">{customer.phone}</td>
-                  <td className="px-4 py-3 text-graphite">{customer.email ?? "—"}</td>
+                  <td className="px-4 py-3 text-graphite">{customer.email ?? "Não informado"}</td>
                   <td className="px-4 py-3">
                     {customer.tags.length === 0 ? (
-                      <span className="text-graphite">—</span>
+                      <span className="text-graphite">Sem tags</span>
                     ) : (
                       <div className="flex flex-wrap gap-1.5">
                         {customer.tags.map((tag) => (

@@ -50,7 +50,7 @@ export default async function AdminFinancePage() {
     <div>
       <h1 className="font-display mb-2 text-2xl sm:text-3xl">Finanças</h1>
       <p className="mb-8 text-sm text-graphite">
-        Visão de custos, caixa e investimento — separada do dashboard de vendas para não misturar desempenho
+        Visão de custos, caixa e investimento, separada do dashboard de vendas para não misturar desempenho
         comercial com saúde financeira do negócio.
       </p>
 
@@ -72,7 +72,11 @@ export default async function AdminFinancePage() {
         <div className="border border-mist p-5">
           <p className="label-caps text-[11px] text-graphite">Payback do investimento</p>
           <p className="font-display mt-2 text-2xl">
-            {payback.paybackMonths !== null ? `${payback.paybackMonths} meses` : "—"}
+            {payback.paybackMonths !== null
+              ? `${payback.paybackMonths} meses`
+              : payback.totalInvested === 0
+                ? "Sem investimento"
+                : "Sem lucro ainda"}
           </p>
           <p className="mt-1 text-xs text-graphite">
             {formatPrice(payback.totalInvested)} investidos em equipamento · lucro médio de{" "}
@@ -93,7 +97,7 @@ export default async function AdminFinancePage() {
           <p className="font-display mt-2 text-2xl">{formatPrice(goal.targetMonthly)}/mês</p>
           <p className="mt-1 text-xs text-graphite">
             Partindo de {formatPrice(goal.baselineMonthly)}/mês
-            {goal.monthsOfData < 3 && " (ainda com pouco histórico — recalcula sozinho conforme os meses passam)"}
+            {goal.monthsOfData < 3 && " (ainda com pouco histórico, o cálculo melhora conforme os meses passam)"}
           </p>
           <p className="mt-2 text-xs text-graphite">
             Crescimento mensal necessário: <span className="text-petrol">{goal.requiredMonthlyGrowthPct}%</span>

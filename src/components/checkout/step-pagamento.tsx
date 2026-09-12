@@ -53,8 +53,9 @@ export function StepPagamento({
           className="text-petrol hover:underline"
         >
           cartão de teste do Mercado Pago
-        </a>{" "}
-        — nenhum pagamento real é processado. Total a pagar:{" "}
+        </a>
+        {". "}
+        Nenhum pagamento real é processado. Total a pagar:{" "}
         <span className="text-paper">{formatPrice(total)}</span>
       </p>
 

@@ -6,7 +6,7 @@ export function StepConfirmacao({ order, isGuest = false }: { order: Order; isGu
   const isApproved = order.status === "Pagamento aprovado";
   const paymentPhrase = isApproved
     ? "o pagamento foi aprovado (ambiente de testes)"
-    : "o pagamento está sendo confirmado (Pix/boleto, ambiente de testes) — você recebe um aviso assim que for aprovado";
+    : "o pagamento está sendo confirmado (Pix/boleto, ambiente de testes). Você recebe um aviso assim que for aprovado";
 
   return (
     <div className="flex flex-col items-center border border-paper/15 px-6 py-16 text-center">

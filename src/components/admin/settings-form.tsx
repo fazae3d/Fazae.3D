@@ -93,7 +93,7 @@ export function SettingsForm({ settings }: { settings: StoreSettings }) {
       <div className="border-t border-mist pt-6">
         <p className="label-caps mb-1 text-xs text-graphite">Configurações de precificação</p>
         <p className="mb-4 text-xs text-graphite">
-          Valores usados para pré-preencher a calculadora em Precificação — nunca são gravados automaticamente no
+          Valores usados para pré-preencher a calculadora em Precificação. Nunca são gravados automaticamente no
           produto.
         </p>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

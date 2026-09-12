@@ -213,7 +213,7 @@ export async function processCheckoutPaymentAction(
   const statusLine =
     orderStatus === "Pagamento aprovado"
       ? "<p>Seu pedido foi confirmado e o pagamento aprovado!</p>"
-      : "<p>Recebemos seu pedido — assim que o pagamento for confirmado (Pix/boleto), você recebe uma nova notificação.</p>";
+      : "<p>Recebemos seu pedido. Assim que o pagamento for confirmado (Pix/boleto), você recebe uma nova notificação.</p>";
   await sendEmail({
     to: email,
     subject: `Fazaê: pedido ${savedOrder.id} recebido`,

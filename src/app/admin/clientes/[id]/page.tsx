@@ -74,7 +74,7 @@ export default async function AdminCustomerDetailPage({ params }: { params: Prom
         </div>
         <div className="border border-mist p-5">
           <p className="label-caps text-[11px] text-graphite">E-mail</p>
-          <p className="mt-2 text-sm">{customer.email ?? "—"}</p>
+          <p className="mt-2 text-sm">{customer.email ?? "Não informado"}</p>
         </div>
         <div className="border border-mist p-5">
           <p className="label-caps text-[11px] text-graphite">Total gasto</p>
