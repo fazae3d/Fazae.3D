@@ -38,6 +38,11 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
           dangerouslySetInnerHTML={{ __html: JSON.stringify(ORGANIZATION_JSON_LD) }}
         />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(WEBSITE_JSON_LD) }} />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none fixed inset-0 bg-cover bg-center opacity-[0.15]"
+          style={{ backgroundImage: "url(/bg-texture.jpg)" }}
+        />
         <div className="flex min-h-full flex-col">
           <AnnouncementBar />
           <Header />

@@ -54,11 +54,6 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="pt-BR" className={`${exo2.variable} ${inter.variable} h-full antialiased`}>
       <body className="min-h-full">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none fixed inset-0 bg-cover bg-center opacity-[0.15]"
-          style={{ backgroundImage: "url(/bg-texture.jpg)" }}
-        />
         <SessionProvider session={session}>{children}</SessionProvider>
       </body>
     </html>

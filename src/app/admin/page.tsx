@@ -4,6 +4,7 @@ import { LOW_STOCK_THRESHOLD, isSoldOut } from "@/lib/badges";
 import { formatPrice } from "@/lib/format";
 import { round2 } from "@/lib/money";
 import {
+  channelBreakdown,
   paymentBreakdown,
   periodComparison,
   revenueByDay,
@@ -13,7 +14,7 @@ import {
 import { RevenueChart } from "@/components/admin/revenue-chart";
 import { getAllOrders } from "@/server/repositories/order-repository";
 import { getAllRawMaterials } from "@/server/repositories/raw-material-repository";
-import { withReadFallback } from "@/lib/db-fallback";
+import { readWithStatus } from "@/lib/db-fallback";
 import { fallbackCategories, fallbackOrders, fallbackProducts, fallbackRawMaterials } from "@/server/demo-fallback";
 
 const REVENUE_WINDOW_DAYS = 14;
@@ -61,12 +62,19 @@ function StatTile({
 }
 
 export default async function AdminDashboardPage() {
-  const [products, categories, orders, rawMaterials] = await Promise.all([
-    withReadFallback(() => getAllProducts(), fallbackProducts),
-    withReadFallback(() => getAllCategories(), fallbackCategories),
-    withReadFallback(() => getAllOrders(), fallbackOrders),
-    withReadFallback(() => getAllRawMaterials(), fallbackRawMaterials),
+  const [productsResult, categoriesResult, ordersResult, rawMaterialsResult] = await Promise.all([
+    readWithStatus(() => getAllProducts(), fallbackProducts),
+    readWithStatus(() => getAllCategories(), fallbackCategories),
+    readWithStatus(() => getAllOrders(), fallbackOrders),
+    readWithStatus(() => getAllRawMaterials(), fallbackRawMaterials),
   ]);
+  const products = productsResult.data;
+  const categories = categoriesResult.data;
+  const orders = ordersResult.data;
+  const rawMaterials = rawMaterialsResult.data;
+  const showingFallbackData = [productsResult, categoriesResult, ordersResult, rawMaterialsResult].some(
+    (r) => r.usedFallback,
+  );
 
   const revenue = round2(orders.reduce((sum, o) => sum + o.total, 0));
   const averageTicket = orders.length > 0 ? round2(revenue / orders.length) : 0;
@@ -96,13 +104,21 @@ export default async function AdminDashboardPage() {
   const chartData = revenueByDay(orders, REVENUE_WINDOW_DAYS);
   const bestSellers = topProducts(orders, 5);
   const payments = paymentBreakdown(orders);
+  const channels = channelBreakdown(orders);
   const statuses = statusBreakdown(orders);
   const maxStatusCount = Math.max(1, ...statuses.map((s) => s.count));
   const maxPaymentRevenue = Math.max(1, ...payments.map((p) => p.revenue));
+  const maxChannelRevenue = Math.max(1, ...channels.map((c) => c.revenue));
 
   return (
     <div>
       <h1 className="font-display mb-8 text-2xl sm:text-3xl">Dashboard</h1>
+
+      {showingFallbackData && (
+        <div className="mb-6 border border-sand/50 bg-sand/10 px-4 py-3 text-xs text-sand">
+          Não foi possível conectar ao banco de dados agora — os números abaixo são dados de exemplo, não reais.
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         <StatTile
@@ -157,7 +173,7 @@ export default async function AdminDashboardPage() {
         </div>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="border border-mist p-5">
           <p className="label-caps mb-4 text-[11px] text-graphite">Mais vendidos</p>
           {bestSellers.length === 0 ? (
@@ -208,6 +224,38 @@ export default async function AdminDashboardPage() {
               ))}
             </ul>
           )}
+        </div>
+
+        <div className="border border-mist p-5">
+          <p className="label-caps mb-4 text-[11px] text-graphite">Vendas por canal</p>
+          {orders.length === 0 ? (
+            <p className="text-xs text-graphite">Nenhum pedido registrado ainda.</p>
+          ) : (
+            <ul className="space-y-3">
+              {channels.map((c) => (
+                <li key={c.channel}>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-ink">{c.label}</span>
+                    <span className="text-graphite">
+                      {c.count} pedido(s) · {formatPrice(c.revenue)}
+                    </span>
+                  </div>
+                  <div className="mt-1 h-1 w-full bg-mist">
+                    <div
+                      className="h-1 bg-petrol"
+                      style={{ width: `${(c.revenue / maxChannelRevenue) * 100}%` }}
+                    />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+          <Link
+            href="/admin/vendas/nova"
+            className="label-caps mt-4 inline-block text-[11px] text-petrol hover:underline"
+          >
+            Lançar venda manual →
+          </Link>
         </div>
       </div>
 

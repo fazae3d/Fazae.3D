@@ -74,6 +74,19 @@ body {
 }
 
 /*
+ * Admin panel theme toggle — scoped to its own subtree (not the storefront,
+ * which stays dark-first/brand-only). Light is the default, matching the
+ * ink-on-paper tokens as declared in :root; dark re-maps the same
+ * bg-paper/text-ink/border-mist utility classes already used throughout
+ * every admin page/component, so no per-component changes were needed.
+ */
+[data-admin-theme="dark"] {
+  --color-paper: #111111;
+  --color-ink: #f4f4f0;
+  --color-mist: #2f2f2f;
+}
+
+/*
  * Without this, some mobile browsers wait ~300ms after a tap on interactive
  * elements to rule out a double-tap-to-zoom gesture before firing the click —
  * on a flaky connection or mid-hydration that delay can make a tap feel like
