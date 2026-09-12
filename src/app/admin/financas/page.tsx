@@ -23,7 +23,7 @@ function KpiCard({
   sublabel?: string;
   tone?: "positive" | "negative" | "neutral";
 }) {
-  const valueColor = tone === "positive" ? "text-petrol" : tone === "negative" ? "text-red-500" : "text-paper";
+  const valueColor = tone === "positive" ? "text-petrol" : tone === "negative" ? "text-red-500" : "text-ink";
   return (
     <div className="border border-mist p-5">
       <p className="label-caps text-[11px] text-graphite">{label}</p>
@@ -134,7 +134,7 @@ export default async function AdminFinancePage() {
                 <td className={`px-4 py-2.5 ${month.net >= 0 ? "text-petrol" : "text-red-500"}`}>
                   {formatPrice(month.net)}
                 </td>
-                <td className={`px-4 py-2.5 font-medium ${month.cumulative >= 0 ? "text-paper" : "text-red-500"}`}>
+                <td className={`px-4 py-2.5 font-medium ${month.cumulative >= 0 ? "text-ink" : "text-red-500"}`}>
                   {formatPrice(month.cumulative)}
                 </td>
               </tr>
@@ -150,7 +150,7 @@ export default async function AdminFinancePage() {
             {categoryBreakdown.map((c) => (
               <li key={c.category}>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-paper">{c.label}</span>
+                  <span className="text-ink">{c.label}</span>
                   <span className="text-graphite">{formatPrice(c.total)}</span>
                 </div>
                 <div className="mt-1 h-1 w-full bg-mist">

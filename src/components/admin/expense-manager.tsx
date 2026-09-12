@@ -167,7 +167,7 @@ export function ExpenseManager({ expenses }: { expenses: Expense[] }) {
           {expenses.map((expense) => (
             <li key={expense.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
               <div className="min-w-0">
-                <p className="truncate text-paper">{expense.description}</p>
+                <p className="truncate text-ink">{expense.description}</p>
                 <p className="text-xs text-graphite">
                   {CATEGORY_OPTIONS.find((c) => c.value === expense.category)?.label} ·{" "}
                   {new Date(expense.purchaseDate).toLocaleDateString("pt-BR", { timeZone: "UTC" })}
