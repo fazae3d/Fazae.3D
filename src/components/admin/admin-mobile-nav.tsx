@@ -3,11 +3,34 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { NAV_LINKS } from "./admin-nav";
+import { NAV_GROUPS } from "./admin-nav";
+
+function isLinkActive(pathname: string, href: string) {
+  return href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
+}
+
+function ChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`h-3.5 w-3.5 shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+    >
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
 
 export function AdminMobileNav() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [openGroups, setOpenGroups] = useState<string[]>(() =>
+    NAV_GROUPS.filter((g) => g.links.some((l) => isLinkActive(pathname, l.href))).map((g) => g.label),
+  );
 
   useEffect(() => {
     document.documentElement.style.overflow = open ? "hidden" : "";
@@ -15,6 +38,10 @@ export function AdminMobileNav() {
       document.documentElement.style.overflow = "";
     };
   }, [open]);
+
+  const toggleGroup = (label: string) => {
+    setOpenGroups((prev) => (prev.includes(label) ? prev.filter((g) => g !== label) : [...prev, label]));
+  };
 
   return (
     <>
@@ -60,19 +87,58 @@ export function AdminMobileNav() {
           </button>
         </div>
         <nav className="flex flex-col gap-1 p-4">
-          {NAV_LINKS.map((link) => {
-            const active = link.href === "/admin" ? pathname === "/admin" : pathname.startsWith(link.href);
+          {NAV_GROUPS.map((group) => {
+            if (group.links.length === 0) {
+              const active = isLinkActive(pathname, group.href!);
+              return (
+                <Link
+                  key={group.label}
+                  href={group.href!}
+                  onClick={() => setOpen(false)}
+                  className={`label-caps px-3 py-2.5 text-xs transition-colors ${
+                    active ? "bg-ink text-paper" : "text-graphite hover:bg-mist/60 hover:text-ink"
+                  }`}
+                >
+                  {group.label}
+                </Link>
+              );
+            }
+
+            const groupOpen = openGroups.includes(group.label);
+            const groupActive = group.links.some((l) => isLinkActive(pathname, l.href));
+
             return (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => setOpen(false)}
-                className={`label-caps px-3 py-2.5 text-xs transition-colors ${
-                  active ? "bg-ink text-paper" : "text-graphite hover:bg-mist/60 hover:text-ink"
-                }`}
-              >
-                {link.label}
-              </Link>
+              <div key={group.label}>
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(group.label)}
+                  className={`label-caps flex w-full items-center justify-between px-3 py-2.5 text-xs transition-colors ${
+                    groupActive && !groupOpen ? "text-ink" : "text-graphite hover:text-ink"
+                  }`}
+                >
+                  {group.label}
+                  <ChevronIcon open={groupOpen} />
+                </button>
+                {groupOpen && (
+                  <div className="ml-3 flex flex-col gap-1 border-l border-mist pl-3">
+                    {group.links.map((link) => {
+                      const active = isLinkActive(pathname, link.href);
+                      return (
+                        <Link
+                          key={link.href}
+                          href={link.href}
+                          onClick={() => setOpen(false)}
+                          className={`label-caps px-3 py-2 text-xs transition-colors ${
+                            active ? "bg-ink text-paper" : "text-graphite hover:bg-mist/60 hover:text-ink"
+                          }`}
+                        >
+                          {link.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             );
           })}
         </nav>

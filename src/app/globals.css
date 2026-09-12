@@ -27,6 +27,16 @@
 
   --background: var(--color-ink);
   --foreground: var(--color-paper);
+
+  /*
+   * The site is dark-first end to end, but without this, native form
+   * controls (select's own dropdown popup, date/time pickers, checkboxes)
+   * ignore all of the above and render with the browser's light-mode
+   * chrome regardless — white popup, black text — clashing with the dark
+   * page around it. The admin panel's own light/dark toggle re-declares
+   * this locally (see [data-admin-theme] below) to override it per-mode.
+   */
+  color-scheme: dark;
 }
 
 @theme inline {
