@@ -44,6 +44,10 @@ export type Product = {
   scaleOptions: string[];
   weightGrams?: number;
   dimensions?: string;
+  /** Dimensões da caixa de envio (cm) — usadas na cotação de frete, distintas de `dimensions`. */
+  packageWidthCm?: number;
+  packageHeightCm?: number;
+  packageLengthCm?: number;
   /** Only shown/used when type is "sob_encomenda". */
   estimatedProductionDays?: number;
   isNew?: boolean;

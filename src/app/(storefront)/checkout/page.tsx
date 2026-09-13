@@ -8,12 +8,11 @@ import { CheckoutStepsNav, type CheckoutStep } from "@/components/checkout/check
 import { OrderSummarySidebar } from "@/components/checkout/order-summary-sidebar";
 import { StepIdentificacao } from "@/components/checkout/step-identificacao";
 import { StepEndereco } from "@/components/checkout/step-endereco";
-import { StepEntrega, type ShippingOption } from "@/components/checkout/step-entrega";
+import { StepEntrega, shippingOptionKey, type ShippingOption } from "@/components/checkout/step-entrega";
 import { StepPagamento } from "@/components/checkout/step-pagamento";
 import { StepConfirmacao } from "@/components/checkout/step-confirmacao";
 import { useCart } from "@/contexts/cart-context";
 import { useStoreSettings } from "@/hooks/use-store-settings";
-import { computeShippingCost } from "@/lib/shipping";
 import type { AddressInput } from "@/lib/validation";
 import type { Order } from "@/server/types";
 
@@ -29,15 +28,13 @@ export default function CheckoutPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [orderError, setOrderError] = useState<string | null>(null);
 
-  // Recomputed live (not just captured once on the "entrega" step) so a coupon
+  // Re-applied live (not just captured once on the "entrega" step) so a coupon
   // applied or removed afterward — the coupon form stays reachable from every
   // step's sidebar — is reflected immediately, instead of the displayed total
   // silently drifting from what processCheckoutPaymentAction ends up charging.
-  const shippingCost = shipping
-    ? freeShippingFromCoupon
-      ? 0
-      : computeShippingCost(shipping.key, subtotal, settings.freeShippingThreshold)
-    : null;
+  // `shipping.cost` itself is always the true quoted/flat price (never
+  // pre-zeroed), so this is the only place the coupon override is applied.
+  const shippingCost = shipping ? (freeShippingFromCoupon ? 0 : shipping.cost) : null;
 
   const checkoutInput = address && shipping
     ? {
@@ -48,7 +45,10 @@ export default function CheckoutPage() {
           quantity: l.quantity,
         })),
         address,
-        shippingMethod: shipping.key,
+        shipping:
+          shipping.kind === "quote"
+            ? { kind: "quote" as const, serviceId: shipping.serviceId }
+            : { kind: "flat" as const, method: shipping.key },
         couponCode: coupon?.code,
         guestEmail: guestEmail ?? undefined,
       }
@@ -97,11 +97,13 @@ export default function CheckoutPage() {
                 onBack={() => setStep("identificacao")}
               />
             )}
-            {step === "entrega" && (
+            {step === "entrega" && address && (
               <StepEntrega
                 subtotal={subtotal}
                 freeShippingThreshold={settings.freeShippingThreshold}
-                initial={shipping?.key}
+                destinationCep={address.zip}
+                items={lines.map((l) => ({ productSlug: l.productSlug, quantity: l.quantity }))}
+                initial={shipping ? shippingOptionKey(shipping) : undefined}
                 freeOverride={freeShippingFromCoupon}
                 onSelect={setShipping}
                 onNext={(option) => {

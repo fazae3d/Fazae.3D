@@ -107,6 +107,8 @@ export type StoreSettings = {
   whatsappNumber: string;
   whatsappMessageTemplate?: string;
   customOrderIntroText?: string;
+  /** CEP de onde a loja envia — usado como origem na cotação de frete real (Melhor Envio). */
+  originCep?: string;
   /** Pré-preenchem a calculadora de precificação — nunca gravados automaticamente no produto. */
   defaultProfitMarginPct?: number;
   averageFailureRatePct?: number;

@@ -79,6 +79,9 @@ export function ProductForm({
           scaleOptions: product.scaleOptions,
           weightGrams: product.weightGrams ?? "",
           dimensions: product.dimensions ?? "",
+          packageWidthCm: product.packageWidthCm ?? "",
+          packageHeightCm: product.packageHeightCm ?? "",
+          packageLengthCm: product.packageLengthCm ?? "",
           estimatedProductionDays: product.estimatedProductionDays ?? "",
           description: product.description,
           tagsRaw: product.tags.join(", "),
@@ -348,6 +351,52 @@ export function ProductForm({
             />
           </div>
         )}
+      </div>
+
+      <div>
+        <p className={labelClass() + " mb-1.5"}>Dimensões da embalagem (cm, opcional)</p>
+        <p className="mb-2 text-xs text-graphite">
+          Tamanho da caixa/pacote de envio — usado para cotar o frete real (Melhor Envio). Diferente do campo
+          &quot;Dimensões&quot; acima, que é a medida da peça mostrada ao cliente.
+        </p>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="flex flex-col gap-1.5">
+            <label className={labelClass()} htmlFor="packageWidthCm">
+              Largura
+            </label>
+            <input
+              id="packageWidthCm"
+              type="number"
+              step="0.1"
+              className={inputClass()}
+              {...register("packageWidthCm", { setValueAs: (v) => (v === "" ? "" : Number(v)) })}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className={labelClass()} htmlFor="packageHeightCm">
+              Altura
+            </label>
+            <input
+              id="packageHeightCm"
+              type="number"
+              step="0.1"
+              className={inputClass()}
+              {...register("packageHeightCm", { setValueAs: (v) => (v === "" ? "" : Number(v)) })}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className={labelClass()} htmlFor="packageLengthCm">
+              Comprimento
+            </label>
+            <input
+              id="packageLengthCm"
+              type="number"
+              step="0.1"
+              className={inputClass()}
+              {...register("packageLengthCm", { setValueAs: (v) => (v === "" ? "" : Number(v)) })}
+            />
+          </div>
+        </div>
       </div>
 
       <div>

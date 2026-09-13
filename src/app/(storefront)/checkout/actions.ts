@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { getProduct } from "@/lib/demo-data";
 import { addressSchema } from "@/lib/validation";
 import { computeShippingCost } from "@/lib/shipping";
+import { calculateShipping } from "@/lib/melhor-envio";
 import { computeCouponDiscount } from "@/lib/coupons";
 import { round2 } from "@/lib/money";
 import { addOrder, generateOrderId } from "@/server/repositories/order-repository";
@@ -30,10 +31,15 @@ const checkoutItemSchema = z.object({
   quantity: z.number().int().min(1),
 });
 
+const shippingChoiceSchema = z.union([
+  z.object({ kind: z.literal("quote"), serviceId: z.number() }),
+  z.object({ kind: z.literal("flat"), method: z.enum(["padrao", "expressa"]) }),
+]);
+
 const checkoutInputSchema = z.object({
   items: z.array(checkoutItemSchema).min(1),
   address: addressSchema,
-  shippingMethod: z.enum(["padrao", "expressa"]),
+  shipping: shippingChoiceSchema,
   couponCode: z.string().optional(),
   guestEmail: z.string().email().optional(),
 });
@@ -70,7 +76,7 @@ export async function processCheckoutPaymentAction(
   if (!brickFormData || typeof brickFormData !== "object") {
     return { success: false, error: "Dados de pagamento inválidos." };
   }
-  const { items, address, shippingMethod, couponCode, guestEmail } = parsed.data;
+  const { items, address, shipping: shippingChoice, couponCode, guestEmail } = parsed.data;
 
   // Guests can check out with just an e-mail — no account required. When a
   // session exists it always wins, so a logged-in user can't be spoofed
@@ -150,11 +156,45 @@ export async function processCheckoutPaymentAction(
     }
   }
 
-  const { freeShippingThreshold } = await withReadFallback(
+  const { freeShippingThreshold, originCep } = await withReadFallback(
     () => getSettings(),
     { freeShippingThreshold: 299.9, whatsappNumber: DEFAULT_WHATSAPP_NUMBER },
   );
-  const shipping = freeShippingFromCoupon ? 0 : computeShippingCost(shippingMethod, subtotal, freeShippingThreshold);
+
+  // Never trust the price the client echoes back — only which service it
+  // picked. A flat method is recomputed from the (subtotal, threshold) pure
+  // function as before; a live quote is re-fetched from Melhor Envio and
+  // only that service's own returned price is used.
+  let shipping = 0;
+  if (!freeShippingFromCoupon) {
+    if (shippingChoice.kind === "flat") {
+      shipping = computeShippingCost(shippingChoice.method, subtotal, freeShippingThreshold);
+    } else if (!originCep) {
+      return { success: false, error: "Frete indisponível no momento. Volte e escolha a entrega novamente." };
+    } else {
+      const quoteResult = await calculateShipping({
+        originCep,
+        destinationCep: address.zip,
+        items: items.map((line) => {
+          const product = productsBySlug.get(line.productSlug);
+          return {
+            id: line.productSlug,
+            weightGrams: product?.weightGrams ?? null,
+            widthCm: product?.packageWidthCm ?? null,
+            heightCm: product?.packageHeightCm ?? null,
+            lengthCm: product?.packageLengthCm ?? null,
+            unitPrice: product?.price ?? 0,
+            quantity: line.quantity,
+          };
+        }),
+      });
+      const quote = quoteResult.success ? quoteResult.quotes.find((q) => q.id === shippingChoice.serviceId) : undefined;
+      if (!quote) {
+        return { success: false, error: "Frete indisponível no momento. Volte e escolha a entrega novamente." };
+      }
+      shipping = quote.price;
+    }
+  }
   const total = round2(Math.max(0, subtotal - discount) + shipping);
 
   // Order id is generated up front (a pure/local helper, no DB write) so it

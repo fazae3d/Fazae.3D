@@ -108,6 +108,13 @@ model Product {
   weightGrams             Int?
   dimensions              String?
   /**
+   * Dimensões da caixa de envio (cm), usadas na cotação de frete — distintas
+   * de `dimensions` (medida da peça em si, mostrada ao cliente).
+   */
+  packageWidthCm          Float?
+  packageHeightCm         Float?
+  packageLengthCm         Float?
+  /**
    * Only shown/used when type is sob_encomenda.
    */
   estimatedProductionDays Int?
@@ -251,6 +258,10 @@ model Settings {
    * Editable intro copy shown at the top of /personalizado.
    */
   customOrderIntroText    String?
+  /**
+   * CEP de onde a loja envia — usado como origem na cotação de frete real (Melhor Envio).
+   */
+  originCep               String?
   /**
    * Pré-preenchem a calculadora de precificação (/admin/precificacao) — nunca gravados
    * automaticamente no produto, só servem de ponto de partida editável.

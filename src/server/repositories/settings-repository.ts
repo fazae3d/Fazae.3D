@@ -8,6 +8,7 @@ function toSettings(row: {
   whatsappNumber: string;
   whatsappMessageTemplate: string | null;
   customOrderIntroText: string | null;
+  originCep: string | null;
   defaultProfitMarginPct: number;
   averageFailureRatePct: number;
   printerCostPerHour: number;
@@ -19,6 +20,7 @@ function toSettings(row: {
     whatsappNumber: row.whatsappNumber,
     whatsappMessageTemplate: row.whatsappMessageTemplate ?? undefined,
     customOrderIntroText: row.customOrderIntroText ?? undefined,
+    originCep: row.originCep ?? undefined,
     defaultProfitMarginPct: row.defaultProfitMarginPct,
     averageFailureRatePct: row.averageFailureRatePct,
     printerCostPerHour: row.printerCostPerHour,

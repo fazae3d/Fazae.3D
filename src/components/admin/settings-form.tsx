@@ -24,6 +24,7 @@ export function SettingsForm({ settings }: { settings: StoreSettings }) {
   } = useForm<SettingsFormInput>({
     defaultValues: {
       ...settings,
+      originCep: settings.originCep ?? "",
       defaultProfitMarginPct: settings.defaultProfitMarginPct ?? 30,
       averageFailureRatePct: settings.averageFailureRatePct ?? 5,
       printerCostPerHour: settings.printerCostPerHour ?? 0,
@@ -38,6 +39,7 @@ export function SettingsForm({ settings }: { settings: StoreSettings }) {
     const result = await updateSettingsAction({
       freeShippingThreshold: Number(data.freeShippingThreshold),
       whatsappNumber: data.whatsappNumber.replace(/\D/g, ""),
+      originCep: data.originCep?.replace(/\D/g, "") ?? "",
       defaultProfitMarginPct: Number(data.defaultProfitMarginPct),
       averageFailureRatePct: Number(data.averageFailureRatePct),
       printerCostPerHour: Number(data.printerCostPerHour),
@@ -87,6 +89,24 @@ export function SettingsForm({ settings }: { settings: StoreSettings }) {
         <p className="text-xs text-graphite">
           Apenas números, com DDI e DDD (ex: 5584999999999). Usado no rodapé, na página de contato e no botão
           flutuante.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className={labelClass()} htmlFor="originCep">
+          CEP de origem (envio)
+        </label>
+        <input
+          id="originCep"
+          placeholder="00000000"
+          maxLength={9}
+          className={inputClass(Boolean(errors.originCep))}
+          {...register("originCep")}
+        />
+        {errors.originCep && <p className="text-xs text-red-600">{errors.originCep.message}</p>}
+        <p className="text-xs text-graphite">
+          CEP de onde a loja despacha os pedidos — usado para cotar o frete real (Melhor Envio) no checkout. Sem
+          isso preenchido, o checkout usa a tabela de frete fixa.
         </p>
       </div>
 

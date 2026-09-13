@@ -17,6 +17,9 @@ const settingsFormSchema = z.object({
   whatsappNumber: z
     .string()
     .regex(/^\d{10,15}$/, "Use apenas números, com DDI e DDD (ex: 5584999999999)."),
+  originCep: z
+    .union([z.string().regex(/^\d{8}$/, "CEP deve ter 8 números."), z.literal("")])
+    .optional(),
   defaultProfitMarginPct: z.number("Informe um valor válido.").min(0, "O valor não pode ser negativo."),
   averageFailureRatePct: z
     .number("Informe um valor válido.")
@@ -43,7 +46,10 @@ export async function updateSettingsAction(input: SettingsFormInput): Promise<Se
 
   // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco — hoje a escrita real falharia sem Supabase configurado.
   const result = await withMutationFallback(async () => {
-    const settings = await updateSettings(parsed.data);
+    const settings = await updateSettings({
+      ...parsed.data,
+      originCep: parsed.data.originCep ? parsed.data.originCep : undefined,
+    });
     return { success: true, settings } as SettingsMutationResult;
   });
   if (result.success) {

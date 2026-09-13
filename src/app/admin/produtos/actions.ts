@@ -40,6 +40,12 @@ function toStoredProduct(input: ProductFormInput): ProductInput {
     scaleOptions: input.scaleOptions ?? [],
     weightGrams: input.weightGrams === "" || input.weightGrams === undefined ? undefined : Number(input.weightGrams),
     dimensions: input.dimensions,
+    packageWidthCm:
+      input.packageWidthCm === "" || input.packageWidthCm === undefined ? undefined : Number(input.packageWidthCm),
+    packageHeightCm:
+      input.packageHeightCm === "" || input.packageHeightCm === undefined ? undefined : Number(input.packageHeightCm),
+    packageLengthCm:
+      input.packageLengthCm === "" || input.packageLengthCm === undefined ? undefined : Number(input.packageLengthCm),
     estimatedProductionDays:
       input.estimatedProductionDays === "" || input.estimatedProductionDays === undefined
         ? undefined
@@ -113,6 +119,9 @@ export async function updateProductAction(slug: string, input: ProductFormInput)
     scaleOptions: stored.scaleOptions,
     weightGrams: stored.weightGrams,
     dimensions: stored.dimensions,
+    packageWidthCm: stored.packageWidthCm,
+    packageHeightCm: stored.packageHeightCm,
+    packageLengthCm: stored.packageLengthCm,
     estimatedProductionDays: stored.estimatedProductionDays,
     description: stored.description,
     tags: stored.tags,

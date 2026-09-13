@@ -147,7 +147,9 @@ function ProntaEntregaPanel({ product, header }: { product: Product; header: Rea
         <p className="text-2xl text-petrol">Sob consulta</p>
       )}
 
-      {product.price !== undefined && <ShippingEstimate price={product.price} quantity={quantity} />}
+      {product.price !== undefined && (
+        <ShippingEstimate productSlug={product.slug} price={product.price} quantity={quantity} />
+      )}
 
       {product.materials.length > 0 && (
         <div>
