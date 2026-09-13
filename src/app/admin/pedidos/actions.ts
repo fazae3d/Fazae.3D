@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { ADMIN_AUTH_DISABLED } from "@/lib/dev-flags";
-import { updateOrderStatus, type UpdateOrderResult } from "@/server/repositories/order-repository";
+import {
+  deleteOrder,
+  updateOrderStatus,
+  type DeleteOrderResult,
+  type UpdateOrderResult,
+} from "@/server/repositories/order-repository";
 import type { OrderStatus } from "@/server/types";
 import { withMutationFallback } from "@/lib/db-fallback";
 
@@ -27,6 +32,19 @@ export async function updateOrderStatusAction(
     revalidatePath("/admin/pedidos");
     revalidatePath("/conta/pedidos");
     revalidatePath("/rastreamento");
+  }
+  return result;
+}
+
+export async function deleteOrderAction(id: string): Promise<DeleteOrderResult> {
+  if (!(await requireAdmin())) {
+    return { success: false, error: "Acesso restrito ao administrador." };
+  }
+  const result = await withMutationFallback(() => deleteOrder(id));
+  if (result.success) {
+    revalidatePath("/admin/pedidos");
+    revalidatePath("/admin/financas");
+    revalidatePath("/admin/producao");
   }
   return result;
 }

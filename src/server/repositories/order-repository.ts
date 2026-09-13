@@ -156,6 +156,15 @@ export async function updateOrderProduction(
   return { success: true, order: toOrder(updated) };
 }
 
+export type DeleteOrderResult = { success: true } | { success: false; error: string };
+
+export async function deleteOrder(id: string): Promise<DeleteOrderResult> {
+  const existing = await db.order.findUnique({ where: { id } });
+  if (!existing) return { success: false, error: "Pedido não encontrado." };
+  await db.order.delete({ where: { id } });
+  return { success: true };
+}
+
 export function generateOrderId() {
   const random = Math.floor(100000 + Math.random() * 900000);
   return `FAZ-${random}`;

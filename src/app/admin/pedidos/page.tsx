@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getAllOrders } from "@/server/repositories/order-repository";
 import { OrderStatusForm } from "@/components/admin/order-status-form";
+import { DeleteOrderButton } from "@/components/admin/delete-order-button";
 import { formatPrice } from "@/lib/format";
 import type { Order, OrderStatus } from "@/server/types";
 import { withReadFallback } from "@/lib/db-fallback";
@@ -172,7 +173,10 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
                     {order.userEmail ?? order.customerName ?? "Cliente não identificado"} · {formatDate(order.createdAt)}
                   </p>
                 </div>
-                <p className="text-sm font-medium">{formatPrice(order.total)}</p>
+                <div className="flex items-center gap-3">
+                  <p className="text-sm font-medium">{formatPrice(order.total)}</p>
+                  <DeleteOrderButton id={order.id} />
+                </div>
               </div>
 
               <ul className="divide-y divide-mist py-3">
