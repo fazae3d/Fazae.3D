@@ -7,6 +7,7 @@ import { formatPrice } from "@/lib/format";
 import type { Order } from "@/server/types";
 
 const publicKey = process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY;
+const isTestMode = publicKey?.startsWith("TEST-") ?? false;
 let mpInitialized = false;
 
 export function StepPagamento({
@@ -45,18 +46,22 @@ export function StepPagamento({
       <p className="label-caps text-xs text-graphite">Forma de pagamento</p>
 
       <p className="text-sm text-graphite">
-        Ambiente de testes: use um{" "}
-        <a
-          href="https://www.mercadopago.com.br/developers/pt/docs/checkout-api/additional-content/your-integrations/test/cards"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-petrol hover:underline"
-        >
-          cartão de teste do Mercado Pago
-        </a>
-        {". "}
-        Nenhum pagamento real é processado. Total a pagar:{" "}
-        <span className="text-paper">{formatPrice(total)}</span>
+        {isTestMode ? (
+          <>
+            Ambiente de testes: use um{" "}
+            <a
+              href="https://www.mercadopago.com.br/developers/pt/docs/checkout-api/additional-content/your-integrations/test/cards"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-petrol hover:underline"
+            >
+              cartão de teste do Mercado Pago
+            </a>
+            {". "}
+            Nenhum pagamento real é processado.{" "}
+          </>
+        ) : null}
+        Total a pagar: <span className="text-paper">{formatPrice(total)}</span>
       </p>
 
       {brickError && <p className="text-sm text-red-600">{brickError}</p>}

@@ -1,3 +1,11 @@
+/**
+ * The Payment Brick's public key is a NEXT_PUBLIC_ var, so it's safe to read
+ * client-side here to tell test (TEST-) credentials apart from live
+ * (APP_USR-) ones — showing a "sandbox" disclaimer during a real charge
+ * would be actively misleading, not just inaccurate copy.
+ */
+const isTestMode = process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY?.startsWith("TEST-") ?? false;
+
 export function TrustBadges() {
   return (
     <div className="mt-4 space-y-2.5 border-t border-mist pt-4 text-[11px] text-graphite">
@@ -13,7 +21,7 @@ export function TrustBadges() {
           <path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z" />
           <path d="M9.5 12l1.8 1.8L15 10.2" />
         </svg>
-        <span>Pix, cartão e boleto no ambiente sandbox de testes</span>
+        <span>{isTestMode ? "Pix, cartão e boleto no ambiente sandbox de testes" : "Pagamento via Pix, cartão ou boleto processado pelo Mercado Pago"}</span>
       </div>
       <div className="flex items-center gap-2">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-petrol">
