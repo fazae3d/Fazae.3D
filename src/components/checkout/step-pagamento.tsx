@@ -71,6 +71,23 @@ export function StepPagamento({
         initialization={{ amount: total, payer: { email: payerEmail } }}
         customization={{
           paymentMethods: { creditCard: "all", debitCard: "all", ticket: "all", bankTransfer: "all" },
+          visual: {
+            style: {
+              theme: "dark",
+              // Matches the storefront's own dark palette (globals.css) instead
+              // of the Brick's default light/white card, which read as a
+              // jarring blank-white panel against the rest of the checkout.
+              customVariables: {
+                formBackgroundColor: "#242424", // --color-mist
+                inputBackgroundColor: "#1a1a1a",
+                baseColor: "#b6ff00", // --color-petrol
+                buttonTextColor: "#111111", // --color-ink
+                textPrimaryColor: "#f4f4f0", // --color-paper
+                textSecondaryColor: "#a6a6a0", // --color-graphite
+                outlinePrimaryColor: "#b6ff00",
+              },
+            },
+          },
         }}
         onSubmit={async ({ formData }) => {
           setBrickError(null);
