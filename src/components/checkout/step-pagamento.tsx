@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { initMercadoPago, Payment } from "@mercadopago/sdk-react";
-import { processCheckoutPaymentAction } from "@/app/(storefront)/checkout/actions";
+import { processCheckoutPaymentAction, type PendingPaymentInstructions } from "@/app/(storefront)/checkout/actions";
 import { formatPrice } from "@/lib/format";
 import type { Order } from "@/server/types";
 
@@ -22,7 +22,7 @@ export function StepPagamento({
   /** Shape expected by processCheckoutPaymentAction's first argument — items/address/shippingMethod/couponCode/guestEmail. */
   checkoutInput: unknown;
   payerEmail: string;
-  onSuccess: (order: Order) => void;
+  onSuccess: (order: Order, paymentInstructions?: PendingPaymentInstructions) => void;
   onError: (message: string) => void;
   onBack: () => void;
 }) {
@@ -99,7 +99,7 @@ export function StepPagamento({
             // Rejecting keeps the Brick's own submit button usable for a retry.
             throw new Error(result.error);
           }
-          onSuccess(result.order);
+          onSuccess(result.order, result.paymentInstructions);
         }}
         onError={(error) => {
           console.error("[mercadopago brick]", error);

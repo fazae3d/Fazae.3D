@@ -44,7 +44,12 @@ const checkoutInputSchema = z.object({
   guestEmail: z.string().email().optional(),
 });
 
-export type CreateOrderResult = { success: true; order: Order } | { success: false; error: string };
+/** What the customer still needs to actually pay — present only for Pix/boleto, never for an already-approved card payment. */
+export type PendingPaymentInstructions = { qrCode?: string; qrCodeBase64?: string; ticketUrl?: string };
+
+export type CreateOrderResult =
+  | { success: true; order: Order; paymentInstructions?: PendingPaymentInstructions }
+  | { success: false; error: string };
 
 /** A payment left "pending"/"in_process" by Mercado Pago (Pix, boleto, some cards) isn't a failure — the order is still created, awaiting the webhook to confirm it. */
 function statusForPayment(paymentStatus: string): OrderStatus {
@@ -260,5 +265,16 @@ export async function processCheckoutPaymentAction(
     html: `${statusLine}<ul>${itemsHtml}</ul><p><strong>Total: ${formatPrice(total)}</strong></p><p>Acompanhe o status em ${SITE_URL}/conta/pedidos</p>`,
   });
 
-  return { success: true, order: savedOrder };
+  return {
+    success: true,
+    order: savedOrder,
+    paymentInstructions:
+      orderStatus === "Pagamento aprovado"
+        ? undefined
+        : {
+            qrCode: paymentResult.qrCode,
+            qrCodeBase64: paymentResult.qrCodeBase64,
+            ticketUrl: paymentResult.ticketUrl,
+          },
+  };
 }

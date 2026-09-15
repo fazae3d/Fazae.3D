@@ -12,9 +12,17 @@ import { TrustBadges } from "./trust-badges";
 export function OrderSummarySidebar({
   lines,
   shipping,
+  lockCoupon = false,
 }: {
   lines: CartLine[];
   shipping: number | null;
+  /**
+   * Freezes the coupon form (no apply/remove) once the payment Brick is
+   * mounted — changing `total` there forces the Brick to remount (that's
+   * MP's own documented way to update the amount), and doing that while
+   * the customer is mid-payment left two Brick instances stacked on screen.
+   */
+  lockCoupon?: boolean;
 }) {
   const { subtotal, discount, coupon, applyCoupon, removeCoupon, getCartProduct } = useCart();
   const [code, setCode] = useState("");
@@ -73,15 +81,17 @@ export function OrderSummarySidebar({
           <span className="text-petrol">
             Cupom <strong>{coupon.code}</strong> aplicado
           </span>
-          <button
-            type="button"
-            onClick={removeCoupon}
-            className="label-caps text-graphite hover:text-petrol hover:underline"
-          >
-            Remover
-          </button>
+          {!lockCoupon && (
+            <button
+              type="button"
+              onClick={removeCoupon}
+              className="label-caps text-graphite hover:text-petrol hover:underline"
+            >
+              Remover
+            </button>
+          )}
         </div>
-      ) : (
+      ) : lockCoupon ? null : (
         <div className="mt-4 border-t border-paper/15 pt-4">
           <div className="flex gap-2">
             <input

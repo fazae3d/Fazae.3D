@@ -5,7 +5,18 @@ const client = process.env.MERCADOPAGO_ACCESS_TOKEN
   : null;
 
 export type MercadoPagoPaymentResult =
-  | { success: true; id: string; status: string; statusDetail: string; paymentTypeId: string }
+  | {
+      success: true;
+      id: string;
+      status: string;
+      statusDetail: string;
+      paymentTypeId: string;
+      /** Present for Pix — the customer still needs to actually scan/pay this to complete the purchase. */
+      qrCode?: string;
+      qrCodeBase64?: string;
+      /** Present for boleto — printable voucher link the customer needs to pay. */
+      ticketUrl?: string;
+    }
   | { success: false; error: string };
 
 /**
@@ -52,12 +63,16 @@ export async function createMercadoPagoPayment({
       return { success: false, error: "Resposta inesperada do Mercado Pago." };
     }
 
+    const transactionData = result.point_of_interaction?.transaction_data;
     return {
       success: true,
       id: String(result.id),
       status: result.status,
       statusDetail: result.status_detail ?? "",
       paymentTypeId: result.payment_type_id ?? "",
+      qrCode: transactionData?.qr_code,
+      qrCodeBase64: transactionData?.qr_code_base64,
+      ticketUrl: transactionData?.ticket_url,
     };
   } catch (error) {
     console.error("[mercadopago] falha ao criar pagamento", error);

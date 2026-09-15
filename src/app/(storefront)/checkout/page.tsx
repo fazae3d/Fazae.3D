@@ -15,6 +15,7 @@ import { useCart } from "@/contexts/cart-context";
 import { useStoreSettings } from "@/hooks/use-store-settings";
 import type { AddressInput } from "@/lib/validation";
 import type { Order } from "@/server/types";
+import type { PendingPaymentInstructions } from "@/app/(storefront)/checkout/actions";
 
 export default function CheckoutPage() {
   const { lines, subtotal, coupon, discount, freeShippingFromCoupon, clearCart } = useCart();
@@ -26,6 +27,7 @@ export default function CheckoutPage() {
   const [address, setAddress] = useState<AddressInput | null>(null);
   const [shipping, setShipping] = useState<ShippingOption | null>(null);
   const [order, setOrder] = useState<Order | null>(null);
+  const [paymentInstructions, setPaymentInstructions] = useState<PendingPaymentInstructions | undefined>(undefined);
   const [orderError, setOrderError] = useState<string | null>(null);
 
   // Re-applied live (not just captured once on the "entrega" step) so a coupon
@@ -74,7 +76,7 @@ export default function CheckoutPage() {
       <CheckoutStepsNav current={step} />
 
       {step === "confirmacao" && order ? (
-        <StepConfirmacao order={order} isGuest={!session} />
+        <StepConfirmacao order={order} isGuest={!session} paymentInstructions={paymentInstructions} />
       ) : (
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-3">
           <div className="lg:col-span-2">
@@ -120,9 +122,10 @@ export default function CheckoutPage() {
                   total={Math.max(0, subtotal - discount) + (shippingCost ?? 0)}
                   checkoutInput={checkoutInput}
                   payerEmail={session?.user?.email ?? guestEmail ?? ""}
-                  onSuccess={(paidOrder) => {
+                  onSuccess={(paidOrder, instructions) => {
                     clearCart();
                     setOrder(paidOrder);
+                    setPaymentInstructions(instructions);
                     setStep("confirmacao");
                   }}
                   onError={setOrderError}
@@ -131,7 +134,7 @@ export default function CheckoutPage() {
               </>
             )}
           </div>
-          <OrderSummarySidebar lines={lines} shipping={shippingCost} />
+          <OrderSummarySidebar lines={lines} shipping={shippingCost} lockCoupon={step === "pagamento"} />
         </div>
       )}
     </div>
