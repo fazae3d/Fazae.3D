@@ -58,8 +58,8 @@ export function seedCategories(): Category[] {
     },
     {
       slug: "casa-decor",
-      name: "Casa & Decor",
-      description: "Vasos, organizadores e objetos que combinam forma e função.",
+      name: "Chaveiros",
+      description: "Chaveiros personalizados e decorativos para levar sua criatividade com você.",
     },
     {
       slug: "utilidades",

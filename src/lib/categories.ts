@@ -22,8 +22,8 @@ export const CATEGORIES: CategoryDef[] = [
   },
   {
     slug: "casa-decor",
-    label: "Casa & Decor",
-    description: "Vasos, organizadores e objetos que combinam forma e função.",
+    label: "Chaveiros",
+    description: "Chaveiros personalizados e decorativos para levar sua criatividade com você.",
   },
   {
     slug: "utilidades",
