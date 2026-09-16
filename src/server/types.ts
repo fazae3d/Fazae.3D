@@ -181,3 +181,17 @@ export type Customer = {
 
 /** Customer plus aggregates computed in one pass over Order — avoids N+1 queries on the list page. */
 export type CustomerWithStats = Customer & { orderCount: number; totalSpent: number };
+
+/** Product review — only created by someone with a delivered order containing that product. */
+export type Review = {
+  id: string;
+  productSlug: string;
+  orderId: string;
+  authorName: string;
+  rating: number;
+  text?: string;
+  hidden: boolean;
+  createdAt: string;
+};
+
+export type ReviewStats = { average: number; count: number };

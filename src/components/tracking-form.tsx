@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { useSession } from "next-auth/react";
+import Link from "next/link";
 import { trackOrderAction } from "@/app/(storefront)/rastreamento/actions";
 import { formatPrice } from "@/lib/format";
+import { ReviewCta } from "@/components/review-cta";
 import type { Order, OrderStatus } from "@/server/types";
 
 const STATUS_SEQUENCE: OrderStatus[] = [
@@ -117,6 +119,27 @@ export function TrackingForm({ initialOrderId = "" }: { initialOrderId?: string 
               Código de rastreio: <span className="text-paper">{order.tracking}</span>
             </p>
           )}
+
+          <ul className="mt-6 divide-y divide-paper/15 border-t border-paper/15">
+            {order.items.map((item) => (
+              <li key={`${item.productSlug}-${item.material}-${item.color}`} className="py-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Link href={`/produto/${item.productSlug}`} className="text-paper hover:text-petrol">
+                      {item.name}
+                    </Link>
+                    <p className="text-xs text-graphite">
+                      {item.categoryName} · {item.material} · {item.color} · Qtd {item.quantity}
+                    </p>
+                  </div>
+                  <span className="text-paper">{formatPrice(item.price * item.quantity)}</span>
+                </div>
+                {order.status === "Entregue" && (
+                  <ReviewCta orderId={order.id} productSlug={item.productSlug} productName={item.name} guestEmail={isGuest ? email : undefined} />
+                )}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </div>

@@ -13,10 +13,10 @@ import {
   getProductsByCategory,
   getRelatedProducts,
 } from "@/lib/demo-data";
-import { demoReviews } from "@/lib/reviews";
 import { SITE_URL } from "@/lib/site-config";
 import { withReadFallback } from "@/lib/db-fallback";
 import { fallbackProducts } from "@/server/demo-fallback";
+import { getPublishedReviews, getReviewStats } from "@/server/repositories/review-repository";
 
 export async function generateStaticParams() {
   // TODO(fase DB): remove o fallback quando a Fazaê tiver o próprio banco — hoje a leitura real falharia sem Supabase configurado.
@@ -47,7 +47,7 @@ export default async function ProductPage({ params }: PageProps<"/produto/[slug]
   );
   if (!product) notFound();
 
-  const [related, categoryProducts] = await Promise.all([
+  const [related, categoryProducts, reviews, reviewStats] = await Promise.all([
     withReadFallback(
       () => getRelatedProducts(product),
       fallbackProducts.filter((p) => product.relatedSlugs?.includes(p.slug)),
@@ -56,6 +56,8 @@ export default async function ProductPage({ params }: PageProps<"/produto/[slug]
       () => getProductsByCategory(product.categorySlug),
       fallbackProducts.filter((p) => p.categorySlug === product.categorySlug),
     ),
+    withReadFallback(() => getPublishedReviews(product.slug), []),
+    withReadFallback(() => getReviewStats(product.slug), { average: 0, count: 0 }),
   ]);
   const youMayLike = categoryProducts
     .filter((p) => p.slug !== product.slug && !related.some((r) => r.slug === p.slug))
@@ -79,10 +81,15 @@ export default async function ProductPage({ params }: PageProps<"/produto/[slug]
           },
         }
       : {}),
-    // No aggregateRating here: the on-page review stats are synthetic demo
-    // data (see lib/reviews.ts). Publishing fake ratings in structured data
-    // that search engines index is both misleading and a rich-results
-    // policy violation — add this back only once reviews are real.
+    ...(reviewStats.count > 0
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: reviewStats.average.toFixed(1),
+            reviewCount: reviewStats.count,
+          },
+        }
+      : {}),
   };
 
   return (
@@ -99,7 +106,7 @@ export default async function ProductPage({ params }: PageProps<"/produto/[slug]
 
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-2 lg:gap-16">
         <ProductGallery product={product} />
-        <ProductPurchasePanel product={product} />
+        <ProductPurchasePanel product={product} reviewStats={reviewStats} />
       </div>
 
       <div className="mt-16 grid grid-cols-1 gap-12 lg:grid-cols-3">
@@ -129,21 +136,27 @@ export default async function ProductPage({ params }: PageProps<"/produto/[slug]
 
       <section id="avaliacoes" className="mt-16 border-t border-paper/15 pt-12">
         <SectionHeading eyebrow="Avaliações" title="O que dizem sobre esse produto" className="mb-8" />
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-          {demoReviews.map((review, i) => (
-            <div key={i} className="flex h-full flex-col border border-paper/15 p-7">
-              <div className="mb-4 flex gap-0.5" aria-label={`${review.rating} de 5 estrelas`}>
-                {Array.from({ length: 5 }).map((_, star) => (
-                  <span key={star} className={star < review.rating ? "text-petrol" : "text-graphite/30"}>
-                    ★
-                  </span>
-                ))}
+        {reviews.length === 0 ? (
+          <p className="text-sm text-graphite">
+            Ainda não há avaliações. Seja a primeira pessoa a avaliar depois de receber o produto.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            {reviews.map((review) => (
+              <div key={review.id} className="flex h-full flex-col border border-paper/15 p-7">
+                <div className="mb-4 flex gap-0.5" aria-label={`${review.rating} de 5 estrelas`}>
+                  {Array.from({ length: 5 }).map((_, star) => (
+                    <span key={star} className={star < review.rating ? "text-petrol" : "text-graphite/30"}>
+                      ★
+                    </span>
+                  ))}
+                </div>
+                {review.text && <p className="flex-1 text-sm text-graphite">&ldquo;{review.text}&rdquo;</p>}
+                <p className="mt-5 text-sm text-paper">{review.authorName}</p>
               </div>
-              <p className="flex-1 text-sm text-graphite">&ldquo;{review.text}&rdquo;</p>
-              <p className="mt-5 text-sm text-paper">{review.author}</p>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {related.length > 0 && (

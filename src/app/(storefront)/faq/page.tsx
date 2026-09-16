@@ -33,8 +33,8 @@ const FAQ_ITEMS = [
   },
   {
     title: "Quais formas de pagamento são aceitas?",
-    plainAnswer: "PIX, cartão de crédito e boleto. Este ambiente ainda está em fase de testes, sem cobrança real.",
-    content: "PIX, cartão de crédito e boleto. Este ambiente ainda está em fase de testes, sem cobrança real.",
+    plainAnswer: "PIX, cartão de crédito parcelado e boleto, processados com segurança pelo Mercado Pago.",
+    content: "PIX, cartão de crédito parcelado e boleto, processados com segurança pelo Mercado Pago.",
   },
   {
     title: "Qual o prazo de entrega?",

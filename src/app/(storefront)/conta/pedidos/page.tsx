@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { ButtonLink } from "@/components/button";
 import { ReorderButton } from "@/components/reorder-button";
+import { ReviewCta } from "@/components/review-cta";
 import { formatPrice } from "@/lib/format";
 import { findOrdersByEmail } from "@/server/repositories/order-repository";
 import { withReadFallback } from "@/lib/db-fallback";
@@ -57,16 +58,21 @@ export default async function PedidosPage() {
 
               <ul className="divide-y divide-paper/15">
                 {order.items.map((item) => (
-                  <li key={`${item.productSlug}-${item.material}-${item.color}`} className="flex items-center justify-between py-3 text-sm">
-                    <div>
-                      <Link href={`/produto/${item.productSlug}`} className="hover:text-petrol">
-                        {item.name}
-                      </Link>
-                      <p className="text-xs text-graphite">
-                        {item.categoryName} · {item.material} · {item.color} · Qtd {item.quantity}
-                      </p>
+                  <li key={`${item.productSlug}-${item.material}-${item.color}`} className="py-3 text-sm">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Link href={`/produto/${item.productSlug}`} className="hover:text-petrol">
+                          {item.name}
+                        </Link>
+                        <p className="text-xs text-graphite">
+                          {item.categoryName} · {item.material} · {item.color} · Qtd {item.quantity}
+                        </p>
+                      </div>
+                      <span>{formatPrice(item.price * item.quantity)}</span>
                     </div>
-                    <span>{formatPrice(item.price * item.quantity)}</span>
+                    {order.status === "Entregue" && (
+                      <ReviewCta orderId={order.id} productSlug={item.productSlug} productName={item.name} />
+                    )}
                   </li>
                 ))}
               </ul>

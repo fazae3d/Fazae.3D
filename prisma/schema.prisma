@@ -132,6 +132,7 @@ model Product {
    */
   laborCost               Float?
   materialUsages          ProductMaterialUsage[]
+  reviews                 Review[]
 
   @@index([categorySlug])
   @@index([type])
@@ -229,6 +230,7 @@ model Order {
    * Sinal já recebido — saldo a receber é calculado (total - depositAmount), não armazenado.
    */
   depositAmount      Float           @default(0)
+  reviews            Review[]
 
   @@index([userEmail])
 }
@@ -306,4 +308,26 @@ model Expense {
 
   @@index([purchaseDate])
   @@index([category])
+}
+
+/** Avaliação de produto — só pode ser criada por quem tem um pedido entregue com aquele produto. */
+model Review {
+  id          String   @id @default(cuid())
+  productSlug String
+  product     Product  @relation(fields: [productSlug], references: [slug], onDelete: Cascade)
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  /** Primeiro nome do cliente do pedido — nunca o sobrenome inteiro. */
+  authorName  String
+  rating      Int
+  text        String?
+  /**
+   * Moderação leve: o admin pode ocultar um review pontual, sem fila de
+   * aprovação prévia — a trava de "só quem recebeu o pedido" já filtra spam.
+   */
+  hidden      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@unique([orderId, productSlug])
+  @@index([productSlug])
 }

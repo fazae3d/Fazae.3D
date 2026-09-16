@@ -5,11 +5,11 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useCart } from "@/contexts/cart-context";
 import { useWishlist } from "@/contexts/wishlist-context";
-import { getDemoReviewStats } from "@/lib/reviews";
 import { LOW_STOCK_THRESHOLD, isSoldOut } from "@/lib/badges";
 import { formatPrice } from "@/lib/format";
 import { pixPrice } from "@/lib/money";
 import type { Product } from "@/lib/types";
+import type { ReviewStats } from "@/server/types";
 import { ButtonLink } from "./button";
 import { PriceBlock } from "./price-block";
 import { QuantityStepper } from "./quantity-stepper";
@@ -17,9 +17,7 @@ import { SecurityBadge } from "./security-badge";
 import { ShareButtons } from "./share-buttons";
 import { ShippingEstimate } from "./shipping-estimate";
 
-export function ProductPurchasePanel({ product }: { product: Product }) {
-  const stats = getDemoReviewStats(product.slug);
-
+export function ProductPurchasePanel({ product, reviewStats }: { product: Product; reviewStats: ReviewStats }) {
   const header = (
     <div>
       <Link
@@ -30,13 +28,15 @@ export function ProductPurchasePanel({ product }: { product: Product }) {
       </Link>
       <h1 className="font-display mt-2 text-3xl sm:text-4xl">{product.name}</h1>
       <div className="mt-2 flex items-center justify-between gap-3">
-        <a
-          href="#avaliacoes"
-          title="Nota de demonstração, ainda não há avaliações reais"
-          className="inline-flex items-center gap-1.5 text-xs text-graphite hover:text-petrol"
-        >
-          <span className="text-petrol">★ {stats.average}</span>({stats.count} avaliações demo)
-        </a>
+        {reviewStats.count > 0 ? (
+          <a href="#avaliacoes" className="inline-flex items-center gap-1.5 text-xs text-graphite hover:text-petrol">
+            <span className="text-petrol">★ {reviewStats.average.toFixed(1)}</span>({reviewStats.count} avaliações)
+          </a>
+        ) : (
+          <a href="#avaliacoes" className="text-xs text-graphite hover:text-petrol">
+            Ainda sem avaliações
+          </a>
+        )}
         <ShareButtons productName={product.name} />
       </div>
     </div>

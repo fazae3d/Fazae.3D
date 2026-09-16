@@ -36,7 +36,9 @@ export default function TermosPage() {
         <section>
           <h2 className="mb-2 text-sm text-paper label-caps">Pedidos e pagamento</h2>
           <p>
-            Este ambiente está em fase de testes: nenhuma cobrança real é processada durante essa fase.
+            Os pagamentos são processados com segurança pelo Mercado Pago, via PIX, cartão de crédito ou boleto. O
+            pedido é confirmado assim que o pagamento é aprovado; para PIX e boleto, a confirmação pode levar
+            algumas horas após o pagamento.
           </p>
         </section>
         <section>
