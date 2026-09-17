@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isValidDocument } from "@/lib/cpf";
 
 export const materialColorSchema = z.object({
   name: z.string().min(1, "Informe o nome da cor."),
@@ -158,3 +159,50 @@ export const customerCreateSchema = z.object({
 });
 
 export type CustomerCreateInput = z.infer<typeof customerCreateSchema>;
+
+export const consigneeFormSchema = z.object({
+  name: z.string().min(2, "Informe o nome."),
+  document: z.string().refine(isValidDocument, "CPF ou CNPJ inválido."),
+  phone: z.string().min(8, "Informe um telefone válido."),
+  email: z.union([z.string().email("E-mail inválido."), z.literal("")]).optional(),
+  street: z.string().optional(),
+  number: z.string().optional(),
+  complement: z.string().optional(),
+  neighborhood: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  zip: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+export type ConsigneeFormInput = z.infer<typeof consigneeFormSchema>;
+
+export const deliverConsignmentItemSchema = z.object({
+  productSlug: z.string().min(1, "Selecione um produto."),
+  consignedPrice: z.number("Informe um preço válido.").positive("O preço deve ser maior que zero."),
+  quantity: z.number("Informe uma quantidade válida.").int().positive("A quantidade deve ser maior que zero."),
+});
+
+export type DeliverConsignmentItemInput = z.infer<typeof deliverConsignmentItemSchema>;
+
+export const registerConsignmentSaleReturnSchema = z
+  .object({
+    productSlug: z.string().min(1),
+    quantitySold: z.number().int().min(0).optional(),
+    quantityReturned: z.number().int().min(0).optional(),
+  })
+  .refine((data) => (data.quantitySold ?? 0) + (data.quantityReturned ?? 0) > 0, {
+    message: "Informe ao menos uma quantidade vendida ou devolvida.",
+    path: ["quantitySold"],
+  });
+
+export type RegisterConsignmentSaleReturnInput = z.infer<typeof registerConsignmentSaleReturnSchema>;
+
+export const registerConsignmentVisitSchema = z.object({
+  visitDate: z.string().min(1, "Informe a data da visita."),
+  nextVisitDate: z.string().optional(),
+  amountCollected: z.number("Informe um valor válido.").min(0, "O valor não pode ser negativo.").optional(),
+  notes: z.string().optional(),
+});
+
+export type RegisterConsignmentVisitInput = z.infer<typeof registerConsignmentVisitSchema>;

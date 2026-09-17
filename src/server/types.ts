@@ -195,3 +195,59 @@ export type Review = {
 };
 
 export type ReviewStats = { average: number; count: number };
+
+/** Lojista/revendedor que recebe peças em consignação. */
+export type Consignee = {
+  id: string;
+  name: string;
+  document: string;
+  phone: string;
+  email?: string;
+  street?: string;
+  number?: string;
+  complement?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  notes?: string;
+  active: boolean;
+  createdAt: string;
+};
+
+/** Consignee plus aggregates over its ConsignmentItem rows — avoids N+1 queries on the list page. */
+export type ConsigneeWithSummary = Consignee & {
+  totalItems: number;
+  totalValueOpen: number;
+  nextVisitDate?: string;
+};
+
+/** Saldo atual de um produto com um lojista — quantidade e preço combinados, atualizados a cada entrega/venda/devolução. */
+export type ConsignmentItem = {
+  id: string;
+  consigneeId: string;
+  productSlug: string;
+  consignedPrice: number;
+  quantity: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ConsignmentItemWithProduct = ConsignmentItem & { productName: string };
+
+/** Registro de visita ao lojista — histórico de acerto e agenda. */
+export type ConsignmentVisit = {
+  id: string;
+  consigneeId: string;
+  visitDate: string;
+  nextVisitDate?: string;
+  amountCollected: number;
+  notes?: string;
+  createdAt: string;
+};
+
+export type ConsigneeDetail = {
+  consignee: Consignee;
+  items: ConsignmentItemWithProduct[];
+  visits: ConsignmentVisit[];
+};

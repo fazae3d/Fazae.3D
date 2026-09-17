@@ -133,6 +133,7 @@ model Product {
   laborCost               Float?
   materialUsages          ProductMaterialUsage[]
   reviews                 Review[]
+  consignmentItems        ConsignmentItem[]
 
   @@index([categorySlug])
   @@index([type])
@@ -330,4 +331,57 @@ model Review {
 
   @@unique([orderId, productSlug])
   @@index([productSlug])
+}
+
+/** Lojista/revendedor que recebe peças em consignação, com preço combinado à parte do catálogo. */
+model Consignee {
+  id           String   @id @default(cuid())
+  name         String
+  document     String // CPF ou CNPJ, sem máscara
+  phone        String
+  email        String?
+  street       String?
+  number       String?
+  complement   String?
+  neighborhood String?
+  city         String?
+  state        String?
+  zip          String?
+  notes        String?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  items        ConsignmentItem[]
+  visits       ConsignmentVisit[]
+}
+
+/** Saldo atual: quanto de cada produto está fisicamente com cada lojista agora, e a que preço. */
+model ConsignmentItem {
+  id             String    @id @default(cuid())
+  consigneeId    String
+  consignee      Consignee @relation(fields: [consigneeId], references: [id], onDelete: Cascade)
+  productSlug    String
+  product        Product   @relation(fields: [productSlug], references: [slug])
+  consignedPrice Float
+  /** Quantidade atualmente com o lojista — entrega soma, venda/devolução subtrai. */
+  quantity       Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([consigneeId, productSlug])
+  @@index([consigneeId])
+}
+
+/** Log de visitas ao lojista — histórico de acerto e agenda da próxima visita. */
+model ConsignmentVisit {
+  id              String    @id @default(cuid())
+  consigneeId     String
+  consignee       Consignee @relation(fields: [consigneeId], references: [id], onDelete: Cascade)
+  visitDate       DateTime
+  nextVisitDate   DateTime?
+  /** Valor recebido nessa visita (referente ao que foi vendido desde a última). */
+  amountCollected Float     @default(0)
+  notes           String?
+  createdAt       DateTime  @default(now())
+
+  @@index([consigneeId])
 }
