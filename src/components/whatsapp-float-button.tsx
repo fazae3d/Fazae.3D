@@ -1,8 +1,12 @@
 import { DEFAULT_WHATSAPP_NUMBER, getWhatsAppLink } from "@/lib/site-config";
+import { getSettings } from "@/server/repositories/settings-repository";
+import { withReadFallback } from "@/lib/db-fallback";
 
-/** TODO(fase DB): trocar pelo Settings real (getSettings()) assim que a Fazaê tiver o próprio banco. */
 export async function WhatsAppFloatButton() {
-  const whatsappNumber = DEFAULT_WHATSAPP_NUMBER;
+  const { whatsappNumber } = await withReadFallback(() => getSettings(), {
+    freeShippingThreshold: 299.9,
+    whatsappNumber: DEFAULT_WHATSAPP_NUMBER,
+  });
 
   return (
     <a

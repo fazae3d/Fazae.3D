@@ -3,6 +3,8 @@ import { FlowLines } from "./flow-lines";
 import { PaymentIcons } from "./payment-icons";
 import { SecurityBadge } from "./security-badge";
 import { DEFAULT_WHATSAPP_NUMBER, INSTAGRAM_URL, SITE_NAME, SITE_TAGLINE, getWhatsAppLink } from "@/lib/site-config";
+import { getSettings } from "@/server/repositories/settings-repository";
+import { withReadFallback } from "@/lib/db-fallback";
 
 function WhatsAppIcon({ className }: { className?: string }) {
   return (
@@ -58,9 +60,11 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
   },
 ];
 
-/** TODO(fase DB): trocar pelo Settings real (getSettings()) assim que a Fazaê tiver o próprio banco — ver nota em src/server/repositories/settings-repository.ts. */
 export async function Footer() {
-  const whatsappNumber = DEFAULT_WHATSAPP_NUMBER;
+  const { whatsappNumber } = await withReadFallback(() => getSettings(), {
+    freeShippingThreshold: 299.9,
+    whatsappNumber: DEFAULT_WHATSAPP_NUMBER,
+  });
 
   return (
     <footer className="relative overflow-hidden bg-ink text-paper">
