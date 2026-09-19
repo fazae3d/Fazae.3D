@@ -7,10 +7,11 @@ import {
   deleteOrder,
   updateOrderStatus,
   type DeleteOrderResult,
-  type UpdateOrderResult,
+  type OrderStatusUpdateResult,
 } from "@/server/repositories/order-repository";
 import type { OrderStatus } from "@/server/types";
 import { withMutationFallback } from "@/lib/db-fallback";
+import { notifyOrderStatusChange } from "@/lib/order-notifications";
 
 async function requireAdmin() {
   if (ADMIN_AUTH_DISABLED) return true;
@@ -22,7 +23,7 @@ export async function updateOrderStatusAction(
   id: string,
   status: OrderStatus,
   tracking: string,
-): Promise<UpdateOrderResult> {
+): Promise<OrderStatusUpdateResult> {
   if (!(await requireAdmin())) {
     return { success: false, error: "Acesso restrito ao administrador." };
   }
@@ -32,6 +33,7 @@ export async function updateOrderStatusAction(
     revalidatePath("/admin/pedidos");
     revalidatePath("/conta/pedidos");
     revalidatePath("/rastreamento");
+    await notifyOrderStatusChange(result.order, result.previousStatus);
   }
   return result;
 }

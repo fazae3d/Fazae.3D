@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getMercadoPagoPayment } from "@/lib/mercadopago";
 import { updateOrderPaymentStatus } from "@/server/repositories/order-repository";
+import { notifyOrderStatusChange } from "@/lib/order-notifications";
 import type { OrderStatus } from "@/server/types";
 
 function orderStatusForPayment(paymentStatus: string): OrderStatus {
@@ -98,6 +99,8 @@ export async function POST(request: NextRequest) {
   });
   if (!result.success) {
     console.warn("[mercadopago webhook] pedido não encontrado para pagamento", payment.id);
+  } else {
+    await notifyOrderStatusChange(result.order, result.previousStatus);
   }
 
   return NextResponse.json({ received: true });

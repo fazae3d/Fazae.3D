@@ -107,18 +107,23 @@ export async function findOrderById(id: string): Promise<Order | undefined> {
 
 export type UpdateOrderResult = { success: true; order: Order } | { success: false; error: string };
 
+/** Like UpdateOrderResult, plus the status the order had right before this update — lets callers tell whether it's worth notifying the customer. */
+export type OrderStatusUpdateResult =
+  | { success: true; order: Order; previousStatus: OrderStatus }
+  | { success: false; error: string };
+
 export async function updateOrderStatus(
   id: string,
   status: OrderStatus,
   tracking?: string,
-): Promise<UpdateOrderResult> {
+): Promise<OrderStatusUpdateResult> {
   const existing = await db.order.findUnique({ where: { id } });
   if (!existing) return { success: false, error: "Pedido não encontrado." };
   const updated = await db.order.update({
     where: { id },
     data: { status, ...(tracking !== undefined ? { tracking: tracking || null } : {}) },
   });
-  return { success: true, order: toOrder(updated) };
+  return { success: true, order: toOrder(updated), previousStatus: existing.status as OrderStatus };
 }
 
 /**
@@ -129,14 +134,14 @@ export async function updateOrderStatus(
 export async function updateOrderPaymentStatus(
   mpPaymentId: string,
   data: { paymentStatus: string; status?: OrderStatus },
-): Promise<UpdateOrderResult> {
+): Promise<OrderStatusUpdateResult> {
   const existing = await db.order.findUnique({ where: { mpPaymentId } });
   if (!existing) return { success: false, error: "Pedido não encontrado para esse pagamento." };
   const updated = await db.order.update({
     where: { mpPaymentId },
     data: { paymentStatus: data.paymentStatus, ...(data.status ? { status: data.status } : {}) },
   });
-  return { success: true, order: toOrder(updated) };
+  return { success: true, order: toOrder(updated), previousStatus: existing.status as OrderStatus };
 }
 
 export async function updateOrderProduction(
