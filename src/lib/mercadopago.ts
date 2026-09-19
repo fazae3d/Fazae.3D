@@ -1,4 +1,5 @@
 import { MercadoPagoConfig, Payment } from "mercadopago";
+import { SITE_URL } from "@/lib/site-config";
 
 const client = process.env.MERCADOPAGO_ACCESS_TOKEN
   ? new MercadoPagoConfig({ accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN })
@@ -55,6 +56,10 @@ export async function createMercadoPagoPayment({
         description,
         external_reference: externalReference,
         payer: { ...existingPayer, email: payerEmail },
+        // Explicit per-payment webhook URL — doesn't depend on the "Notificações"
+        // panel in the MP dashboard being configured correctly, which is easy to
+        // get wrong (or leave unset) and silently stops every status update.
+        notification_url: `${SITE_URL}/api/webhooks/mercadopago`,
       },
       requestOptions: { idempotencyKey: externalReference },
     });
