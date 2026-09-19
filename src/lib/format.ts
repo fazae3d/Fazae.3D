@@ -1,3 +1,8 @@
+/** First name only — never the full name — for greetings, review authorship, etc. */
+export function firstName(name: string) {
+  return name.trim().split(/\s+/)[0] ?? name;
+}
+
 export function formatPrice(value: number) {
   return value.toLocaleString("pt-BR", {
     style: "currency",

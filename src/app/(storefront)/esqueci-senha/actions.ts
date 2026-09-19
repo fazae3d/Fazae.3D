@@ -10,6 +10,8 @@ import {
 } from "@/server/repositories/user-repository";
 import { getClientIp, rateLimit } from "@/server/rate-limit";
 import { sendEmail } from "@/lib/email";
+import { getEmailContactUrl, renderEmailLayout } from "@/lib/email-template";
+import { firstName } from "@/lib/format";
 import { SITE_URL } from "@/lib/site-config";
 
 const RESET_REQUEST_LIMIT = 5;
@@ -43,8 +45,16 @@ export async function requestPasswordResetAction(input: unknown): Promise<Reques
   const resetPath = `/redefinir-senha?token=${token}`;
   const emailResult = await sendEmail({
     to: user.email,
-    subject: "Fazaê: redefinição de senha",
-    html: `<p>Recebemos um pedido para redefinir sua senha.</p><p><a href="${SITE_URL}${resetPath}">Clique aqui para criar uma nova senha</a></p><p>Se você não pediu isso, ignore este e-mail.</p>`,
+    subject: "Vamos redefinir sua senha?",
+    html: renderEmailLayout({
+      preheader: "Recebemos um pedido para redefinir sua senha.",
+      eyebrow: "Sua conta",
+      greeting: `E aí, ${firstName(user.name)}!`,
+      heading: "Vamos redefinir sua senha?",
+      bodyHtml: `<p style="margin:0 0 4px;">Recebemos um pedido pra redefinir a senha da sua conta.</p><p style="margin:0;color:#A6A6A0;">Se não foi você, sem stress, é só ignorar esse e-mail que tá tudo certo por aqui.</p>`,
+      action: { label: "Criar nova senha", url: `${SITE_URL}${resetPath}` },
+      contactUrl: await getEmailContactUrl(),
+    }),
   });
 
   return { success: true, resetLink: emailResult.success ? undefined : resetPath };

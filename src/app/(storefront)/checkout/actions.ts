@@ -13,8 +13,9 @@ import { registerCouponUsage } from "@/server/repositories/coupon-repository";
 import { validateCouponWithFallback } from "@/server/coupon-validation";
 import { getSettings } from "@/server/repositories/settings-repository";
 import { getClientIp, rateLimit } from "@/server/rate-limit";
-import { escapeHtml, sendEmail } from "@/lib/email";
-import { formatPrice } from "@/lib/format";
+import { sendEmail } from "@/lib/email";
+import { getEmailContactUrl, renderEmailLayout, renderOrderItemsTable, renderTotalHighlight } from "@/lib/email-template";
+import { firstName, formatPrice } from "@/lib/format";
 import { DEFAULT_WHATSAPP_NUMBER, SITE_URL } from "@/lib/site-config";
 import { withReadFallback } from "@/lib/db-fallback";
 import { fallbackProducts } from "@/server/demo-fallback";
@@ -249,20 +250,22 @@ export async function processCheckoutPaymentAction(
   const savedOrder = await withReadFallback(() => addOrder(order), order);
   if (appliedCouponCode) await withReadFallback(() => registerCouponUsage(appliedCouponCode), undefined);
 
-  const itemsHtml = resolvedItems
-    .map(
-      (item) =>
-        `<li>${item.quantity}x ${escapeHtml(item.name)} (${escapeHtml(item.material)}, ${escapeHtml(item.color)}) · ${formatPrice(item.price * item.quantity)}</li>`,
-    )
-    .join("");
-  const statusLine =
+  const introText =
     orderStatus === "Pagamento aprovado"
-      ? "<p>Seu pedido foi confirmado e o pagamento aprovado!</p>"
-      : "<p>Recebemos seu pedido. Assim que o pagamento for confirmado (Pix/boleto), você recebe uma nova notificação.</p>";
+      ? "<p style=\"margin:0;\">Que alegria ter você por aqui! Seu pagamento já foi confirmado certinho e nosso time já tá de mãos na massa, preparando tudo com todo o carinho pra chegar aí do seu jeitinho.</p>"
+      : "<p style=\"margin:0;\">Recebemos seu pedido certinho! Assim que o pagamento (Pix ou boleto) cair, a gente te conta por aqui, prometido.</p>";
   await sendEmail({
     to: email,
-    subject: `Fazaê: pedido ${savedOrder.id} recebido`,
-    html: `${statusLine}<ul>${itemsHtml}</ul><p><strong>Total: ${formatPrice(total)}</strong></p><p>Acompanhe o status em ${SITE_URL}/conta/pedidos</p>`,
+    subject: `Recebemos seu pedido ${savedOrder.id}!`,
+    html: renderEmailLayout({
+      preheader: `Pedido ${savedOrder.id} · ${formatPrice(total)}`,
+      eyebrow: "Pedido confirmado",
+      greeting: `E aí, ${firstName(address.recipient)}!`,
+      heading: "Recebemos o seu pedido!",
+      bodyHtml: `${introText}${renderOrderItemsTable(resolvedItems, formatPrice)}${renderTotalHighlight("Total:", formatPrice(total))}`,
+      action: { label: "Acompanhar pedido", url: `${SITE_URL}/conta/pedidos` },
+      contactUrl: await getEmailContactUrl(),
+    }),
   });
 
   return {

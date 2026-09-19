@@ -4,12 +4,8 @@ import { auth } from "@/auth";
 import { findOrderById } from "@/server/repositories/order-repository";
 import { createReview, getReviewForOrderProduct } from "@/server/repositories/review-repository";
 import { withReadFallback, withMutationFallback } from "@/lib/db-fallback";
+import { firstName } from "@/lib/format";
 import type { Review } from "@/server/types";
-
-/** First name only — never the full name — for a public-facing review author. */
-function firstName(name: string) {
-  return name.trim().split(/\s+/)[0] ?? name;
-}
 
 export type SubmitReviewResult = { success: true; review: Review } | { success: false; error: string };
 
