@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { auth } from "@/auth";
-import { getProduct } from "@/lib/demo-data";
+import { fetchProductsForLines, resolveCartItems } from "@/lib/resolve-cart-items";
 import { addressSchema } from "@/lib/validation";
 import { computeShippingCost } from "@/lib/shipping";
 import { calculateShipping } from "@/lib/melhor-envio";
@@ -18,7 +18,6 @@ import { getEmailContactUrl, renderEmailLayout, renderOrderItemsTable, renderTot
 import { firstName, formatPrice } from "@/lib/format";
 import { DEFAULT_WHATSAPP_NUMBER, SITE_URL } from "@/lib/site-config";
 import { withReadFallback } from "@/lib/db-fallback";
-import { fallbackProducts } from "@/server/demo-fallback";
 import { createMercadoPagoPayment, mapPaymentTypeToMethod } from "@/lib/mercadopago";
 import type { Order, OrderStatus } from "@/server/types";
 
@@ -93,39 +92,8 @@ export async function processCheckoutPaymentAction(
     return { success: false, error: "Informe um e-mail para continuar." };
   }
 
-  // TODO(fase DB): remove o fallback quando a Fazaê tiver o próprio banco — hoje a leitura real falharia sem Supabase configurado.
-  const productsBySlug = new Map(
-    (
-      await Promise.all(
-        items.map((line) =>
-          withReadFallback(
-            () => getProduct(line.productSlug),
-            fallbackProducts.find((p) => p.slug === line.productSlug),
-          ),
-        ),
-      )
-    )
-      .filter((p): p is NonNullable<typeof p> => Boolean(p))
-      .map((p) => [p.slug, p] as const),
-  );
-
-  const resolvedItems = items
-    .map((line) => {
-      const product = productsBySlug.get(line.productSlug);
-      // A product with no fixed price ("sob consulta") isn't sellable through
-      // checkout — it's dropped here the same way a discontinued product is.
-      if (!product || product.price === undefined) return null;
-      return {
-        productSlug: product.slug,
-        name: product.name,
-        categoryName: product.categoryName,
-        material: line.material,
-        color: line.color,
-        quantity: line.quantity,
-        price: product.price,
-      };
-    })
-    .filter((item): item is NonNullable<typeof item> => Boolean(item));
+  const productsBySlug = await fetchProductsForLines(items);
+  const resolvedItems = await resolveCartItems(items, productsBySlug);
 
   if (resolvedItems.length === 0) {
     return { success: false, error: "Carrinho vazio ou produtos inválidos." };

@@ -251,3 +251,15 @@ export type ConsigneeDetail = {
   items: ConsignmentItemWithProduct[];
   visits: ConsignmentVisit[];
 };
+
+/** Snapshot of a cart someone left without finishing checkout — see AbandonedCart in schema.prisma. */
+export type AbandonedCart = {
+  id: string;
+  email: string;
+  name?: string;
+  items: OrderItem[];
+  subtotal: number;
+  createdAt: string;
+  updatedAt: string;
+  remindedAt?: string;
+};

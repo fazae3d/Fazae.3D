@@ -385,3 +385,24 @@ model ConsignmentVisit {
 
   @@index([consigneeId])
 }
+
+/**
+ * Snapshot do carrinho de quem passou do passo de identificação do checkout
+ * (e-mail já conhecido) mas não finalizou a compra. Sobrescrito (upsert por
+ * email) a cada nova tentativa de checkout — zera remindedAt, então um novo
+ * abandono depois de já ter recebido lembrete é elegível de novo. Apagado
+ * quando o checkout é concluído com sucesso.
+ */
+model AbandonedCart {
+  id         String    @id @default(cuid())
+  email      String    @unique
+  name       String?
+  /** Mesmo shape de Order.items (OrderItem[]) — preço/nome já resolvidos no momento da captura. */
+  items      Json
+  subtotal   Float
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  remindedAt DateTime?
+
+  @@index([remindedAt])
+}

@@ -13,6 +13,7 @@ import { StepPagamento } from "@/components/checkout/step-pagamento";
 import { StepConfirmacao } from "@/components/checkout/step-confirmacao";
 import { useCart } from "@/contexts/cart-context";
 import { useStoreSettings } from "@/hooks/use-store-settings";
+import { captureAbandonedCartAction, clearAbandonedCartAction } from "@/app/actions/abandoned-cart";
 import type { AddressInput } from "@/lib/validation";
 import type { Order } from "@/server/types";
 import type { PendingPaymentInstructions } from "@/app/(storefront)/checkout/actions";
@@ -86,6 +87,19 @@ export default function CheckoutPage() {
                 onNext={(email) => {
                   setGuestEmail(email);
                   setStep("endereco");
+                  const knownEmail = session?.user?.email ?? email;
+                  if (knownEmail) {
+                    void captureAbandonedCartAction({
+                      email: knownEmail,
+                      name: session?.user?.name ?? undefined,
+                      lines: lines.map((l) => ({
+                        productSlug: l.productSlug,
+                        material: l.material,
+                        color: l.color,
+                        quantity: l.quantity,
+                      })),
+                    });
+                  }
                 }}
               />
             )}
@@ -127,6 +141,8 @@ export default function CheckoutPage() {
                     setOrder(paidOrder);
                     setPaymentInstructions(instructions);
                     setStep("confirmacao");
+                    const payerEmail = session?.user?.email ?? guestEmail;
+                    if (payerEmail) void clearAbandonedCartAction(payerEmail);
                   }}
                   onError={setOrderError}
                   onBack={() => setStep("entrega")}

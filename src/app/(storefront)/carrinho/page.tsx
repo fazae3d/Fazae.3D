@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { Suspense, useEffect, useRef } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { ButtonLink } from "@/components/button";
 import { CartCrossSell } from "@/components/cart-cross-sell";
@@ -10,15 +12,41 @@ import { ProductThumb } from "@/components/product-thumb";
 import { useCart } from "@/contexts/cart-context";
 import { useWishlist } from "@/contexts/wishlist-context";
 import { useStoreSettings } from "@/hooks/use-store-settings";
+import { getAbandonedCartLinesAction } from "@/app/actions/abandoned-cart";
 import { formatPrice } from "@/lib/format";
 import { round2 } from "@/lib/money";
 import { computeShippingCost } from "@/lib/shipping";
 
 export default function CarrinhoPage() {
-  const { lines, removeLine, updateQuantity, subtotal, discount, freeShippingFromCoupon, getCartProduct } =
+  return (
+    <Suspense fallback={null}>
+      <CarrinhoPageInner />
+    </Suspense>
+  );
+}
+
+function CarrinhoPageInner() {
+  const { lines, addLine, removeLine, updateQuantity, subtotal, discount, freeShippingFromCoupon, getCartProduct } =
     useCart();
   const { toggle } = useWishlist();
   const { settings } = useStoreSettings();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const recoverId = searchParams.get("recuperar");
+  const recovering = useRef<string | null>(null);
+
+  // "Finalizar compra" no e-mail de carrinho abandonado — repovoa o carrinho local
+  // a partir do snapshot salvo no servidor, mesmo se aberto num navegador/dispositivo
+  // diferente de onde a pessoa comprou (o carrinho em si só existe no localStorage).
+  useEffect(() => {
+    if (!recoverId || recovering.current === recoverId) return;
+    recovering.current = recoverId;
+    getAbandonedCartLinesAction(recoverId).then((cartLines) => {
+      for (const line of cartLines) addLine(line);
+      router.replace(pathname, { scroll: false });
+    });
+  }, [recoverId, addLine, router, pathname]);
 
   const remaining = round2(Math.max(0, settings.freeShippingThreshold - subtotal));
   const shipping =
