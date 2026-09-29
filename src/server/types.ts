@@ -263,3 +263,16 @@ export type AbandonedCart = {
   updatedAt: string;
   remindedAt?: string;
 };
+
+/** Item de produção sem pedido associado — ver ProductionItem em schema.prisma. */
+export type ProductionItem = {
+  id: string;
+  productSlug?: string;
+  description: string;
+  quantity: number;
+  stage: ProductionStage;
+  deadline?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+};

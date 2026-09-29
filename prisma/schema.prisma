@@ -134,6 +134,7 @@ model Product {
   materialUsages          ProductMaterialUsage[]
   reviews                 Review[]
   consignmentItems        ConsignmentItem[]
+  productionItems         ProductionItem[]
 
   @@index([categorySlug])
   @@index([type])
@@ -405,4 +406,25 @@ model AbandonedCart {
   remindedAt DateTime?
 
   @@index([remindedAt])
+}
+
+/**
+ * Item de produção sem pedido associado — peça feita por conta própria
+ * (estoque, amostra, teste), fora do fluxo normal onde a produção nasce
+ * de um Order. Aparece no mesmo board de /admin/producao, lado a lado
+ * com os pedidos reais.
+ */
+model ProductionItem {
+  id          String          @id @default(cuid())
+  productSlug String?
+  product     Product?        @relation(fields: [productSlug], references: [slug])
+  description String
+  quantity    Int             @default(1)
+  stage       ProductionStage @default(inicio)
+  deadline    DateTime?
+  notes       String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([stage])
 }
