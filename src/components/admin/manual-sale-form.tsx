@@ -61,6 +61,7 @@ export function ManualSaleForm({ products }: { products: Product[] }) {
   const [customerPhone, setCustomerPhone] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pix");
   const [status, setStatus] = useState<OrderStatus>("Entregue");
+  const [productionPending, setProductionPending] = useState(false);
   const [items, setItems] = useState<SaleItem[]>([emptyItem(products)]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -113,6 +114,7 @@ export function ManualSaleForm({ products }: { products: Product[] }) {
       customerPhone: customerPhone.trim() || undefined,
       paymentMethod,
       status,
+      productionPending,
       items,
     });
     setSubmitting(false);
@@ -191,17 +193,28 @@ export function ManualSaleForm({ products }: { products: Product[] }) {
         </div>
       </div>
 
-      <div className="flex flex-col gap-1.5 sm:max-w-xs">
-        <label className={labelClass()} htmlFor="status">
-          Status do pedido
+      <div className="flex flex-wrap items-end gap-6">
+        <div className="flex flex-col gap-1.5 sm:max-w-xs">
+          <label className={labelClass()} htmlFor="status">
+            Status do pedido
+          </label>
+          <Select
+            id="status"
+            value={status}
+            onChange={(v) => setStatus(v as OrderStatus)}
+            className={inputClass()}
+            options={STATUSES.map((s) => ({ value: s, label: s }))}
+          />
+        </div>
+        <label className="flex items-center gap-2 pb-2.5 text-sm">
+          <input
+            type="checkbox"
+            checked={productionPending}
+            onChange={(e) => setProductionPending(e.target.checked)}
+            className="h-4 w-4 accent-ink"
+          />
+          Produção pendente
         </label>
-        <Select
-          id="status"
-          value={status}
-          onChange={(v) => setStatus(v as OrderStatus)}
-          className={inputClass()}
-          options={STATUSES.map((s) => ({ value: s, label: s }))}
-        />
       </div>
 
       <div>

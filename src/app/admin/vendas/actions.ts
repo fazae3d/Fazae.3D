@@ -27,7 +27,7 @@ export async function createManualSaleAction(input: ManualSaleFormInput): Promis
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
-  const { channel, customerName, customerPhone, paymentMethod, status, items } = parsed.data;
+  const { channel, customerName, customerPhone, paymentMethod, status, items, productionPending } = parsed.data;
 
   // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco — hoje a escrita real falharia sem Supabase configurado.
   const result = await withMutationFallback(async () => {
@@ -74,7 +74,7 @@ export async function createManualSaleAction(input: ManualSaleFormInput): Promis
       status,
     };
 
-    const created = await addOrder(order);
+    const created = await addOrder(order, { forceProductionPending: productionPending });
 
     // Deduct stock per line. A plain read-then-write, not a single atomic
     // decrement — acceptable here since this is a low-volume admin-only tool,

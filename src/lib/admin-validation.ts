@@ -138,6 +138,7 @@ export const manualSaleFormSchema = z.object({
     "Entregue",
     "Cancelado",
   ]),
+  productionPending: z.boolean().optional(),
   items: z.array(manualSaleItemSchema).min(1, "Adicione ao menos um produto."),
 });
 

@@ -61,9 +61,12 @@ async function determineProductionStage(order: Order): Promise<ProductionStage> 
   return needsProduction ? "inicio" : "nao_aplicavel";
 }
 
-export async function addOrder(order: Order): Promise<Order> {
+export async function addOrder(
+  order: Order,
+  options?: { forceProductionPending?: boolean },
+): Promise<Order> {
   const { createdAt, address, ...rest } = order;
-  const productionStage = await determineProductionStage(order);
+  const productionStage = options?.forceProductionPending ? "inicio" : await determineProductionStage(order);
   const created = await db.order.create({
     data: {
       ...rest,
