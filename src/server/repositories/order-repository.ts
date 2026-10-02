@@ -63,10 +63,11 @@ async function determineProductionStage(order: Order): Promise<ProductionStage> 
 
 export async function addOrder(
   order: Order,
-  options?: { forceProductionPending?: boolean },
+  options?: { forceProductionPending?: boolean; productionStage?: ProductionStage },
 ): Promise<Order> {
   const { createdAt, address, ...rest } = order;
-  const productionStage = options?.forceProductionPending ? "inicio" : await determineProductionStage(order);
+  const productionStage =
+    options?.productionStage ?? (options?.forceProductionPending ? "inicio" : await determineProductionStage(order));
   const created = await db.order.create({
     data: {
       ...rest,

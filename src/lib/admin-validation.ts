@@ -144,6 +144,18 @@ export const manualSaleFormSchema = z.object({
 
 export type ManualSaleFormInput = z.infer<typeof manualSaleFormSchema>;
 
+/** "Lançar como venda" a partir de um item de produção — mesmos dados do lançar venda manual, mas a linha vem do item. */
+export const productionItemSaleSchema = manualSaleFormSchema
+  .pick({ channel: true, customerName: true, customerPhone: true, paymentMethod: true, status: true })
+  .extend({
+    quantity: z.number("Informe uma quantidade válida.").int().min(1, "Quantidade mínima é 1."),
+    unitPrice: z.number("Informe um preço válido.").min(0, "O preço não pode ser negativo."),
+    material: z.string().optional(),
+    color: z.string().optional(),
+  });
+
+export type ProductionItemSaleInput = z.infer<typeof productionItemSaleSchema>;
+
 export const customerCrmSchema = z.object({
   notes: z.string().optional(),
   tagsRaw: z.string().optional(),

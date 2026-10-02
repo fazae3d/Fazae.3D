@@ -30,7 +30,10 @@ export default async function AdminProductionPage() {
 
       <ProductionItemForm products={products.map((p) => ({ slug: p.slug, name: p.name }))} />
 
-      <ProductionBoard cards={cards} />
+      <ProductionBoard
+        cards={cards}
+        products={products.map((p) => ({ slug: p.slug, price: p.price, materials: p.materials }))}
+      />
     </div>
   );
 }

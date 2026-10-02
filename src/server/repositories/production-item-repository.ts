@@ -21,6 +21,11 @@ export async function getAllProductionItems(): Promise<ProductionItem[]> {
   return rows.map(toProductionItem);
 }
 
+export async function getProductionItem(id: string): Promise<ProductionItem | undefined> {
+  const row = await db.productionItem.findUnique({ where: { id } });
+  return row ? toProductionItem(row) : undefined;
+}
+
 export type ProductionItemInput = {
   productSlug?: string;
   description: string;

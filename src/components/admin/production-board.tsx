@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { Order, ProductionItem } from "@/server/types";
 import type { ProductionStage } from "@/generated/prisma/client";
 import { formatPrice } from "@/lib/format";
@@ -11,6 +12,7 @@ import {
 } from "@/app/admin/producao/actions";
 import { KanbanBoard, type KanbanColumn } from "@/components/admin/kanban-board";
 import { Select } from "@/components/select";
+import { ProductionSaleDialog, type SaleProduct } from "@/components/admin/production-sale-dialog";
 
 export type ProductionCard =
   | { kind: "order"; id: string; order: Order }
@@ -30,7 +32,8 @@ const STAGE_LABELS: Record<ProductionStage, string> = {
 };
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+  // Deadlines come from a date input stored as UTC midnight — formatting in the local zone shows the previous day.
+  return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
 }
 
 function itemsSummary(order: Order) {
@@ -108,10 +111,12 @@ function ItemEditForm({
   item,
   onSave,
   onDelete,
+  onLaunchSale,
 }: {
   item: ProductionItem;
   onSave: (data: { deadline?: string | null; quantity?: number; notes?: string }) => void;
   onDelete: () => void;
+  onLaunchSale: () => void;
 }) {
   const [deadline, setDeadline] = useState(toDateInputValue(item.deadline));
   const [quantity, setQuantity] = useState(String(item.quantity));
@@ -162,6 +167,13 @@ function ItemEditForm({
       >
         {pending ? "Salvando..." : "Salvar"}
       </button>
+      <button
+        type="button"
+        onClick={onLaunchSale}
+        className="label-caps border border-petrol px-4 py-2 text-[11px] text-petrol transition-colors hover:bg-petrol hover:text-ink"
+      >
+        Lançar como venda
+      </button>
       {confirmingDelete ? (
         <span className="flex items-center gap-2 text-[11px]">
           <span className="text-graphite">Excluir?</span>
@@ -185,8 +197,10 @@ function ItemEditForm({
   );
 }
 
-export function ProductionBoard({ cards: initialCards }: { cards: ProductionCard[] }) {
+export function ProductionBoard({ cards: initialCards, products }: { cards: ProductionCard[]; products: SaleProduct[] }) {
+  const router = useRouter();
   const [cards, setCards] = useState(initialCards);
+  const [sellingId, setSellingId] = useState<string | null>(null);
   // Re-sync whenever the server component hands us a fresh array (e.g. after
   // router.refresh() following the "novo item" form) — local state otherwise
   // only reflects props from the initial mount.
@@ -255,6 +269,7 @@ export function ProductionBoard({ cards: initialCards }: { cards: ProductionCard
         item={card.item}
         onSave={(data) => handleItemSave(card.item.id, data)}
         onDelete={() => handleItemDelete(card.item.id)}
+        onLaunchSale={() => setSellingId(card.item.id)}
       />
     );
   }
@@ -285,8 +300,23 @@ export function ProductionBoard({ cards: initialCards }: { cards: ProductionCard
     );
   }
 
+  const sellingCard = cards.find((c) => c.kind === "item" && c.id === sellingId);
+
   return (
     <div>
+      {sellingCard && sellingCard.kind === "item" && (
+        <ProductionSaleDialog
+          item={sellingCard.item}
+          product={products.find((p) => p.slug === sellingCard.item.productSlug)}
+          onClose={() => setSellingId(null)}
+          onDone={() => {
+            setSellingId(null);
+            setEditingId(null);
+            router.refresh();
+          }}
+        />
+      )}
+
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <button
           type="button"

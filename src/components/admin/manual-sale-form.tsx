@@ -18,13 +18,13 @@ type SaleItem = {
   price: number;
 };
 
-const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
+export const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
   { value: "pix", label: "PIX" },
   { value: "cartao", label: "Cartão" },
   { value: "boleto", label: "Boleto" },
 ];
 
-const STATUSES: OrderStatus[] = [
+export const STATUSES: OrderStatus[] = [
   "Pedido recebido",
   "Pagamento aprovado",
   "Em preparação",
