@@ -1,17 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ProductArt } from "./illustrations/product-art";
 import type { Product } from "@/lib/types";
 
 const VIEWS = ["Produto", "Detalhe", "Lifestyle", "Composição"];
+const SWIPE_THRESHOLD_PX = 50;
 
 export function ProductGallery({ product }: { product: Product }) {
   const [active, setActive] = useState(0);
   const [zoomOpen, setZoomOpen] = useState(false);
+  const touchStartX = useRef<number | null>(null);
   const images = product.images ?? [];
   const hasPhotos = images.length > 0;
+  const hasMultiple = images.length > 1;
   const slots = hasPhotos ? images : VIEWS;
+
+  const goPrev = useCallback(() => setActive((i) => (i - 1 + images.length) % images.length), [images.length]);
+  const goNext = useCallback(() => setActive((i) => (i + 1) % images.length), [images.length]);
+
+  useEffect(() => {
+    if (!zoomOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setZoomOpen(false);
+      if (hasMultiple && e.key === "ArrowLeft") goPrev();
+      if (hasMultiple && e.key === "ArrowRight") goNext();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [zoomOpen, hasMultiple, goPrev, goNext]);
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || !hasMultiple) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    touchStartX.current = null;
+    if (dx > SWIPE_THRESHOLD_PX) goPrev();
+    else if (dx < -SWIPE_THRESHOLD_PX) goNext();
+  };
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row">
@@ -21,14 +46,14 @@ export function ProductGallery({ product }: { product: Product }) {
             key={slot}
             type="button"
             onClick={() => setActive(i)}
-            className={`relative aspect-[4/5] w-20 shrink-0 overflow-hidden border transition-colors sm:w-24 ${
+            className={`relative aspect-[4/5] w-20 shrink-0 overflow-hidden border bg-mist transition-colors sm:w-24 ${
               active === i ? "border-petrol" : "border-paper/15"
             }`}
             aria-label={hasPhotos ? `Ver foto ${i + 1}` : `Ver ${VIEWS[i].toLowerCase()}`}
             aria-current={active === i}
           >
             {hasPhotos ? (
-              <img src={slot} alt="" className="h-full w-full object-cover" />
+              <img src={slot} alt="" className="h-full w-full object-contain" />
             ) : (
               <ProductArt slug={product.slug} tone={product.imageTone} className="h-full w-full" />
             )}
@@ -44,7 +69,7 @@ export function ProductGallery({ product }: { product: Product }) {
           aria-label={hasPhotos ? "Ampliar foto do produto" : undefined}
         >
           {hasPhotos ? (
-            <img src={images[active]} alt={product.name} className="h-full w-full object-cover" />
+            <img src={images[active]} alt={product.name} className="h-full w-full object-contain" />
           ) : (
             <ProductArt slug={product.slug} tone={product.imageTone} className="h-full w-full" />
           )}
@@ -64,6 +89,10 @@ export function ProductGallery({ product }: { product: Product }) {
         <div
           className="fixed inset-0 z-[60] flex items-center justify-center bg-ink/95 p-4"
           onClick={() => setZoomOpen(false)}
+          onTouchStart={(e) => {
+            touchStartX.current = e.touches[0].clientX;
+          }}
+          onTouchEnd={handleTouchEnd}
           role="dialog"
           aria-modal="true"
           aria-label={`Foto ampliada de ${product.name}`}
@@ -84,6 +113,39 @@ export function ProductGallery({ product }: { product: Product }) {
             className="max-h-full max-w-full object-contain"
             onClick={(e) => e.stopPropagation()}
           />
+          {hasMultiple && (
+            <>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goPrev();
+                }}
+                aria-label="Foto anterior"
+                className="absolute left-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-paper/10 text-paper transition-colors hover:bg-paper/20 sm:left-6"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M15 5l-7 7 7 7" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goNext();
+                }}
+                aria-label="Próxima foto"
+                className="absolute right-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-paper/10 text-paper transition-colors hover:bg-paper/20 sm:right-6"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+              <span className="label-caps absolute bottom-5 left-1/2 -translate-x-1/2 rounded-full bg-paper/10 px-3 py-1 text-[11px] text-paper">
+                {active + 1} / {images.length}
+              </span>
+            </>
+          )}
         </div>
       )}
     </div>

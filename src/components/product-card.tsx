@@ -41,7 +41,7 @@ export function ProductCard({ product }: { product: Product }) {
           }`}
         >
           {product.images && product.images.length > 0 ? (
-            <img src={product.images[0]} alt={product.name} className="h-full w-full object-cover" />
+            <img src={product.images[0]} alt={product.name} className="h-full w-full object-contain" />
           ) : (
             <ProductArt slug={product.slug} tone={product.imageTone} className="h-full w-full" />
           )}
