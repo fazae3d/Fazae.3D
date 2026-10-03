@@ -615,7 +615,7 @@ export function ProductForm({
 
       <div>
         <div className="mb-2 flex items-center justify-between">
-          <p className={labelClass()}>Fotos do produto (URLs)</p>
+          <p className={labelClass()}>Fotos do produto (a primeira é a capa)</p>
           <button
             type="button"
             onClick={() => updateImages([...imageItems, ""])}
@@ -663,6 +663,20 @@ export function ProductForm({
                   }}
                 />
               </label>
+              {index === 0 ? (
+                imageItems.length > 1 && (
+                  <span className="label-caps bg-ink px-2 py-1 text-[10px] text-paper">Capa</span>
+                )
+              ) : (
+                <button
+                  type="button"
+                  disabled={!url}
+                  onClick={() => updateImages([url, ...imageItems.filter((_, i) => i !== index)])}
+                  className="label-caps px-2 text-[11px] text-petrol hover:underline disabled:opacity-40"
+                >
+                  Definir como capa
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => updateImages(imageItems.filter((_, i) => i !== index))}
