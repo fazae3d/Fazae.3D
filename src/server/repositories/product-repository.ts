@@ -106,6 +106,26 @@ export type DeleteProductResult = { success: true } | { success: false; error: s
 export async function deleteProduct(slug: string): Promise<DeleteProductResult> {
   const existing = await db.product.findUnique({ where: { slug } });
   if (!existing) return { success: false, error: "Produto não encontrado." };
-  await db.product.delete({ where: { slug } });
+
+  // ConsignmentItem references Product with no cascade, so any row — even a
+  // zeroed-out one — makes the delete fail with an opaque FK error. A real
+  // balance still out at a lojista blocks the delete (that's their stock/money
+  // on the books); an empty line is just history and goes with the product.
+  const stillOut = await db.consignmentItem.findMany({
+    where: { productSlug: slug, quantity: { gt: 0 } },
+    include: { consignee: { select: { name: true } } },
+  });
+  if (stillOut.length > 0) {
+    const where = stillOut.map((i) => `${i.consignee.name} (${i.quantity} un.)`).join(", ");
+    return {
+      success: false,
+      error: `Este produto ainda está em consignação: ${where}. Dê baixa (venda/devolução) em Consignação antes de excluir.`,
+    };
+  }
+
+  await db.$transaction([
+    db.consignmentItem.deleteMany({ where: { productSlug: slug } }),
+    db.product.delete({ where: { slug } }),
+  ]);
   return { success: true };
 }
