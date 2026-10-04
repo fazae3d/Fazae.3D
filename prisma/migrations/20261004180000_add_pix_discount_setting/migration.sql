@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Settings" ADD COLUMN "pixDiscountPct" DOUBLE PRECISION NOT NULL DEFAULT 5;

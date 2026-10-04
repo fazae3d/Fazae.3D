@@ -14,6 +14,8 @@ import { StepConfirmacao } from "@/components/checkout/step-confirmacao";
 import { useCart } from "@/contexts/cart-context";
 import { useStoreSettings } from "@/hooks/use-store-settings";
 import { getLocalDeliveryRules } from "@/lib/local-delivery";
+import { usePixDiscountPct } from "@/contexts/pix-discount-context";
+import { resolveOrderDiscount, round2 } from "@/lib/money";
 import { captureAbandonedCartAction, clearAbandonedCartAction } from "@/app/actions/abandoned-cart";
 import type { AddressInput } from "@/lib/validation";
 import type { Order } from "@/server/types";
@@ -23,6 +25,7 @@ export default function CheckoutPage() {
   const { lines, subtotal, coupon, discount, freeShippingFromCoupon, clearCart } = useCart();
   const { data: session } = useSession();
   const { settings } = useStoreSettings();
+  const pixPct = usePixDiscountPct();
 
   const [step, setStep] = useState<CheckoutStep>("identificacao");
   const [guestEmail, setGuestEmail] = useState<string | null>(null);
@@ -39,6 +42,10 @@ export default function CheckoutPage() {
   // `shipping.cost` itself is always the true quoted/flat price (never
   // pre-zeroed), so this is the only place the coupon override is applied.
   const shippingCost = shipping ? (freeShippingFromCoupon ? 0 : shipping.cost) : null;
+
+  // Same function the server uses to bill a Pix payment, so the preview below is exactly what gets charged.
+  const pixDiscount = resolveOrderDiscount({ subtotal, couponDiscount: discount, pixPct, isPix: true }).discount;
+  const pixTotal = round2(Math.max(0, subtotal - pixDiscount) + (shippingCost ?? 0));
 
   const checkoutInput = address && shipping
     ? {
@@ -137,7 +144,9 @@ export default function CheckoutPage() {
               <>
                 {orderError && <p className="mb-4 text-sm text-red-600">{orderError}</p>}
                 <StepPagamento
-                  total={Math.max(0, subtotal - discount) + (shippingCost ?? 0)}
+                  total={round2(Math.max(0, subtotal - discount) + (shippingCost ?? 0))}
+                  pixTotal={pixTotal}
+                  pixPct={pixPct}
                   checkoutInput={checkoutInput}
                   payerEmail={session?.user?.email ?? guestEmail ?? ""}
                   onSuccess={(paidOrder, instructions) => {

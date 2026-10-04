@@ -5,7 +5,8 @@ import { useCart } from "@/contexts/cart-context";
 import { useWishlist } from "@/contexts/wishlist-context";
 import { useStoreSettings } from "@/hooks/use-store-settings";
 import { formatPrice } from "@/lib/format";
-import { PIX_DISCOUNT } from "@/lib/money";
+import { formatPct } from "@/lib/money";
+import { usePixDiscountPct } from "@/contexts/pix-discount-context";
 import { CartCrossSell } from "./cart-cross-sell";
 import { QuantityStepper } from "./quantity-stepper";
 import { ButtonLink } from "./button";
@@ -15,6 +16,7 @@ export function CartDrawer() {
   const { lines, isOpen, closeCart, removeLine, updateQuantity, subtotal, getCartProduct } = useCart();
   const { toggle } = useWishlist();
   const { settings } = useStoreSettings();
+  const pixPct = usePixDiscountPct();
   const [showOffers, setShowOffers] = useState(false);
 
   const remainingForFreeShipping = Math.max(0, settings.freeShippingThreshold - subtotal);
@@ -72,7 +74,7 @@ export function CartDrawer() {
                       <span className="text-paper">Cupom FAZAE10</span> · 10% OFF na primeira compra
                     </li>
                     <li>
-                      <span className="text-paper">{Math.round(PIX_DISCOUNT * 100)}% OFF no Pix</span> em qualquer
+                      <span className="text-paper">{formatPct(pixPct)}% OFF no Pix</span> em qualquer
                       compra
                     </li>
                     <li>

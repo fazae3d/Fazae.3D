@@ -4,6 +4,7 @@ import { useState } from "react";
 import { initMercadoPago, Payment } from "@mercadopago/sdk-react";
 import { processCheckoutPaymentAction, type PendingPaymentInstructions } from "@/app/(storefront)/checkout/actions";
 import { formatPrice } from "@/lib/format";
+import { formatPct } from "@/lib/money";
 import type { Order } from "@/server/types";
 
 const publicKey = process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY;
@@ -12,6 +13,8 @@ let mpInitialized = false;
 
 export function StepPagamento({
   total,
+  pixTotal,
+  pixPct,
   checkoutInput,
   payerEmail,
   onSuccess,
@@ -19,6 +22,9 @@ export function StepPagamento({
   onBack,
 }: {
   total: number;
+  /** What a Pix payment will actually be billed (already net of the Pix discount / coupon rule). */
+  pixTotal: number;
+  pixPct: number;
   /** Shape expected by processCheckoutPaymentAction's first argument — items/address/shippingMethod/couponCode/guestEmail. */
   checkoutInput: unknown;
   payerEmail: string;
@@ -61,8 +67,16 @@ export function StepPagamento({
             Nenhum pagamento real é processado.{" "}
           </>
         ) : null}
-        Total a pagar: <span className="text-paper">{formatPrice(total)}</span>
+        {pixTotal < total ? "Cartão ou boleto" : "Total a pagar"}:{" "}
+        <span className="text-paper">{formatPrice(total)}</span>
       </p>
+
+      {pixTotal < total && (
+        <p className="border border-petrol/40 px-4 py-3 text-sm text-petrol">
+          Pagando no Pix: <strong>{formatPrice(pixTotal)}</strong> ({formatPct(pixPct)}% de desconto). O Pix é gerado já com
+          esse valor.
+        </p>
+      )}
 
       {brickError && <p className="text-sm text-red-600">{brickError}</p>}
 

@@ -5,6 +5,10 @@ import { Footer } from "@/components/footer";
 import { CartDrawer } from "@/components/cart-drawer";
 import { WhatsAppFloatButton } from "@/components/whatsapp-float-button";
 import { CartProvider } from "@/contexts/cart-context";
+import { PixDiscountProvider } from "@/contexts/pix-discount-context";
+import { withReadFallback } from "@/lib/db-fallback";
+import { DEFAULT_PIX_DISCOUNT_PCT } from "@/lib/money";
+import { getSettings } from "@/server/repositories/settings-repository";
 import { WishlistProvider } from "@/contexts/wishlist-context";
 import { SITE_NAME, SITE_URL } from "@/lib/site-config";
 
@@ -30,7 +34,12 @@ const WEBSITE_JSON_LD = {
 };
 
 export default async function StorefrontLayout({ children }: { children: ReactNode }) {
+  const pixDiscountPct = await withReadFallback(
+    async () => (await getSettings()).pixDiscountPct ?? DEFAULT_PIX_DISCOUNT_PCT,
+    DEFAULT_PIX_DISCOUNT_PCT,
+  );
   return (
+    <PixDiscountProvider pct={pixDiscountPct}>
     <CartProvider>
       <WishlistProvider>
         <script
@@ -53,5 +62,6 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
         <WhatsAppFloatButton />
       </WishlistProvider>
     </CartProvider>
+    </PixDiscountProvider>
   );
 }

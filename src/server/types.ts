@@ -120,6 +120,8 @@ export type StoreSettings = {
   /** Entrega própria (motoboy) em Natal/Parnamirim: grátis a partir do threshold, senão cobra a taxa. Ausentes = defaults de lib/local-delivery. */
   localDeliveryThreshold?: number;
   localDeliveryFee?: number;
+  /** Desconto (%) exibido como preço "no Pix". Ausente = DEFAULT_PIX_DISCOUNT_PCT de lib/money. */
+  pixDiscountPct?: number;
 };
 
 /** Custo extra nomeado e reutilizável (argola, ímã, embalagem...) — somado ad-hoc na calculadora de precificação. */

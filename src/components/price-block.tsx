@@ -1,5 +1,6 @@
 import { formatInstallments, formatPrice } from "@/lib/format";
-import { pixPrice, PIX_DISCOUNT } from "@/lib/money";
+import { formatPct, pixPrice } from "@/lib/money";
+import { usePixDiscountPct } from "@/contexts/pix-discount-context";
 
 /**
  * The Pix-discounted price is the headline number across the store — matches
@@ -16,7 +17,8 @@ export function PriceBlock({
   compareAtPrice?: number;
   size?: "sm" | "lg";
 }) {
-  const pix = pixPrice(price);
+  const pixPct = usePixDiscountPct();
+  const pix = pixPrice(price, pixPct);
 
   if (size === "sm") {
     return (
@@ -42,7 +44,7 @@ export function PriceBlock({
       <div className="flex items-baseline gap-3">
         <span className="text-3xl text-petrol sm:text-4xl">{formatPrice(pix)}</span>
         <span className="label-caps text-xs text-petrol/70">
-          no Pix ({Math.round(PIX_DISCOUNT * 100)}% off)
+          no Pix ({formatPct(pixPct)}% off)
         </span>
       </div>
       <p className="mt-1 text-sm text-graphite">{formatPrice(price)} no cartão ou boleto</p>

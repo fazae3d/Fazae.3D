@@ -6,6 +6,7 @@ import { useProductSnapshot } from "@/hooks/use-product-snapshot";
 import { matchesSearch } from "@/lib/search";
 import { formatPrice } from "@/lib/format";
 import { pixPrice } from "@/lib/money";
+import { usePixDiscountPct } from "@/contexts/pix-discount-context";
 
 const MAX_SUGGESTIONS = 5;
 
@@ -13,6 +14,7 @@ export function HeaderSearch() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const { products } = useProductSnapshot();
+  const pixPct = usePixDiscountPct();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const results = useMemo(() => {
@@ -106,7 +108,7 @@ export function HeaderSearch() {
                             <span className="label-caps block text-[10px] text-paper/60">{product.categoryName}</span>
                           </span>
                           <span className="shrink-0 text-sm font-medium text-paper">
-                            {product.price !== undefined ? formatPrice(pixPrice(product.price)) : "Sob consulta"}
+                            {product.price !== undefined ? formatPrice(pixPrice(product.price, pixPct)) : "Sob consulta"}
                           </span>
                         </Link>
                       </li>

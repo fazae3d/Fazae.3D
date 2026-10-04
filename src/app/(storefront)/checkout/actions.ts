@@ -9,7 +9,7 @@ import { LOCAL_DELIVERY_LABEL, getLocalDeliveryRules, localDeliveryCost } from "
 import { isLocalDeliveryCep } from "@/server/local-delivery";
 import { calculateShipping } from "@/lib/melhor-envio";
 import { computeCouponDiscount } from "@/lib/coupons";
-import { round2 } from "@/lib/money";
+import { DEFAULT_PIX_DISCOUNT_PCT, resolveOrderDiscount, round2 } from "@/lib/money";
 import { addOrder, generateOrderId } from "@/server/repositories/order-repository";
 import { registerCouponUsage } from "@/server/repositories/coupon-repository";
 import { validateCouponWithFallback } from "@/server/coupon-validation";
@@ -120,6 +120,7 @@ export async function processCheckoutPaymentAction(
   let discount = 0;
   let freeShippingFromCoupon = false;
   let appliedCouponCode: string | undefined;
+  let couponIsPriceDiscount = false;
 
   if (couponCode) {
     const result = await validateCouponWithFallback(couponCode, subtotal);
@@ -129,6 +130,7 @@ export async function processCheckoutPaymentAction(
         freeShippingFromCoupon = true;
       } else {
         discount = computeCouponDiscount(subtotal, result.type, result.value);
+        couponIsPriceDiscount = true;
       }
     }
   }
@@ -138,6 +140,18 @@ export async function processCheckoutPaymentAction(
     { freeShippingThreshold: 299.9, whatsappNumber: DEFAULT_WHATSAPP_NUMBER },
   );
   const { freeShippingThreshold, originCep } = settings;
+
+  // Pix never stacks with a coupon — whichever discount is larger wins. When
+  // Pix wins, the coupon isn't recorded as used (the customer didn't get it).
+  const isPix = (brickFormData as Record<string, unknown>).payment_method_id === "pix";
+  const orderDiscount = resolveOrderDiscount({
+    subtotal,
+    couponDiscount: discount,
+    pixPct: settings.pixDiscountPct ?? DEFAULT_PIX_DISCOUNT_PCT,
+    isPix,
+  });
+  discount = orderDiscount.discount;
+  if (orderDiscount.pixWins && couponIsPriceDiscount) appliedCouponCode = undefined;
 
   // Never trust the price the client echoes back — only which service it
   // picked. A flat method is recomputed from the (subtotal, threshold) pure

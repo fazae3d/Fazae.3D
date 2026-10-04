@@ -4,12 +4,12 @@ import { useEffect, useState } from "react";
 import { useCart } from "@/contexts/cart-context";
 import { useStoreSettings } from "@/hooks/use-store-settings";
 import { formatPrice } from "@/lib/format";
-import { PIX_DISCOUNT } from "@/lib/money";
+import { formatPct } from "@/lib/money";
+import { usePixDiscountPct } from "@/contexts/pix-discount-context";
 import { LOCAL_DELIVERY_CITIES_LABEL, getLocalDeliveryRules } from "@/lib/local-delivery";
 
 const STATIC_MESSAGES = [
   "Ganhe 10% OFF na primeira compra com o cupom FAZAE10",
-  `${Math.round(PIX_DISCOUNT * 100)}% de desconto pagando no Pix`,
   "Parcele em até 3x sem juros",
 ];
 
@@ -31,7 +31,14 @@ export function AnnouncementBar() {
       ? `${LOCAL_DELIVERY_CITIES_LABEL}: faltam ${formatPrice(remainingLocal)} para frete grátis via motoboy`
       : `${LOCAL_DELIVERY_CITIES_LABEL}: você garantiu frete grátis via motoboy 🎉`;
 
-  const messages = [...STATIC_MESSAGES, shippingMessage, localMessage];
+  const pixPct = usePixDiscountPct();
+  const messages = [
+    STATIC_MESSAGES[0],
+    `${formatPct(pixPct)}% de desconto pagando no Pix`,
+    STATIC_MESSAGES[1],
+    shippingMessage,
+    localMessage,
+  ];
 
   useEffect(() => {
     const id = setInterval(() => {

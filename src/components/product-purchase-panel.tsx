@@ -8,6 +8,7 @@ import { useWishlist } from "@/contexts/wishlist-context";
 import { LOW_STOCK_THRESHOLD, isSoldOut } from "@/lib/badges";
 import { formatPrice } from "@/lib/format";
 import { pixPrice } from "@/lib/money";
+import { usePixDiscountPct } from "@/contexts/pix-discount-context";
 import type { Product } from "@/lib/types";
 import type { ReviewStats } from "@/server/types";
 import { ButtonLink } from "./button";
@@ -80,6 +81,7 @@ export function ProductPurchasePanel({ product, reviewStats }: { product: Produc
 }
 
 function ProntaEntregaPanel({ product, header }: { product: Product; header: React.ReactNode }) {
+  const pixPct = usePixDiscountPct();
   const { addLine } = useCart();
   const { has, toggle } = useWishlist();
   const router = useRouter();
@@ -284,7 +286,7 @@ function ProntaEntregaPanel({ product, header }: { product: Product; header: Rea
         <div className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t border-paper/15 bg-ink/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-4px_16px_rgba(0,0,0,0.4)] backdrop-blur-sm lg:hidden">
           <div className="min-w-0 flex-1">
             <p className="truncate text-xs text-graphite">{product.name}</p>
-            <p className="text-sm text-petrol">{formatPrice(pixPrice(product.price))} no Pix</p>
+            <p className="text-sm text-petrol">{formatPrice(pixPrice(product.price, pixPct))} no Pix</p>
           </div>
           <button
             type="button"

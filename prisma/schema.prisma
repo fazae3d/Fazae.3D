@@ -285,6 +285,10 @@ model Settings {
    */
   localDeliveryThreshold     Float @default(49.9)
   localDeliveryFee           Float @default(12)
+  /**
+   * Desconto (%) exibido como preço "no Pix" em toda a loja.
+   */
+  pixDiscountPct             Float @default(5)
 }
 
 /** Custo extra nomeado e reutilizável (argola, ímã, embalagem...) — somado ad-hoc na calculadora de precificação. */

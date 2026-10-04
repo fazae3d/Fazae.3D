@@ -16,6 +16,10 @@ const settingsFormSchema = z.object({
   freeShippingThreshold: z.number("Informe um valor válido.").min(0, "O valor não pode ser negativo."),
   localDeliveryThreshold: z.number("Informe um valor válido.").min(0, "O valor não pode ser negativo."),
   localDeliveryFee: z.number("Informe um valor válido.").min(0, "O valor não pode ser negativo."),
+  pixDiscountPct: z
+    .number("Informe um valor válido.")
+    .min(0, "O desconto não pode ser negativo.")
+    .max(90, "O desconto no Pix não pode passar de 90%."),
   whatsappNumber: z
     .string()
     .regex(/^\d{10,15}$/, "Use apenas números, com DDI e DDD (ex: 5584999999999)."),

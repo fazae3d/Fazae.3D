@@ -16,6 +16,7 @@ function toSettings(row: {
   defaultMaterialCostPerGram: number;
   localDeliveryThreshold: number;
   localDeliveryFee: number;
+  pixDiscountPct: number;
 }): StoreSettings {
   return {
     freeShippingThreshold: row.freeShippingThreshold,
@@ -30,6 +31,7 @@ function toSettings(row: {
     defaultMaterialCostPerGram: row.defaultMaterialCostPerGram,
     localDeliveryThreshold: row.localDeliveryThreshold,
     localDeliveryFee: row.localDeliveryFee,
+    pixDiscountPct: row.pixDiscountPct,
   };
 }
 

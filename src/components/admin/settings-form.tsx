@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { updateSettingsAction, type SettingsFormInput } from "@/app/admin/configuracoes/actions";
 import { DEFAULT_LOCAL_DELIVERY_FEE, DEFAULT_LOCAL_DELIVERY_THRESHOLD } from "@/lib/local-delivery";
+import { DEFAULT_PIX_DISCOUNT_PCT } from "@/lib/money";
 import type { StoreSettings } from "@/server/types";
 
 function labelClass() {
@@ -28,6 +29,7 @@ export function SettingsForm({ settings }: { settings: StoreSettings }) {
       originCep: settings.originCep ?? "",
       localDeliveryThreshold: settings.localDeliveryThreshold ?? DEFAULT_LOCAL_DELIVERY_THRESHOLD,
       localDeliveryFee: settings.localDeliveryFee ?? DEFAULT_LOCAL_DELIVERY_FEE,
+      pixDiscountPct: settings.pixDiscountPct ?? DEFAULT_PIX_DISCOUNT_PCT,
       defaultProfitMarginPct: settings.defaultProfitMarginPct ?? 30,
       averageFailureRatePct: settings.averageFailureRatePct ?? 5,
       printerCostPerHour: settings.printerCostPerHour ?? 0,
@@ -43,6 +45,7 @@ export function SettingsForm({ settings }: { settings: StoreSettings }) {
       freeShippingThreshold: Number(data.freeShippingThreshold),
       localDeliveryThreshold: Number(data.localDeliveryThreshold),
       localDeliveryFee: Number(data.localDeliveryFee),
+      pixDiscountPct: Number(data.pixDiscountPct),
       whatsappNumber: data.whatsappNumber.replace(/\D/g, ""),
       originCep: data.originCep?.replace(/\D/g, "") ?? "",
       defaultProfitMarginPct: Number(data.defaultProfitMarginPct),
@@ -77,6 +80,25 @@ export function SettingsForm({ settings }: { settings: StoreSettings }) {
         )}
         <p className="text-xs text-graphite">
           Usado na barra de anúncio, no carrinho e no cálculo real do frete no checkout.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className={labelClass()} htmlFor="pixDiscountPct">
+          Desconto no Pix (%)
+        </label>
+        <input
+          id="pixDiscountPct"
+          type="number"
+          step="0.1"
+          min="0"
+          max="90"
+          className={inputClass(Boolean(errors.pixDiscountPct))}
+          {...register("pixDiscountPct", { valueAsNumber: true })}
+        />
+        {errors.pixDiscountPct && <p className="text-xs text-red-600">{errors.pixDiscountPct.message}</p>}
+        <p className="text-xs text-graphite">
+          Percentual exibido como preço &ldquo;no Pix&rdquo; nos produtos, na busca, no carrinho e na barra de anúncio.
         </p>
       </div>
 
