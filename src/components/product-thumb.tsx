@@ -11,7 +11,7 @@ export function ProductThumb({
 }) {
   const image = product.images?.[0];
   if (image) {
-    return <img src={image} alt={product.name} className={`object-cover ${className}`} />;
+    return <img src={image} alt={product.name} className={`bg-mist object-contain ${className}`} />;
   }
   return <div className={`bg-mist ${className}`} />;
 }

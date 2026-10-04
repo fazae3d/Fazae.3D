@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ButtonLink } from "../button";
 import { formatPrice } from "@/lib/format";
+import { PIX_RECEIVER_NOTICE } from "@/lib/site-config";
 import type { Order } from "@/server/types";
 import type { PendingPaymentInstructions } from "@/app/(storefront)/checkout/actions";
 
@@ -54,6 +55,7 @@ function PixInstructions({ qrCode, qrCodeBase64 }: { qrCode?: string; qrCodeBase
           </div>
         </div>
       )}
+      <p className="text-xs text-graphite">{PIX_RECEIVER_NOTICE}</p>
     </div>
   );
 }

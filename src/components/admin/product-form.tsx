@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { slugify } from "@/lib/slug";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { Select } from "@/components/select";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -56,6 +57,7 @@ export function ProductForm({
   const router = useRouter();
   const isEditing = Boolean(product);
   const [serverError, setServerError] = useState<string | null>(null);
+  const slugEditedByHand = useRef(false);
 
   const {
     register,
@@ -187,7 +189,16 @@ export function ProductForm({
           <label className={labelClass()} htmlFor="name">
             Nome
           </label>
-          <input id="name" className={inputClass(Boolean(errors.name))} {...register("name")} />
+          <input
+            id="name"
+            className={inputClass(Boolean(errors.name))}
+            {...register("name", {
+              // Novo produto: o slug acompanha o nome até a pessoa editar o slug na mão.
+              onChange: (e) => {
+                if (!isEditing && !slugEditedByHand.current) setValue("slug", slugify(e.target.value), { shouldValidate: true });
+              },
+            })}
+          />
           {errors.name && <p className="text-xs text-red-600">{errors.name.message}</p>}
         </div>
 
@@ -199,8 +210,11 @@ export function ProductForm({
             id="slug"
             disabled={isEditing}
             className={`${inputClass(Boolean(errors.slug))} disabled:bg-mist/40 disabled:text-graphite`}
-            {...register("slug")}
+            {...register("slug", { onChange: () => (slugEditedByHand.current = true) })}
           />
+          {!isEditing && (
+            <p className="text-[11px] text-graphite">Preenchido sozinho a partir do nome. Pode editar se quiser.</p>
+          )}
           {errors.slug && <p className="text-xs text-red-600">{errors.slug.message}</p>}
         </div>
       </div>

@@ -5,6 +5,7 @@ import { initMercadoPago, Payment } from "@mercadopago/sdk-react";
 import { processCheckoutPaymentAction, type PendingPaymentInstructions } from "@/app/(storefront)/checkout/actions";
 import { formatPrice } from "@/lib/format";
 import { formatPct } from "@/lib/money";
+import { PIX_RECEIVER_NOTICE } from "@/lib/site-config";
 import type { Order } from "@/server/types";
 
 const publicKey = process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY;
@@ -77,6 +78,8 @@ export function StepPagamento({
           esse valor.
         </p>
       )}
+
+      <p className="text-xs text-graphite">{PIX_RECEIVER_NOTICE}</p>
 
       {brickError && <p className="text-sm text-red-600">{brickError}</p>}
 

@@ -100,7 +100,7 @@ export function HeaderSearch() {
                         >
                           <span className="h-14 w-11 shrink-0 overflow-hidden bg-mist">
                             {product.images && product.images.length > 0 && (
-                              <img src={product.images[0]} alt="" className="h-full w-full object-cover" />
+                              <img src={product.images[0]} alt="" className="h-full w-full bg-mist object-contain" />
                             )}
                           </span>
                           <span className="flex-1">
