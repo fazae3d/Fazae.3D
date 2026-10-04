@@ -71,6 +71,8 @@ export type Order = {
   items: OrderItem[];
   subtotal: number;
   shipping: number;
+  /** Label of the delivery option the customer picked (e.g. "Entrega própria (Motoboy)"). Absent on older orders and manual sales. */
+  shippingMethod?: string;
   discount: number;
   couponCode?: string;
   total: number;
@@ -115,6 +117,9 @@ export type StoreSettings = {
   printerCostPerHour?: number;
   energyCostPerHour?: number;
   defaultMaterialCostPerGram?: number;
+  /** Entrega própria (motoboy) em Natal/Parnamirim: grátis a partir do threshold, senão cobra a taxa. Ausentes = defaults de lib/local-delivery. */
+  localDeliveryThreshold?: number;
+  localDeliveryFee?: number;
 };
 
 /** Custo extra nomeado e reutilizável (argola, ímã, embalagem...) — somado ad-hoc na calculadora de precificação. */

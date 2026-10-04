@@ -5,6 +5,7 @@ import { useCart } from "@/contexts/cart-context";
 import { useStoreSettings } from "@/hooks/use-store-settings";
 import { formatPrice } from "@/lib/format";
 import { PIX_DISCOUNT } from "@/lib/money";
+import { LOCAL_DELIVERY_CITIES_LABEL, getLocalDeliveryRules } from "@/lib/local-delivery";
 
 const STATIC_MESSAGES = [
   "Ganhe 10% OFF na primeira compra com o cupom FAZAE10",
@@ -24,7 +25,13 @@ export function AnnouncementBar() {
       ? `Faltam ${formatPrice(remaining)} para você ganhar frete grátis`
       : "Você garantiu frete grátis 🎉";
 
-  const messages = [...STATIC_MESSAGES, shippingMessage];
+  const remainingLocal = Math.max(0, getLocalDeliveryRules(settings).threshold - subtotal);
+  const localMessage =
+    remainingLocal > 0
+      ? `${LOCAL_DELIVERY_CITIES_LABEL}: faltam ${formatPrice(remainingLocal)} para frete grátis via motoboy`
+      : `${LOCAL_DELIVERY_CITIES_LABEL}: você garantiu frete grátis via motoboy 🎉`;
+
+  const messages = [...STATIC_MESSAGES, shippingMessage, localMessage];
 
   useEffect(() => {
     const id = setInterval(() => {

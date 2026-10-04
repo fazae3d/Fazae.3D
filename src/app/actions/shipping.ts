@@ -5,8 +5,14 @@ import { withReadFallback } from "@/lib/db-fallback";
 import { fallbackProducts } from "@/server/demo-fallback";
 import { getSettings } from "@/server/repositories/settings-repository";
 import { calculateShipping, type ShippingQuote } from "@/lib/melhor-envio";
+import { isLocalDeliveryCep } from "@/server/local-delivery";
 
 export type ShippingQuoteInput = { productSlug: string; quantity: number };
+
+/** True when the CEP is in a city served by our own motoboy delivery (Natal/Parnamirim). */
+export async function checkLocalDeliveryAction(destinationCep: string): Promise<boolean> {
+  return isLocalDeliveryCep(destinationCep);
+}
 
 /**
  * Shared by the PDP shipping widget and the checkout delivery step — resolves

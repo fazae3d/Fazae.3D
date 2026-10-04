@@ -193,6 +193,25 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
                 ))}
               </ul>
 
+              {order.address && (
+                <div className="mb-3 border-t border-mist pt-3 text-xs text-graphite">
+                  <p>
+                    <span className="label-caps text-[10px]">Entrega</span>{" "}
+                    {order.shippingMethod ? (
+                      <strong className="font-medium text-ink">{order.shippingMethod}</strong>
+                    ) : (
+                      "—"
+                    )}{" "}
+                    · {order.shipping === 0 ? "Grátis" : formatPrice(order.shipping)}
+                  </p>
+                  <p className="mt-0.5">
+                    {order.address.recipient} · {order.address.street}, {order.address.number}
+                    {order.address.complement ? ` (${order.address.complement})` : ""} · {order.address.neighborhood} ·{" "}
+                    {order.address.city}/{order.address.state} · CEP {order.address.zip}
+                  </p>
+                </div>
+              )}
+
               <div className="border-t border-mist pt-4">
                 <OrderStatusForm order={order} />
               </div>

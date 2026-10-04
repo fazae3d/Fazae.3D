@@ -4,7 +4,9 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { fetchProductsForLines, resolveCartItems } from "@/lib/resolve-cart-items";
 import { addressSchema } from "@/lib/validation";
-import { computeShippingCost } from "@/lib/shipping";
+import { SHIPPING_OPTIONS, computeShippingCost } from "@/lib/shipping";
+import { LOCAL_DELIVERY_LABEL, getLocalDeliveryRules, localDeliveryCost } from "@/lib/local-delivery";
+import { isLocalDeliveryCep } from "@/server/local-delivery";
 import { calculateShipping } from "@/lib/melhor-envio";
 import { computeCouponDiscount } from "@/lib/coupons";
 import { round2 } from "@/lib/money";
@@ -32,6 +34,7 @@ const checkoutItemSchema = z.object({
 });
 
 const shippingChoiceSchema = z.union([
+  z.object({ kind: z.literal("local") }),
   z.object({ kind: z.literal("quote"), serviceId: z.number() }),
   z.object({ kind: z.literal("flat"), method: z.enum(["padrao", "expressa"]) }),
 ]);
@@ -130,19 +133,34 @@ export async function processCheckoutPaymentAction(
     }
   }
 
-  const { freeShippingThreshold, originCep } = await withReadFallback(
+  const settings = await withReadFallback(
     () => getSettings(),
     { freeShippingThreshold: 299.9, whatsappNumber: DEFAULT_WHATSAPP_NUMBER },
   );
+  const { freeShippingThreshold, originCep } = settings;
 
   // Never trust the price the client echoes back — only which service it
   // picked. A flat method is recomputed from the (subtotal, threshold) pure
   // function as before; a live quote is re-fetched from Melhor Envio and
   // only that service's own returned price is used.
   let shipping = 0;
-  if (!freeShippingFromCoupon) {
+  let shippingMethod: string;
+  if (shippingChoice.kind === "local") {
+    // Own-logistics delivery: re-verified here (city from the CEP, price from
+    // the live settings) since the client only says "I picked this option".
+    // Runs even with a free-shipping coupon, because the label tells the admin
+    // this order goes out by motoboy, not by a carrier.
+    if (!(await isLocalDeliveryCep(address.zip))) {
+      return { success: false, error: "Entrega por motoboy indisponível para este pedido. Volte e escolha outra forma de entrega." };
+    }
+    shipping = freeShippingFromCoupon ? 0 : localDeliveryCost(subtotal, getLocalDeliveryRules(settings));
+    shippingMethod = LOCAL_DELIVERY_LABEL;
+  } else if (freeShippingFromCoupon) {
+    shippingMethod = "Frete grátis (cupom)";
+  } else {
     if (shippingChoice.kind === "flat") {
       shipping = computeShippingCost(shippingChoice.method, subtotal, freeShippingThreshold);
+      shippingMethod = SHIPPING_OPTIONS.find((o) => o.key === shippingChoice.method)?.label ?? "Entrega";
     } else if (!originCep) {
       return { success: false, error: "Frete indisponível no momento. Volte e escolha a entrega novamente." };
     } else {
@@ -167,6 +185,7 @@ export async function processCheckoutPaymentAction(
         return { success: false, error: "Frete indisponível no momento. Volte e escolha a entrega novamente." };
       }
       shipping = quote.price;
+      shippingMethod = quote.company ? `${quote.name} (${quote.company})` : quote.name;
     }
   }
   const total = round2(Math.max(0, subtotal - discount) + shipping);
@@ -203,6 +222,7 @@ export async function processCheckoutPaymentAction(
     items: resolvedItems,
     subtotal,
     shipping,
+    shippingMethod,
     discount,
     couponCode: appliedCouponCode,
     total,

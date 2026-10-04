@@ -14,6 +14,8 @@ import { withMutationFallback } from "@/lib/db-fallback";
 
 const settingsFormSchema = z.object({
   freeShippingThreshold: z.number("Informe um valor válido.").min(0, "O valor não pode ser negativo."),
+  localDeliveryThreshold: z.number("Informe um valor válido.").min(0, "O valor não pode ser negativo."),
+  localDeliveryFee: z.number("Informe um valor válido.").min(0, "O valor não pode ser negativo."),
   whatsappNumber: z
     .string()
     .regex(/^\d{10,15}$/, "Use apenas números, com DDI e DDD (ex: 5584999999999)."),

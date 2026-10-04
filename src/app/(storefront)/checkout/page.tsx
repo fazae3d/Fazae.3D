@@ -13,6 +13,7 @@ import { StepPagamento } from "@/components/checkout/step-pagamento";
 import { StepConfirmacao } from "@/components/checkout/step-confirmacao";
 import { useCart } from "@/contexts/cart-context";
 import { useStoreSettings } from "@/hooks/use-store-settings";
+import { getLocalDeliveryRules } from "@/lib/local-delivery";
 import { captureAbandonedCartAction, clearAbandonedCartAction } from "@/app/actions/abandoned-cart";
 import type { AddressInput } from "@/lib/validation";
 import type { Order } from "@/server/types";
@@ -49,9 +50,11 @@ export default function CheckoutPage() {
         })),
         address,
         shipping:
-          shipping.kind === "quote"
-            ? { kind: "quote" as const, serviceId: shipping.serviceId }
-            : { kind: "flat" as const, method: shipping.key },
+          shipping.kind === "local"
+            ? { kind: "local" as const }
+            : shipping.kind === "quote"
+              ? { kind: "quote" as const, serviceId: shipping.serviceId }
+              : { kind: "flat" as const, method: shipping.key },
         couponCode: coupon?.code,
         guestEmail: guestEmail ?? undefined,
       }
@@ -117,6 +120,7 @@ export default function CheckoutPage() {
               <StepEntrega
                 subtotal={subtotal}
                 freeShippingThreshold={settings.freeShippingThreshold}
+                localDelivery={getLocalDeliveryRules(settings)}
                 destinationCep={address.zip}
                 items={lines.map((l) => ({ productSlug: l.productSlug, quantity: l.quantity }))}
                 initial={shipping ? shippingOptionKey(shipping) : undefined}

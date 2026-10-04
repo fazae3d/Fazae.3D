@@ -212,6 +212,10 @@ model Order {
   items              Json
   subtotal           Float
   shipping           Float
+  /**
+   * Como o cliente escolheu receber (ex.: "Entrega própria (Motoboy)", "SEDEX (Correios)"). Nulo em pedidos antigos e vendas manuais.
+   */
+  shippingMethod     String?
   discount           Float
   couponCode         String?
   total              Float
@@ -275,6 +279,12 @@ model Settings {
   printerCostPerHour         Float @default(0)
   energyCostPerHour          Float @default(0)
   defaultMaterialCostPerGram Float @default(0)
+  /**
+   * Entrega própria (motoboy) em Natal/Parnamirim: grátis a partir de `localDeliveryThreshold`,
+   * abaixo disso cobra `localDeliveryFee`.
+   */
+  localDeliveryThreshold     Float @default(49.9)
+  localDeliveryFee           Float @default(12)
 }
 
 /** Custo extra nomeado e reutilizável (argola, ímã, embalagem...) — somado ad-hoc na calculadora de precificação. */

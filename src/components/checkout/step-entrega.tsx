@@ -2,10 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { SHIPPING_OPTIONS, computeShippingCost, type ShippingMethod } from "@/lib/shipping";
-import { quoteShippingAction, type ShippingQuoteInput } from "@/app/actions/shipping";
+import { checkLocalDeliveryAction, quoteShippingAction, type ShippingQuoteInput } from "@/app/actions/shipping";
 import { formatPrice } from "@/lib/format";
+import { round2 } from "@/lib/money";
+import {
+  LOCAL_DELIVERY_ETA,
+  LOCAL_DELIVERY_LABEL,
+  localDeliveryCost,
+  type LocalDeliveryRules,
+} from "@/lib/local-delivery";
 
 export type ShippingOption =
+  | { kind: "local"; label: string; eta: string; cost: number }
   | { kind: "quote"; serviceId: number; label: string; eta: string; cost: number }
   | { kind: "flat"; key: ShippingMethod; label: string; eta: string; cost: number };
 
@@ -14,12 +22,14 @@ function etaLabel(deliveryDays: number) {
 }
 
 export function shippingOptionKey(o: ShippingOption) {
+  if (o.kind === "local") return "local";
   return o.kind === "quote" ? `quote-${o.serviceId}` : `flat-${o.key}`;
 }
 
 export function StepEntrega({
   subtotal,
   freeShippingThreshold,
+  localDelivery,
   destinationCep,
   items,
   initial,
@@ -30,6 +40,7 @@ export function StepEntrega({
 }: {
   subtotal: number;
   freeShippingThreshold: number;
+  localDelivery: LocalDeliveryRules;
   destinationCep: string;
   items: ShippingQuoteInput[];
   initial?: string;
@@ -41,12 +52,16 @@ export function StepEntrega({
 }) {
   const [loading, setLoading] = useState(true);
   const [quoteOptions, setQuoteOptions] = useState<ShippingOption[] | null>(null);
+  const [localEligible, setLocalEligible] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    quoteShippingAction(destinationCep, items).then((quotes) => {
+    const quotesRequest = quoteShippingAction(destinationCep, items);
+    const localRequest = checkLocalDeliveryAction(destinationCep);
+    Promise.all([quotesRequest, localRequest]).then(([quotes, isLocalCity]) => {
       if (cancelled) return;
+      setLocalEligible(isLocalCity);
       setQuoteOptions(
         quotes.length > 0
           ? quotes.map((q) => ({
@@ -78,7 +93,15 @@ export function StepEntrega({
     cost: computeShippingCost(o.key, subtotal, freeShippingThreshold),
   }));
 
-  const options = quoteOptions ?? flatOptions;
+  // Own-logistics delivery only exists for Natal/Parnamirim, and is always
+  // listed first when it applies: free from the minimum, flat fee below it.
+  const localCost = localDeliveryCost(subtotal, localDelivery);
+  const localOption: ShippingOption[] = localEligible
+    ? [{ kind: "local", label: LOCAL_DELIVERY_LABEL, eta: LOCAL_DELIVERY_ETA, cost: localCost }]
+    : [];
+  const remainingForLocal = round2(Math.max(0, localDelivery.threshold - subtotal));
+
+  const options = [...localOption, ...(quoteOptions ?? flatOptions)];
 
   const [selected, setSelected] = useState<string | undefined>(initial);
 
@@ -106,6 +129,11 @@ export function StepEntrega({
         <p className="text-sm text-graphite">Calculando opções de frete para {destinationCep}...</p>
       ) : (
         <div className="flex flex-col gap-3">
+          {localEligible && remainingForLocal > 0 && (
+            <p className="text-xs text-petrol">
+              Faltam <strong>{formatPrice(remainingForLocal)}</strong> para a entrega por motoboy ficar grátis.
+            </p>
+          )}
           {options.map((option) => {
             const key = shippingOptionKey(option);
             return (

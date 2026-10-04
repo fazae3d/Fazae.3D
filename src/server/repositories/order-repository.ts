@@ -19,6 +19,7 @@ function toOrder(row: OrderRow): Order {
     customerName: row.customerName ?? undefined,
     customerPhone: row.customerPhone ?? undefined,
     couponCode: row.couponCode ?? undefined,
+    shippingMethod: row.shippingMethod ?? undefined,
     tracking: row.tracking ?? undefined,
     paymentMethod: row.paymentMethod as Order["paymentMethod"],
     paymentStatus: row.paymentStatus as Order["paymentStatus"],

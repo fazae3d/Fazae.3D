@@ -14,6 +14,8 @@ function toSettings(row: {
   printerCostPerHour: number;
   energyCostPerHour: number;
   defaultMaterialCostPerGram: number;
+  localDeliveryThreshold: number;
+  localDeliveryFee: number;
 }): StoreSettings {
   return {
     freeShippingThreshold: row.freeShippingThreshold,
@@ -26,6 +28,8 @@ function toSettings(row: {
     printerCostPerHour: row.printerCostPerHour,
     energyCostPerHour: row.energyCostPerHour,
     defaultMaterialCostPerGram: row.defaultMaterialCostPerGram,
+    localDeliveryThreshold: row.localDeliveryThreshold,
+    localDeliveryFee: row.localDeliveryFee,
   };
 }
 

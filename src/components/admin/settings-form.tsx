@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { updateSettingsAction, type SettingsFormInput } from "@/app/admin/configuracoes/actions";
+import { DEFAULT_LOCAL_DELIVERY_FEE, DEFAULT_LOCAL_DELIVERY_THRESHOLD } from "@/lib/local-delivery";
 import type { StoreSettings } from "@/server/types";
 
 function labelClass() {
@@ -25,6 +26,8 @@ export function SettingsForm({ settings }: { settings: StoreSettings }) {
     defaultValues: {
       ...settings,
       originCep: settings.originCep ?? "",
+      localDeliveryThreshold: settings.localDeliveryThreshold ?? DEFAULT_LOCAL_DELIVERY_THRESHOLD,
+      localDeliveryFee: settings.localDeliveryFee ?? DEFAULT_LOCAL_DELIVERY_FEE,
       defaultProfitMarginPct: settings.defaultProfitMarginPct ?? 30,
       averageFailureRatePct: settings.averageFailureRatePct ?? 5,
       printerCostPerHour: settings.printerCostPerHour ?? 0,
@@ -38,6 +41,8 @@ export function SettingsForm({ settings }: { settings: StoreSettings }) {
     setSaved(false);
     const result = await updateSettingsAction({
       freeShippingThreshold: Number(data.freeShippingThreshold),
+      localDeliveryThreshold: Number(data.localDeliveryThreshold),
+      localDeliveryFee: Number(data.localDeliveryFee),
       whatsappNumber: data.whatsappNumber.replace(/\D/g, ""),
       originCep: data.originCep?.replace(/\D/g, "") ?? "",
       defaultProfitMarginPct: Number(data.defaultProfitMarginPct),
@@ -72,6 +77,40 @@ export function SettingsForm({ settings }: { settings: StoreSettings }) {
         )}
         <p className="text-xs text-graphite">
           Usado na barra de anúncio, no carrinho e no cálculo real do frete no checkout.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className={labelClass()} htmlFor="localDeliveryThreshold">
+          Motoboy (Natal e Parnamirim): frete grátis a partir de (R$)
+        </label>
+        <input
+          id="localDeliveryThreshold"
+          type="number"
+          step="0.01"
+          className={inputClass(Boolean(errors.localDeliveryThreshold))}
+          {...register("localDeliveryThreshold", { valueAsNumber: true })}
+        />
+        {errors.localDeliveryThreshold && (
+          <p className="text-xs text-red-600">{errors.localDeliveryThreshold.message}</p>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className={labelClass()} htmlFor="localDeliveryFee">
+          Motoboy (Natal e Parnamirim): valor abaixo desse mínimo (R$)
+        </label>
+        <input
+          id="localDeliveryFee"
+          type="number"
+          step="0.01"
+          className={inputClass(Boolean(errors.localDeliveryFee))}
+          {...register("localDeliveryFee", { valueAsNumber: true })}
+        />
+        {errors.localDeliveryFee && <p className="text-xs text-red-600">{errors.localDeliveryFee.message}</p>}
+        <p className="text-xs text-graphite">
+          A entrega por motoboy só aparece para CEPs de Natal/RN e Parnamirim/RN, sempre no topo das opções de frete.
+          Usado na barra de anúncio, na página do produto e no checkout.
         </p>
       </div>
 

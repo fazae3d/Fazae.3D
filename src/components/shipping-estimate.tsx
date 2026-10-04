@@ -6,7 +6,8 @@ import { useStoreSettings } from "@/hooks/use-store-settings";
 import { formatPrice } from "@/lib/format";
 import { round2 } from "@/lib/money";
 import { SHIPPING_OPTIONS } from "@/lib/shipping";
-import { quoteShippingAction } from "@/app/actions/shipping";
+import { checkLocalDeliveryAction, quoteShippingAction } from "@/app/actions/shipping";
+import { LOCAL_DELIVERY_LABEL, getLocalDeliveryRules, localDeliveryCost } from "@/lib/local-delivery";
 import type { ShippingQuote } from "@/lib/melhor-envio";
 
 /** Shown on the PDP — the point where the purchase decision actually happens, not just at cart/checkout. */
@@ -22,12 +23,14 @@ export function ShippingEstimate({
   const { subtotal } = useCart();
   const { settings } = useStoreSettings();
   const potentialSubtotal = round2(subtotal + price * quantity);
+  const localRules = getLocalDeliveryRules(settings);
   const remaining = round2(Math.max(0, settings.freeShippingThreshold - potentialSubtotal));
 
   const [cep, setCep] = useState("");
   const [loading, setLoading] = useState(false);
   const [quotes, setQuotes] = useState<ShippingQuote[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [localDelivery, setLocalDelivery] = useState(false);
 
   const handleCalculate = async () => {
     const digits = cep.replace(/\D/g, "");
@@ -38,8 +41,13 @@ export function ShippingEstimate({
     setError(null);
     setLoading(true);
     setQuotes(null);
-    const result = await quoteShippingAction(digits, [{ productSlug, quantity }]);
+    setLocalDelivery(false);
+    const [result, isLocalCity] = await Promise.all([
+      quoteShippingAction(digits, [{ productSlug, quantity }]),
+      checkLocalDeliveryAction(digits),
+    ]);
     setLoading(false);
+    setLocalDelivery(isLocalCity);
     if (result.length === 0) {
       setError("Não foi possível calcular o frete para esse CEP agora.");
       return;
@@ -93,6 +101,15 @@ export function ShippingEstimate({
             </button>
           </div>
           {error && <p className="mt-1.5 text-red-500">{error}</p>}
+
+          {localDelivery && (
+            <p className="mt-2 text-petrol">
+              {LOCAL_DELIVERY_LABEL}:{" "}
+              {localDeliveryCost(potentialSubtotal, localRules) === 0
+                ? "Grátis 🎉"
+                : `${formatPrice(localRules.fee)} (grátis a partir de ${formatPrice(localRules.threshold)})`}
+            </p>
+          )}
 
           {quotes ? (
             <ul className="mt-2 space-y-0.5">
