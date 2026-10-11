@@ -21,6 +21,31 @@ function isConfirmed(order: Order) {
   return order.status !== "Cancelado" && order.status !== "Pedido recebido";
 }
 
+/** Prefixo do id dos "pedidos" sintéticos que representam o dinheiro recebido em acertos de consignação. */
+export const CONSIGNMENT_ID_PREFIX = "CONSIG-";
+
+/**
+ * Cada acerto de consignação com valor recebido vira uma venda (já paga) no dia da visita, para entrar na receita, no caixa e no
+ * payback sem mudar nenhuma outra conta. O horário fixo ao meio-dia evita que o fuso empurre a visita para o dia vizinho.
+ */
+export function consignmentVisitsAsOrders(visits: { id: string; visitDate: string; amountCollected: number }[]): Order[] {
+  return visits
+    .filter((v) => v.amountCollected > 0)
+    .map((v) => ({
+      id: `${CONSIGNMENT_ID_PREFIX}${v.id}`,
+      createdAt: new Date(new Date(v.visitDate).getTime() + 12 * 60 * 60 * 1000).toISOString(),
+      channel: "presencial" as const,
+      customerName: "Consignação",
+      items: [],
+      subtotal: v.amountCollected,
+      shipping: 0,
+      discount: 0,
+      total: v.amountCollected,
+      paymentMethod: "pix" as const,
+      status: "Entregue" as const,
+    }));
+}
+
 export type MonthBucket = { key: string; label: string };
 
 function lastNMonths(count: number): MonthBucket[] {
@@ -67,6 +92,13 @@ export function cashFlowByMonth(orders: Order[], expenses: Expense[], months = 6
 
 export type SimplifiedDRE = {
   grossRevenue: number;
+  /** Parte da receita bruta que é frete cobrado do cliente (não é receita de produto). */
+  shippingIncluded: number;
+  /** Parte da receita bruta que veio de acertos de consignação. */
+  consignmentIncluded: number;
+  /** Taxas do Mercado Pago dos pedidos que já têm a taxa registrada (pedidos antigos e vendas manuais não têm). */
+  paymentFees: number;
+  ordersWithFee: number;
   cogs: number;
   operatingExpenses: number;
   operatingProfit: number;
@@ -87,9 +119,24 @@ export function simplifiedDRE(orders: Order[], expenses: Expense[]): SimplifiedD
   const operatingExpenses = round2(
     expenses.filter((e) => e.category === "operacional").reduce((sum, e) => sum + e.totalValue, 0),
   );
-  const operatingProfit = round2(grossRevenue - cogs - operatingExpenses);
+  const confirmed = orders.filter(isConfirmed);
+  const shippingIncluded = round2(confirmed.reduce((sum, o) => sum + (o.shipping ?? 0), 0));
+  const consignmentIncluded = round2(confirmed.filter((o) => o.id.startsWith(CONSIGNMENT_ID_PREFIX)).reduce((sum, o) => sum + o.total, 0));
+  const withFee = confirmed.filter((o) => o.paymentFee !== undefined);
+  const paymentFees = round2(withFee.reduce((sum, o) => sum + (o.paymentFee ?? 0), 0));
+  const operatingProfit = round2(grossRevenue - cogs - operatingExpenses - paymentFees);
   const operatingMarginPct = grossRevenue > 0 ? round2((operatingProfit / grossRevenue) * 100) : null;
-  return { grossRevenue, cogs, operatingExpenses, operatingProfit, operatingMarginPct };
+  return {
+    grossRevenue,
+    shippingIncluded,
+    consignmentIncluded,
+    paymentFees,
+    ordersWithFee: withFee.length,
+    cogs,
+    operatingExpenses,
+    operatingProfit,
+    operatingMarginPct,
+  };
 }
 
 export type InvestmentPayback = {

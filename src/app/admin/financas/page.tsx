@@ -4,12 +4,14 @@ import { withReadFallback } from "@/lib/db-fallback";
 import { fallbackExpenses, fallbackOrders } from "@/server/demo-fallback";
 import {
   cashFlowByMonth,
+  consignmentVisitsAsOrders,
   expenseCategoryBreakdown,
   growthGoal,
   investmentPayback,
   simplifiedDRE,
 } from "@/lib/finance-stats";
 import { formatPrice } from "@/lib/format";
+import { getAllConsignmentVisits } from "@/server/repositories/consignment-repository";
 import { ExpenseManager } from "@/components/admin/expense-manager";
 
 function KpiCard({
@@ -34,10 +36,13 @@ function KpiCard({
 }
 
 export default async function AdminFinancePage() {
-  const [orders, expenses] = await Promise.all([
+  const [salesOrders, expenses, visits] = await Promise.all([
     withReadFallback(() => getAllOrders(), fallbackOrders),
     withReadFallback(() => getAllExpenses(), fallbackExpenses),
+    withReadFallback(() => getAllConsignmentVisits(), []),
   ]);
+  // O dinheiro recebido dos lojistas em consignação também é receita: entra junto com as vendas.
+  const orders = [...salesOrders, ...consignmentVisitsAsOrders(visits)];
 
   const dre = simplifiedDRE(orders, expenses);
   const payback = investmentPayback(orders, expenses);
@@ -55,8 +60,26 @@ export default async function AdminFinancePage() {
       </p>
 
       <p className="label-caps mb-3 text-[11px] text-graphite">DRE simplificado (regime de caixa)</p>
-      <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <KpiCard label="Receita bruta" value={formatPrice(dre.grossRevenue)} />
+      <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        <KpiCard
+          label="Receita bruta"
+          value={formatPrice(dre.grossRevenue)}
+          sublabel={[
+            dre.shippingIncluded > 0 ? `inclui ${formatPrice(dre.shippingIncluded)} de frete` : null,
+            dre.consignmentIncluded > 0 ? `${formatPrice(dre.consignmentIncluded)} de consignação` : null,
+          ]
+            .filter(Boolean)
+            .join(" · ") || undefined}
+        />
+        <KpiCard
+          label="Taxas do Mercado Pago"
+          value={formatPrice(dre.paymentFees)}
+          sublabel={
+            dre.ordersWithFee > 0
+              ? `em ${dre.ordersWithFee} pedido(s); pedidos antigos não têm a taxa registrada`
+              : "Aparece a partir dos próximos pedidos aprovados"
+          }
+        />
         <KpiCard label="Custos diretos" value={formatPrice(dre.cogs)} sublabel="Material + embalagem" />
         <KpiCard label="Despesas operacionais" value={formatPrice(dre.operatingExpenses)} />
         <KpiCard

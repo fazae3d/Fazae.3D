@@ -14,7 +14,7 @@ const MAX_SUGGESTIONS = 5;
 export function HeaderSearch() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const { products } = useProductSnapshot();
+  const { products } = useProductSnapshot({ enabled: open });
   const pixPct = usePixDiscountPct();
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();

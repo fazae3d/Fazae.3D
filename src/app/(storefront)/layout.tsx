@@ -2,9 +2,8 @@ import type { ReactNode } from "react";
 import { AnnouncementBar } from "@/components/announcement-bar";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
-import { CartDrawer } from "@/components/cart-drawer";
+import { LazyCartDrawer, LazyCookieConsent } from "@/components/lazy-widgets";
 import { WhatsAppFloatButton } from "@/components/whatsapp-float-button";
-import { CookieConsent } from "@/components/cookie-consent";
 import { CartProvider } from "@/contexts/cart-context";
 import { PixDiscountProvider } from "@/contexts/pix-discount-context";
 import { MenuCategoriesProvider } from "@/contexts/menu-categories-context";
@@ -84,9 +83,9 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
           <main className="flex-1">{children}</main>
           <Footer />
         </div>
-        <CartDrawer />
+        <LazyCartDrawer />
         <WhatsAppFloatButton />
-        <CookieConsent />
+        <LazyCookieConsent />
       </WishlistProvider>
     </CartProvider>
     </PixDiscountProvider>

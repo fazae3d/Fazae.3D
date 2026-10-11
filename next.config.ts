@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { SLUG_ALIASES } from "./src/lib/slug-aliases";
 
 const nextConfig: NextConfig = {
   // Lets the dev server serve JS chunks/HMR when opened via the LAN IP
@@ -6,6 +7,13 @@ const nextConfig: NextConfig = {
   // those requests as cross-origin and the page loads but never hydrates,
   // so every button looks dead even though the markup is correct.
   allowedDevOrigins: ["192.168.1.144", "192.168.88.118"],
+  async redirects() {
+    return Object.entries(SLUG_ALIASES).map(([from, to]) => ({
+      source: `/produto/${from}`,
+      destination: `/produto/${to}`,
+      permanent: true,
+    }));
+  },
   async headers() {
     return [
       {

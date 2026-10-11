@@ -246,6 +246,11 @@ model Order {
    * ativa devolvem estoque ao cancelar — pedidos antigos, anteriores à baixa automática, não.
    */
   stockReserved      Boolean         @default(false)
+  /**
+   * Taxa cobrada pelo Mercado Pago neste pedido (valor pago menos o líquido recebido). Preenchida quando o pagamento é aprovado;
+   * vazia em pedidos antigos e vendas lançadas à mão.
+   */
+  paymentFee         Float?
   reviews            Review[]
 
   @@index([userEmail])
@@ -449,6 +454,11 @@ model ProductionItem {
   stage       ProductionStage @default(inicio)
   deadline    DateTime?
   notes       String?
+  /**
+   * Quantas unidades já foram somadas ao estoque do produto quando o item foi marcado como finalizado
+   * (zerado se voltar para uma fase anterior). Garante que o estoque só aumenta uma vez por item.
+   */
+  stockAddedQty Int           @default(0)
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 

@@ -21,6 +21,7 @@ function toOrder(row: OrderRow): Order {
     customerPhone: row.customerPhone ?? undefined,
     couponCode: row.couponCode ?? undefined,
     shippingMethod: row.shippingMethod ?? undefined,
+    paymentFee: row.paymentFee ?? undefined,
     tracking: row.tracking ?? undefined,
     paymentMethod: row.paymentMethod as Order["paymentMethod"],
     paymentStatus: row.paymentStatus as Order["paymentStatus"],
@@ -214,6 +215,8 @@ export async function applyPaymentUpdate(input: {
   externalReference?: string | null;
   paymentStatus: string;
   transactionAmount?: number;
+  /** Líquido recebido (informado pelo Mercado Pago quando aprovado): a diferença para o valor pago é a taxa. */
+  netReceived?: number;
 }): Promise<PaymentUpdateResult> {
   const existing =
     (await db.order.findUnique({ where: { mpPaymentId: input.mpPaymentId } })) ??
@@ -241,7 +244,14 @@ export async function applyPaymentUpdate(input: {
 
   const claimed = await db.order.updateMany({
     where: { id: existing.id, status: existing.status, paymentStatus: existing.paymentStatus },
-    data: { paymentStatus: input.paymentStatus, status: nextStatus, mpPaymentId: existing.mpPaymentId ?? input.mpPaymentId },
+    data: {
+      paymentStatus: input.paymentStatus,
+      status: nextStatus,
+      mpPaymentId: existing.mpPaymentId ?? input.mpPaymentId,
+      ...(feeFrom(input.paymentStatus, input.transactionAmount, input.netReceived) !== undefined
+        ? { paymentFee: feeFrom(input.paymentStatus, input.transactionAmount, input.netReceived) }
+        : {}),
+    },
   });
   const current = await db.order.findUniqueOrThrow({ where: { id: existing.id } });
   if (claimed.count === 0) {
@@ -252,10 +262,22 @@ export async function applyPaymentUpdate(input: {
   return { success: true, order: toOrder(current), previousStatus };
 }
 
+/** Taxa = valor pago - líquido recebido; só faz sentido com pagamento aprovado e valores coerentes. */
+export function feeFrom(paymentStatus: string, paid?: number, net?: number): number | undefined {
+  if (paymentStatus !== "approved" || paid === undefined || net === undefined || net <= 0 || net > paid) return undefined;
+  return Math.round((paid - net) * 100) / 100;
+}
+
 /** Grava o resultado do pagamento no pedido criado antes da cobrança. */
 export async function recordPaymentOutcome(
   id: string,
-  data: { mpPaymentId: string; paymentStatus: string; status: OrderStatus; paymentMethod: Order["paymentMethod"] },
+  data: {
+    mpPaymentId: string;
+    paymentStatus: string;
+    status: OrderStatus;
+    paymentMethod: Order["paymentMethod"];
+    paymentFee?: number;
+  },
 ): Promise<void> {
   await db.order.update({ where: { id }, data });
 }

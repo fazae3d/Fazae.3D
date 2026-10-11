@@ -12,6 +12,8 @@ export type MercadoPagoPaymentResult =
       status: string;
       statusDetail: string;
       paymentTypeId: string;
+      /** Valor líquido que o Mercado Pago repassa à loja (já sem a taxa). Só é definitivo quando o pagamento está aprovado. */
+      netReceived?: number;
       /** Present for Pix — the customer still needs to actually scan/pay this to complete the purchase. */
       qrCode?: string;
       qrCodeBase64?: string;
@@ -85,6 +87,7 @@ export async function createMercadoPagoPayment({
       status: result.status,
       statusDetail: result.status_detail ?? "",
       paymentTypeId: result.payment_type_id ?? "",
+      netReceived: result.transaction_details?.net_received_amount ?? undefined,
       qrCode: transactionData?.qr_code,
       qrCodeBase64: transactionData?.qr_code_base64,
       ticketUrl: transactionData?.ticket_url,
@@ -96,7 +99,7 @@ export async function createMercadoPagoPayment({
 }
 
 export type MercadoPagoPaymentLookupResult =
-  | { success: true; id: string; status: string; externalReference: string | null; transactionAmount?: number }
+  | { success: true; id: string; status: string; externalReference: string | null; transactionAmount?: number; netReceived?: number }
   | { success: false; error: string };
 
 /** Used by the webhook route — never trusts the notification payload's own status, always re-fetches from Mercado Pago. */
@@ -117,6 +120,7 @@ export async function getMercadoPagoPayment(id: string): Promise<MercadoPagoPaym
       status: result.status,
       externalReference: result.external_reference ?? null,
       transactionAmount: result.transaction_amount ?? undefined,
+      netReceived: result.transaction_details?.net_received_amount ?? undefined,
     };
   } catch (error) {
     console.error("[mercadopago] falha ao consultar pagamento", error);

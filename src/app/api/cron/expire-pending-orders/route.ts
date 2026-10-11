@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
           externalReference: payment.externalReference,
           paymentStatus: payment.status,
           transactionAmount: payment.transactionAmount,
+          netReceived: payment.netReceived,
         });
         if (result.success) {
           recovered += 1;

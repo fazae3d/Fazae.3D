@@ -170,6 +170,11 @@ export type ConsignmentVisitInput = {
   notes?: string;
 };
 
+export async function getAllConsignmentVisits(): Promise<ConsignmentVisit[]> {
+  const rows = await db.consignmentVisit.findMany({ orderBy: { visitDate: "desc" } });
+  return rows.map(toConsignmentVisit);
+}
+
 export async function createConsignmentVisit(input: ConsignmentVisitInput): Promise<ConsignmentVisit> {
   const created = await db.consignmentVisit.create({ data: input });
   return toConsignmentVisit(created);

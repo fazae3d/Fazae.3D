@@ -1,4 +1,5 @@
 import { db } from "../db";
+import { SLUG_ALIASES } from "@/lib/slug-aliases";
 import { matchesSearch } from "@/lib/search";
 import type { Product } from "@/lib/types";
 import type { StoredProduct } from "../types";
@@ -36,7 +37,12 @@ export async function getAllProducts(): Promise<Product[]> {
 export async function getProduct(slug: string): Promise<Product | undefined> {
   if (!slug) return undefined;
   const row = await db.product.findUnique({ where: { slug }, include: { category: true } });
-  return row ? toProduct(row) : undefined;
+  if (row) return toProduct(row);
+  // Produto renomeado: pedidos e carrinhos antigos ainda trazem o endereço antigo.
+  const renamed = SLUG_ALIASES[slug];
+  if (!renamed) return undefined;
+  const byNewSlug = await db.product.findUnique({ where: { slug: renamed }, include: { category: true } });
+  return byNewSlug ? toProduct(byNewSlug) : undefined;
 }
 
 export async function getProductsByCategory(categorySlug: string): Promise<Product[]> {

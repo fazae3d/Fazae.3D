@@ -105,6 +105,8 @@ export type Order = {
   depositAmount?: number;
   /** True when checkout already deducted stock for this order, so cancelling it must give the stock back. */
   stockReserved?: boolean;
+  /** Taxa do Mercado Pago deste pedido (valor pago menos o líquido recebido). Ausente em pedidos antigos e vendas manuais. */
+  paymentFee?: number;
 };
 
 export type CouponType = "percentual" | "fixo" | "frete-gratis";
@@ -288,6 +290,8 @@ export type AbandonedCart = {
 
 /** Item de produção sem pedido associado — ver ProductionItem em schema.prisma. */
 export type ProductionItem = {
+  /** Unidades já somadas ao estoque do produto quando o item foi finalizado. */
+  stockAddedQty: number;
   id: string;
   productSlug?: string;
   description: string;

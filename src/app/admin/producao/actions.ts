@@ -192,7 +192,11 @@ export async function launchProductionItemAsSaleAction(
       productionDeadline: item.deadline,
     };
 
-    const created = await addOrder(order, { productionStage: item.stage });
+    // Item já finalizado com unidades somadas ao estoque: a venda tira essas peças do estoque (senão ficariam contadas duas vezes).
+    const created = await addOrder(order, {
+      productionStage: item.stage,
+      reserveStock: Boolean(item.productSlug) && item.stockAddedQty > 0,
+    });
     await deleteProductionItem(item.id);
 
     revalidatePath("/admin/producao");

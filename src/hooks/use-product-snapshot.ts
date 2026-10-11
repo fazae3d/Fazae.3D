@@ -30,7 +30,8 @@ function loadSnapshot(force: boolean): Promise<Snapshot> {
  * point where staleness would actually matter (e.g. opening the cart)
  * rather than polling.
  */
-export function useProductSnapshot() {
+export function useProductSnapshot(options?: { enabled?: boolean }) {
+  const enabled = options?.enabled ?? true;
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -48,9 +49,11 @@ export function useProductSnapshot() {
     // subscribe to here) — the lint rule's heuristic doesn't distinguish
     // this from a derived-state anti-pattern, but this genuinely is the
     // documented "fetch in an effect" shape.
+    // `enabled: false` adia a busca até ser necessária (ex.: busca do topo só carrega o catálogo quando é aberta).
+    if (!enabled) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     refresh(false);
-  }, [refresh]);
+  }, [refresh, enabled]);
 
   const getProduct = useCallback((slug: string) => products.find((p) => p.slug === slug), [products]);
   const getCategory = useCallback((slug: string) => categories.find((c) => c.slug === slug), [categories]);

@@ -26,6 +26,7 @@ function toOrder(row: Prisma.OrderGetPayload<object>): Order {
     customerPhone: row.customerPhone ?? undefined,
     couponCode: row.couponCode ?? undefined,
     shippingMethod: row.shippingMethod ?? undefined,
+    paymentFee: row.paymentFee ?? undefined,
     tracking: row.tracking ?? undefined,
     paymentMethod: row.paymentMethod as Order["paymentMethod"],
     paymentStatus: row.paymentStatus as Order["paymentStatus"],

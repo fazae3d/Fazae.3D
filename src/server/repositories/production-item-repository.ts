@@ -52,7 +52,25 @@ export async function updateProductionItem(
 ): Promise<ProductionItem | null> {
   const existing = await db.productionItem.findUnique({ where: { id } });
   if (!existing) return null;
-  const updated = await db.productionItem.update({ where: { id }, data: input });
+
+  // Item ligado a um produto do catálogo: ao ser finalizado, as unidades entram no estoque (uma vez só); se voltar para uma
+  // fase anterior, saem de novo. `stockAddedQty` guarda quantas unidades já foram somadas, para nunca contar em dobro.
+  const updated = await db.$transaction(async (tx) => {
+    const quantity = input.quantity ?? existing.quantity;
+    let stockAddedQty = existing.stockAddedQty;
+    if (input.stage && existing.productSlug) {
+      if (input.stage === "finalizado" && existing.stockAddedQty === 0) {
+        await tx.product.update({ where: { slug: existing.productSlug }, data: { stock: { increment: quantity } } });
+        stockAddedQty = quantity;
+      } else if (input.stage !== "finalizado" && existing.stockAddedQty > 0) {
+        const current = await tx.product.findUnique({ where: { slug: existing.productSlug }, select: { stock: true } });
+        const remove = Math.min(existing.stockAddedQty, current?.stock ?? 0);
+        if (remove > 0) await tx.product.update({ where: { slug: existing.productSlug }, data: { stock: { decrement: remove } } });
+        stockAddedQty = 0;
+      }
+    }
+    return tx.productionItem.update({ where: { id }, data: { ...input, stockAddedQty } });
+  });
   return toProductionItem(updated);
 }
 

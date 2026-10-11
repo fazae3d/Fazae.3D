@@ -95,6 +95,7 @@ export async function POST(request: NextRequest) {
       externalReference: payment.externalReference,
       paymentStatus: payment.status,
       transactionAmount: payment.transactionAmount,
+      netReceived: payment.netReceived,
     });
   } catch (error) {
     console.error("[mercadopago webhook] falha ao atualizar pedido", payment.id, error);

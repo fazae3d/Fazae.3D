@@ -14,6 +14,7 @@ import {
   OutOfStockError,
   addOrder,
   discardUnpaidOrder,
+  feeFrom,
   findOrdersByEmail,
   generateUniqueOrderId,
   recordPaymentOutcome,
@@ -285,6 +286,9 @@ export async function processCheckoutPaymentAction(
     paymentStatus: paymentResult.status,
     status: orderStatus,
     paymentMethod: mapPaymentTypeToMethod(paymentResult.paymentTypeId),
+    ...(feeFrom(paymentResult.status, total, paymentResult.netReceived) !== undefined
+      ? { paymentFee: feeFrom(paymentResult.status, total, paymentResult.netReceived) }
+      : {}),
   };
   const order: Order = { ...draft, ...outcome, paymentStatus: paymentResult.status as Order["paymentStatus"] };
 

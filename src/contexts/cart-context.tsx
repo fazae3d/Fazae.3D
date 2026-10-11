@@ -54,7 +54,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     couponStore.getServerSnapshot,
   );
   const [isOpen, setIsOpen] = useState(false);
-  const { loaded, getProduct, refresh } = useProductSnapshot();
+  // Carrinho vazio e fechado não precisa do catálogo: na maioria das visitas (home, páginas de produto) isso evita uma chamada pesada.
+  const { loaded, getProduct, refresh } = useProductSnapshot({ enabled: rawLines.length > 0 || isOpen });
 
   // Defensive: a line whose product no longer resolves (discontinued demo
   // item), or whose price is unset ("sob consulta" — a sob_encomenda piece
