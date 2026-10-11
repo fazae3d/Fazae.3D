@@ -45,10 +45,10 @@ Um ET barrigudinho e simpático em miniatura, impresso em 3D em PLA verde água.
 ## 4. Chaveiro Mini Jogo da Velha
 
 - **Tags sugeridas:** chaveiro, jogo da velha, jogo, miniatura, presente, impresso em 3D
-- **Confirme:** se o chaveiro é jogável (peças que se movem). Se for, eu acrescento isso, que é um ótimo atrativo.
+- Confirmado por você: o chaveiro é jogável, as peças se mexem.
 
 **Descrição:**
-Chaveiro inspirado no clássico jogo da velha, impresso em 3D em PLA roxo. Um acessório divertido para quem gosta de jogos e de itens diferentes: leve, colorido e fácil de levar nas chaves, na mochila ou na bolsa. Ótimo para presentear amigos, colegas e crianças maiores, e para lembrar de uma brincadeira que todo mundo já jogou. Produzido pela Fazaê em Parnamirim/RN. Peça pequena, não indicada para menores de 3 anos.
+Chaveiro do clássico jogo da velha, impresso em 3D em PLA roxo, e dá para jogar de verdade: as peças se mexem, então você pode desafiar um amigo em qualquer lugar. Pequeno, leve e colorido, vai nas chaves, na mochila ou na bolsa e vira passatempo na fila, no intervalo ou na viagem. Ótimo para presentear amigos, colegas e crianças maiores, e para quem gosta de jogos e de itens diferentes. Produzido pela Fazaê em Parnamirim/RN. Peça pequena, não indicada para menores de 3 anos.
 
 ---
 
@@ -104,10 +104,11 @@ Chaveiro fidget de corações concêntricos, impresso em 3D em PETG vermelho, co
 
 - **Nome sugerido:** Chaveiro Estrela Sensorial com Alça
 - **Tags sugeridas:** fidget, estrela, chaveiro sensorial, antiestresse, presente, impresso em 3D
-- **Confirme:** a unidade das dimensões cadastradas (4,5 x 4,9 x 4,5), que eu entendo como centímetros, e se a estrela também desliza como o Coração Sensorial.
+- Confirmado por você: as dimensões (4,5 x 4,9 x 4,5) são em centímetros.
+- **Confirme:** se a estrela também desliza como o Coração Sensorial (se sim, eu descrevo o movimento).
 
 **Descrição:**
-Chaveiro sensorial em formato de estrela, impresso em 3D em PLA roxo, com alça para prender nas chaves, na mochila ou na bolsa. Pesa cerca de 10 g e é uma companhia divertida para quem gosta de ter algo para mexer nas mãos e aliviar a tensão do dia. O roxo vibrante deixa a peça com visual moderno e fácil de achar na bolsa. Uma lembrança original para presentear amigos, colegas e quem curte itens diferentes. Produzido pela Fazaê em Parnamirim/RN. Peça pequena, não indicada para menores de 3 anos. Manuseie com cuidado.
+Chaveiro sensorial em formato de estrela, impresso em 3D em PLA roxo, com alça para prender nas chaves, na mochila ou na bolsa. Mede 4,5 x 4,9 x 4,5 cm, pesa cerca de 10 g e é uma companhia divertida para quem gosta de ter algo para mexer nas mãos e aliviar a tensão do dia. O roxo vibrante deixa a peça com visual moderno e fácil de achar na bolsa. Uma lembrança original para presentear amigos, colegas e quem curte itens diferentes. Produzido pela Fazaê em Parnamirim/RN. Peça pequena, não indicada para menores de 3 anos. Manuseie com cuidado.
 
 ---
 
@@ -133,7 +134,8 @@ Polvo articulado impresso em 3D em PETG vermelho. Cada tentáculo é articulado 
 
 - **Tags sugeridas:** porta munição, organizador, utilidade, impresso em 3D
 - **Observação:** fora do feed do Google Shopping (ver ponto 3 acima).
-- **Confirme:** se as dimensões cadastradas (12x10x15) são em centímetros, e se quer manter a frase final sobre legislação (é um aviso de cautela, opcional).
+- Confirmado por você: as dimensões (12 x 10 x 15) são em centímetros.
+- **Decida:** se quer manter a frase final sobre legislação (é um aviso de cautela, opcional).
 
 **Descrição:**
 Porta munições compacto produzido em impressão 3D em PETG, com capacidade para 50 munições. Mantém tudo organizado e sempre à mão, em um formato prático de 12 x 10 x 15 cm e cerca de 200 g. Disponível em preto e nude. Produzido pela Fazaê em Parnamirim/RN. Verifique a legislação aplicável ao uso e ao transporte antes de comprar.
