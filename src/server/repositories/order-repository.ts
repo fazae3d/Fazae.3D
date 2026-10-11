@@ -190,6 +190,8 @@ export async function updateOrderStatus(
     where: { id },
     data: { status, ...(tracking !== undefined ? { tracking: tracking || null } : {}) },
   });
+  // Cancelar um pedido que tinha estoque reservado devolve as peças e os insumos (uma vez só).
+  if (status === "Cancelado" && existing.status !== "Cancelado") await releaseReservation(id);
   return { success: true, order: toOrder(updated), previousStatus: existing.status as OrderStatus };
 }
 
@@ -309,6 +311,8 @@ export type DeleteOrderResult = { success: true } | { success: false; error: str
 export async function deleteOrder(id: string): Promise<DeleteOrderResult> {
   const existing = await db.order.findUnique({ where: { id } });
   if (!existing) return { success: false, error: "Pedido não encontrado." };
+  // Excluir também devolve o estoque reservado (se ainda houver), senão a peça some do estoque sem venda.
+  await releaseReservation(id);
   await db.order.delete({ where: { id } });
   return { success: true };
 }

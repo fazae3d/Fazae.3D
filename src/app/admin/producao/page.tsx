@@ -14,7 +14,7 @@ export default async function AdminProductionPage() {
   ]);
 
   const orderCards: ProductionCard[] = orders
-    .filter((order) => order.productionStage && order.productionStage !== "nao_aplicavel")
+    .filter((order) => order.status !== "Cancelado" && order.productionStage && order.productionStage !== "nao_aplicavel")
     .map((order) => ({ kind: "order", id: order.id, order }));
   const itemCards: ProductionCard[] = productionItems.map((item) => ({ kind: "item", id: item.id, item }));
   const cards = [...orderCards, ...itemCards];

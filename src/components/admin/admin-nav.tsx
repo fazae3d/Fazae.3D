@@ -25,6 +25,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/avaliacoes", label: "Avaliações" },
       { href: "/admin/consignacao", label: "Consignação" },
       { href: "/admin/pedidos", label: "Pedidos" },
+      { href: "/admin/carrinhos", label: "Carrinhos abandonados" },
       { href: "/admin/vendas/nova", label: "Lançar venda" },
     ],
   },
@@ -41,6 +42,7 @@ export const NAV_GROUPS: NavGroup[] = [
   { label: "Financeiro", href: "/admin/financas", links: [] },
   { label: "Clientes", href: "/admin/clientes", links: [] },
   { label: "Configurações", href: "/admin/configuracoes", links: [] },
+  { label: "Atividade", href: "/admin/atividade", links: [] },
 ];
 
 /** Flattened, in the same order — used by admin-mobile-nav and anywhere else that just needs every link. */

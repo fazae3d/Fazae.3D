@@ -54,7 +54,8 @@ export async function updateSettingsAction(input: SettingsFormInput): Promise<Se
   const result = await withMutationFallback(async () => {
     const settings = await updateSettings({
       ...parsed.data,
-      originCep: parsed.data.originCep ? parsed.data.originCep : undefined,
+      // CEP vazio limpa o campo (null); undefined deixaria o CEP antigo no lugar.
+      originCep: (parsed.data.originCep ? parsed.data.originCep : null) as unknown as string,
     });
     return { success: true, settings } as SettingsMutationResult;
   });

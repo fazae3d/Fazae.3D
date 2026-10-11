@@ -18,6 +18,19 @@ const ALL_STATUSES: OrderStatus[] = [
 ];
 
 const PAGE_SIZE = 10;
+const TO_SHIP = "a-enviar";
+
+const PAYMENT_STATUS_LABELS: Record<string, string> = {
+  pending: "Pagamento pendente",
+  in_process: "Pagamento em análise",
+  approved: "Pago",
+  authorized: "Autorizado",
+  rejected: "Recusado",
+  cancelled: "Cancelado",
+  refunded: "Reembolsado",
+  charged_back: "Chargeback",
+  in_mediation: "Em disputa",
+};
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
@@ -34,7 +47,9 @@ function matchesQuery(order: Order, query: string) {
   return (
     order.id.toLowerCase().includes(term) ||
     Boolean(order.userEmail?.toLowerCase().includes(term)) ||
-    Boolean(order.customerName?.toLowerCase().includes(term))
+    Boolean(order.customerName?.toLowerCase().includes(term)) ||
+    Boolean(order.address?.recipient.toLowerCase().includes(term)) ||
+    Boolean(order.customerPhone?.includes(term.replace(/\D/g, "") || "\u0000"))
   );
 }
 
@@ -53,8 +68,10 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
   const page = Math.max(1, Number(typeof params.page === "string" ? params.page : "1") || 1);
 
   const orders = await withReadFallback(() => getAllOrders(), fallbackOrders);
+  // "A enviar" = já pago, ainda sem código de rastreio e sem ter saído: a fila de trabalho do dia.
+  const toShip = (o: Order) => (o.status === "Pagamento aprovado" || o.status === "Em preparação") && !o.tracking;
   const filtered = orders
-    .filter((o) => !statusFilter || o.status === statusFilter)
+    .filter((o) => !statusFilter || (statusFilter === TO_SHIP ? toShip(o) : o.status === statusFilter))
     .filter((o) => !query || matchesQuery(o, query))
     .filter((o) => !from || o.createdAt.slice(0, 10) >= from)
     .filter((o) => !to || o.createdAt.slice(0, 10) <= to);
@@ -75,12 +92,20 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
             {filtered.length} de {orders.length} pedido(s)
           </p>
         </div>
-        <Link
-          href="/admin/vendas/nova"
-          className="label-caps border border-ink px-5 py-3 text-xs transition-colors hover:bg-ink hover:text-paper"
-        >
-          Lançar venda
-        </Link>
+        <div className="flex flex-wrap gap-3">
+          <a
+            href="/admin/exportar/pedidos"
+            className="label-caps border border-mist px-5 py-3 text-xs text-graphite transition-colors hover:border-ink hover:text-ink"
+          >
+            Exportar CSV
+          </a>
+          <Link
+            href="/admin/vendas/nova"
+            className="label-caps border border-ink px-5 py-3 text-xs transition-colors hover:bg-ink hover:text-paper"
+          >
+            Lançar venda
+          </Link>
+        </div>
       </div>
 
       <form className="mb-6 flex flex-wrap items-end gap-3" action="/admin/pedidos">
@@ -138,6 +163,14 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
         >
           Todos
         </Link>
+        <Link
+          href={`/admin/pedidos${buildQueryString({ ...baseParams, status: TO_SHIP })}`}
+          className={`label-caps border px-3.5 py-2 text-[11px] transition-colors ${
+            statusFilter === TO_SHIP ? "border-petrol bg-petrol text-ink" : "border-petrol/60 text-petrol hover:border-petrol"
+          }`}
+        >
+          A enviar ({orders.filter(toShip).length})
+        </Link>
         {ALL_STATUSES.map((status) => (
           <Link
             key={status}
@@ -170,7 +203,12 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
                     )}
                   </div>
                   <p className="text-xs text-graphite">
-                    {order.userEmail ?? order.customerName ?? "Cliente não identificado"} · {formatDate(order.createdAt)}
+                    {order.customerName ?? order.userEmail ?? "Cliente não identificado"}
+                    {order.customerPhone ? ` · ${order.customerPhone}` : ""} · {formatDate(order.createdAt)}
+                  </p>
+                  <p className="mt-0.5 text-xs text-graphite">
+                    {order.paymentMethod.toUpperCase()} · {PAYMENT_STATUS_LABELS[order.paymentStatus ?? "pending"] ?? order.paymentStatus}
+                    {order.tracking ? ` · Rastreio ${order.tracking}` : ""}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">

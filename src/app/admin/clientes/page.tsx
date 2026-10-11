@@ -33,12 +33,20 @@ export default async function AdminCustomersPage({
             {rows.length} de {customers.length} cliente(s)
           </p>
         </div>
-        <Link
-          href="/admin/clientes/novo"
-          className="label-caps border border-ink px-5 py-2.5 text-xs transition-colors hover:bg-ink hover:text-paper"
-        >
-          Novo cliente
-        </Link>
+        <div className="flex flex-wrap gap-3">
+          <a
+            href="/admin/exportar/clientes"
+            className="label-caps border border-mist px-5 py-2.5 text-xs text-graphite transition-colors hover:border-ink hover:text-ink"
+          >
+            Exportar CSV
+          </a>
+          <Link
+            href="/admin/clientes/novo"
+            className="label-caps border border-ink px-5 py-2.5 text-xs transition-colors hover:bg-ink hover:text-paper"
+          >
+            Novo cliente
+          </Link>
+        </div>
       </div>
 
       <form className="mb-6 flex flex-wrap gap-3" action="/admin/clientes">

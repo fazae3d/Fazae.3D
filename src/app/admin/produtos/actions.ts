@@ -1,5 +1,6 @@
 "use server";
 
+import { logAdminAction } from "@/server/audit";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { ADMIN_AUTH_DISABLED } from "@/lib/dev-flags";
@@ -97,6 +98,11 @@ export async function createProductAction(input: ProductFormInput): Promise<Prod
   return result;
 }
 
+/** Campo opcional vazio = apagar o valor antigo (null), não "não mexer" (undefined). */
+function clearable<T>(value: T | undefined): T {
+  return (value === undefined ? null : value) as T;
+}
+
 export async function updateProductAction(slug: string, input: ProductFormInput): Promise<ProductMutationResult> {
   if (!(await requireAdmin())) {
     return { success: false, error: "Acesso restrito ao administrador." };
@@ -112,24 +118,25 @@ export async function updateProductAction(slug: string, input: ProductFormInput)
     name: stored.name,
     categorySlug: stored.categorySlug,
     type: stored.type,
-    price: stored.price,
-    compareAtPrice: stored.compareAtPrice,
+    // null (e não undefined) para limpar o campo: o Prisma ignora undefined e o valor antigo ficava.
+    price: clearable(stored.price),
+    compareAtPrice: clearable(stored.compareAtPrice),
     stock: stored.stock,
     materials: stored.materials,
     scaleOptions: stored.scaleOptions,
-    weightGrams: stored.weightGrams,
-    dimensions: stored.dimensions,
-    packageWidthCm: stored.packageWidthCm,
-    packageHeightCm: stored.packageHeightCm,
-    packageLengthCm: stored.packageLengthCm,
-    estimatedProductionDays: stored.estimatedProductionDays,
+    weightGrams: clearable(stored.weightGrams),
+    dimensions: clearable(stored.dimensions),
+    packageWidthCm: clearable(stored.packageWidthCm),
+    packageHeightCm: clearable(stored.packageHeightCm),
+    packageLengthCm: clearable(stored.packageLengthCm),
+    estimatedProductionDays: clearable(stored.estimatedProductionDays),
     description: stored.description,
     tags: stored.tags,
     isNew: stored.isNew,
     isBestSeller: stored.isBestSeller,
-    imageTone: stored.imageTone,
+    imageTone: clearable(stored.imageTone),
     images: stored.images,
-    laborCost: stored.laborCost,
+    laborCost: clearable(stored.laborCost),
   }));
   if (result.success) {
     await persistMaterialUsages(result.product.slug, parsed.data.materialUsages);
@@ -144,6 +151,7 @@ export async function deleteProductAction(slug: string, categorySlug: string): P
   }
   // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco — hoje a escrita real falharia sem Supabase configurado.
   const result = await withMutationFallback(() => deleteProduct(slug));
+  if (result.success) await logAdminAction("produto.excluir", "Product", slug);
   if (result.success) revalidateCatalogPaths(slug, categorySlug);
   return result;
 }

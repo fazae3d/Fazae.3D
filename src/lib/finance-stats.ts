@@ -1,12 +1,19 @@
 import { round2 } from "@/lib/money";
+import { storeMonthKey, toStoreTime } from "@/lib/store-time";
 import type { Expense, Order } from "@/server/types";
 
+/** Mês de um pedido (tem horário): no fuso da loja. */
 function monthKey(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+  return storeMonthKey(date);
+}
+
+/** Mês de uma despesa: a data vem de um campo de data (meia-noite UTC), então vale o próprio calendário, sem deslocar fuso. */
+function dateOnlyMonthKey(date: Date) {
+  return date.toISOString().slice(0, 7);
 }
 
 function monthLabel(date: Date) {
-  return date.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" });
+  return date.toLocaleDateString("pt-BR", { month: "short", year: "2-digit", timeZone: "UTC" });
 }
 
 /** Same "confirmado" rule as revenueSplit in admin-stats.ts: pagamento aprovado (ou etapa posterior), nunca cancelado/pendente. */
@@ -17,11 +24,11 @@ function isConfirmed(order: Order) {
 export type MonthBucket = { key: string; label: string };
 
 function lastNMonths(count: number): MonthBucket[] {
-  const today = new Date();
+  const nowLocal = toStoreTime(new Date());
   const buckets: MonthBucket[] = [];
   for (let i = count - 1; i >= 0; i--) {
-    const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
-    buckets.push({ key: monthKey(date), label: monthLabel(date) });
+    const date = new Date(Date.UTC(nowLocal.getUTCFullYear(), nowLocal.getUTCMonth() - i, 1));
+    buckets.push({ key: date.toISOString().slice(0, 7), label: monthLabel(date) });
   }
   return buckets;
 }
@@ -44,7 +51,7 @@ export function cashFlowByMonth(orders: Order[], expenses: Expense[], months = 6
     inflowByMonth.set(key, (inflowByMonth.get(key) ?? 0) + order.total);
   }
   for (const expense of expenses) {
-    const key = monthKey(new Date(expense.purchaseDate));
+    const key = dateOnlyMonthKey(new Date(expense.purchaseDate));
     outflowByMonth.set(key, (outflowByMonth.get(key) ?? 0) + expense.totalValue);
   }
 
@@ -112,7 +119,9 @@ export function investmentPayback(orders: Order[], expenses: Expense[]): Investm
   const latest = new Date(Math.max(...dates.map((d) => d.getTime())));
   const monthsElapsed = Math.max(
     1,
-    (latest.getFullYear() - earliest.getFullYear()) * 12 + (latest.getMonth() - earliest.getMonth()) + 1,
+    (toStoreTime(latest).getUTCFullYear() - toStoreTime(earliest).getUTCFullYear()) * 12 +
+      (toStoreTime(latest).getUTCMonth() - toStoreTime(earliest).getUTCMonth()) +
+      1,
   );
   const avgMonthlyProfit = round2(operatingProfit / monthsElapsed);
 

@@ -23,13 +23,24 @@ export async function readWithStatus<T>(fn: () => Promise<T>, fallback: T): Prom
   }
 }
 
+/** Traduz o erro do Prisma numa frase útil; o resto vira uma mensagem genérica (o detalhe vai para o log). */
+function describeMutationError(error: unknown, fallbackMessage: string): string {
+  const code = (error as { code?: string } | null)?.code;
+  if (code === "P2002") return "Já existe um registro com esses dados.";
+  if (code === "P2003") return "Este item está em uso em outro cadastro (pedido, produção, consignação...) e não pode ser alterado ou excluído por enquanto.";
+  if (code === "P2025") return "Registro não encontrado. Atualize a página e tente de novo.";
+  return fallbackMessage;
+}
+
 export async function withMutationFallback<T extends { success: boolean }>(
   fn: () => Promise<T>,
-  errorMessage = "Configure o banco de dados (Supabase) para salvar alterações.",
+  errorMessage = "Não foi possível salvar agora. Tente de novo em instantes.",
 ): Promise<T> {
   try {
     return await fn();
-  } catch {
-    return { success: false, error: errorMessage } as unknown as T;
+  } catch (error) {
+    // Antes tudo virava "Configure o banco de dados (Supabase)", o que escondia o erro real (item em uso, dado duplicado...).
+    console.error("[mutação] falhou", error);
+    return { success: false, error: describeMutationError(error, errorMessage) } as unknown as T;
   }
 }

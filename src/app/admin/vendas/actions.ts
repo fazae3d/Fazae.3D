@@ -5,7 +5,7 @@ import { auth } from "@/auth";
 import { ADMIN_AUTH_DISABLED } from "@/lib/dev-flags";
 import { manualSaleFormSchema, type ManualSaleFormInput } from "@/lib/admin-validation";
 import { round2 } from "@/lib/money";
-import { addOrder, generateOrderId } from "@/server/repositories/order-repository";
+import { addOrder, generateOrderId, OutOfStockError } from "@/server/repositories/order-repository";
 import { getProduct, updateProduct } from "@/server/repositories/product-repository";
 import type { Order } from "@/server/types";
 import { withMutationFallback } from "@/lib/db-fallback";
@@ -40,7 +40,7 @@ export async function createManualSaleAction(input: ManualSaleFormInput): Promis
       if (!product) {
         return { success: false, error: `Produto "${line.productSlug}" não encontrado.` };
       }
-      if (product.stock < line.quantity) {
+      if (product.type !== "sob_encomenda" && product.stock < line.quantity) {
         return {
           success: false,
           error: `"${product.name}" não tem estoque suficiente (${product.stock} disponível, ${line.quantity} solicitado).`,
@@ -74,19 +74,15 @@ export async function createManualSaleAction(input: ManualSaleFormInput): Promis
       status,
     };
 
-    const created = await addOrder(order, { forceProductionPending: productionPending });
-
-    // Deduct stock per line. A plain read-then-write, not a single atomic
-    // decrement — acceptable here since this is a low-volume admin-only tool,
-    // not the public checkout path.
-    for (const line of resolvedItems) {
-      const product = await getProduct(line.productSlug);
-      if (product) {
-        await updateProduct(line.productSlug, { stock: product.stock - line.quantity });
-      }
+    // O estoque é baixado dentro da mesma transação que grava a venda (atômico), e fica marcado como
+    // reservado: cancelar essa venda depois devolve as peças.
+    try {
+      const created = await addOrder(order, { forceProductionPending: productionPending, reserveStock: true });
+      return { success: true, order: created };
+    } catch (error) {
+      if (error instanceof OutOfStockError) return { success: false, error: error.message };
+      throw error;
     }
-
-    return { success: true, order: created };
   });
 
   if (result.success) {

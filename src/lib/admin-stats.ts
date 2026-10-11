@@ -1,30 +1,37 @@
 import { round2 } from "@/lib/money";
+import { storeDayKey, storeDayNumber } from "@/lib/store-time";
 import type { Order, OrderStatus, PaymentMethod } from "@/server/types";
 
-function startOfDay(date: Date) {
-  const copy = new Date(date);
-  copy.setHours(0, 0, 0, 0);
-  return copy;
+/** Pedido cancelado não é venda: fora de faturamento, ticket médio, gráficos e rankings. */
+export function isActiveOrder(order: Order) {
+  return order.status !== "Cancelado";
+}
+
+/**
+ * Quanto ainda falta receber de um pedido. Pedido online já aprovado no Mercado Pago está pago por inteiro
+ * (o sinal só existe nas vendas/encomendas lançadas à mão); cancelado não tem nada a receber.
+ */
+export function orderBalanceDue(order: Order) {
+  if (order.status === "Cancelado") return 0;
+  if (order.paymentStatus === "approved") return 0;
+  return Math.max(0, round2(order.total - (order.depositAmount ?? 0)));
 }
 
 export type DayRevenue = { date: string; label: string; revenue: number };
 
-/** One bucket per day for the last `days` days (oldest first), zero-filled where there's no order. */
+/** One bucket per day for the last `days` days (oldest first), zero-filled where there's no order. Dias no fuso da loja. */
 export function revenueByDay(orders: Order[], days: number): DayRevenue[] {
-  const today = startOfDay(new Date());
+  const todayNumber = storeDayNumber(new Date());
   const buckets: DayRevenue[] = [];
   for (let i = days - 1; i >= 0; i--) {
-    const date = new Date(today);
-    date.setDate(date.getDate() - i);
-    buckets.push({
-      date: date.toISOString().slice(0, 10),
-      label: date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
-      revenue: 0,
-    });
+    const date = new Date((todayNumber - i) * 86_400_000);
+    const iso = date.toISOString().slice(0, 10);
+    buckets.push({ date: iso, label: `${iso.slice(8, 10)}/${iso.slice(5, 7)}`, revenue: 0 });
   }
   const byDate = new Map(buckets.map((bucket) => [bucket.date, bucket]));
   for (const order of orders) {
-    const bucket = byDate.get(order.createdAt.slice(0, 10));
+    if (!isActiveOrder(order)) continue;
+    const bucket = byDate.get(storeDayKey(new Date(order.createdAt)));
     if (bucket) bucket.revenue = round2(bucket.revenue + order.total);
   }
   return buckets;
@@ -52,18 +59,15 @@ export type PeriodComparison = { current: number; previous: number; pct: number 
 
 /** Revenue in the last `days` days vs. the `days` before that. `pct` is null when there's no baseline to compare against. */
 export function periodComparison(orders: Order[], days: number): PeriodComparison {
-  const today = startOfDay(new Date());
-  const currentCutoff = new Date(today);
-  currentCutoff.setDate(currentCutoff.getDate() - days);
-  const previousCutoff = new Date(today);
-  previousCutoff.setDate(previousCutoff.getDate() - days * 2);
-
+  const todayNumber = storeDayNumber(new Date());
   let current = 0;
   let previous = 0;
   for (const order of orders) {
-    const createdAt = new Date(order.createdAt);
-    if (createdAt >= currentCutoff) current += order.total;
-    else if (createdAt >= previousCutoff) previous += order.total;
+    if (!isActiveOrder(order)) continue;
+    const age = todayNumber - storeDayNumber(new Date(order.createdAt));
+    if (age < 0) continue;
+    if (age < days) current += order.total;
+    else if (age < days * 2) previous += order.total;
   }
   current = round2(current);
   previous = round2(previous);
@@ -76,6 +80,7 @@ export type TopProduct = { slug: string; name: string; categoryName: string; qua
 export function topProducts(orders: Order[], limit = 5): TopProduct[] {
   const bySlug = new Map<string, TopProduct>();
   for (const order of orders) {
+    if (!isActiveOrder(order)) continue;
     for (const item of order.items) {
       const entry = bySlug.get(item.productSlug) ?? {
         slug: item.productSlug,
@@ -109,6 +114,7 @@ export function paymentBreakdown(orders: Order[]): PaymentBreakdown[] {
     boleto: { count: 0, revenue: 0 },
   };
   for (const order of orders) {
+    if (!isActiveOrder(order)) continue;
     totals[order.paymentMethod].count += 1;
     totals[order.paymentMethod].revenue = round2(totals[order.paymentMethod].revenue + order.total);
   }
@@ -125,6 +131,7 @@ export type ChannelBreakdown = { channel: "site" | "manual"; label: string; coun
 export function channelBreakdown(orders: Order[]): ChannelBreakdown[] {
   const groups = { site: { count: 0, revenue: 0 }, manual: { count: 0, revenue: 0 } };
   for (const order of orders) {
+    if (!isActiveOrder(order)) continue;
     const key = order.channel === "online" ? "site" : "manual";
     groups[key].count += 1;
     groups[key].revenue = round2(groups[key].revenue + order.total);

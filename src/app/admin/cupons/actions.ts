@@ -58,8 +58,9 @@ export async function updateCouponAction(code: string, input: CouponFormInput): 
     updateCoupon(code, {
       type: stored.type,
       value: stored.value,
-      minSubtotal: stored.minSubtotal,
-      usageLimit: stored.usageLimit,
+      // null limpa o campo (o Prisma ignora undefined e o valor antigo ficava).
+      minSubtotal: (stored.minSubtotal === undefined ? null : stored.minSubtotal) as number,
+      usageLimit: (stored.usageLimit === undefined ? null : stored.usageLimit) as number,
       active: stored.active,
     }),
   );

@@ -12,6 +12,8 @@ import {
   revenueSplit,
   statusBreakdown,
   topProducts,
+  isActiveOrder,
+  orderBalanceDue,
 } from "@/lib/admin-stats";
 import { RevenueChart } from "@/components/admin/revenue-chart";
 import { getAllOrders } from "@/server/repositories/order-repository";
@@ -147,19 +149,19 @@ export default async function AdminDashboardPage() {
     (r) => r.usedFallback,
   );
 
-  const revenue = round2(orders.reduce((sum, o) => sum + o.total, 0));
-  const averageTicket = orders.length > 0 ? round2(revenue / orders.length) : 0;
+  // Pedidos cancelados ficam de fora do faturamento e do ticket médio (continuam no quadro de status).
+  const activeOrders = orders.filter(isActiveOrder);
+  const revenue = round2(activeOrders.reduce((sum, o) => sum + o.total, 0));
+  const averageTicket = activeOrders.length > 0 ? round2(revenue / activeOrders.length) : 0;
   const { confirmed: confirmedRevenue, pending: pendingRevenue } = revenueSplit(orders);
 
   const soldOut = products.filter(isSoldOut);
   const lowStock = products.filter((p) => !isSoldOut(p) && p.stock <= LOW_STOCK_THRESHOLD);
 
   const activeProductionOrders = orders.filter(
-    (o) => o.productionStage === "inicio" || o.productionStage === "em_producao",
+    (o) => isActiveOrder(o) && (o.productionStage === "inicio" || o.productionStage === "em_producao"),
   );
-  const receivableInProduction = round2(
-    activeProductionOrders.reduce((sum, o) => sum + (o.total - (o.depositAmount ?? 0)), 0),
-  );
+  const receivableInProduction = round2(activeProductionOrders.reduce((sum, o) => sum + orderBalanceDue(o), 0));
   const lowStockRawMaterials = rawMaterials.filter((rm) => rm.stock <= (rm.minStock ?? 0));
 
   const upcomingDeadlines = activeProductionOrders

@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - name: Tipos (TypeScript)
+        run: npx tsc --noEmit
+      - name: Testes das regras de preço, frete, desconto e relatórios
+        run: npm test
+      - name: Build de produção
+        run: npm run build
+        env:
+          # Só para o build não reclamar; o CI não conecta no banco real.
+          DATABASE_URL: postgresql://user:pass@localhost:5432/fazae
+          AUTH_SECRET: ci-build-only

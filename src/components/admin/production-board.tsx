@@ -1,5 +1,6 @@
 "use client";
 
+import { orderBalanceDue } from "@/lib/admin-stats";
 import { Fragment, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Order, ProductionItem } from "@/server/types";
@@ -286,7 +287,7 @@ export function ProductionBoard({ cards: initialCards, products }: { cards: Prod
           <p className={deadlineClass(order.productionDeadline)}>
             {order.productionDeadline ? formatDate(order.productionDeadline) : "Sem prazo"}
           </p>
-          <p className="text-ink">{formatPrice(order.total - (order.depositAmount ?? 0))} a receber</p>
+          <p className="text-ink">{formatPrice(orderBalanceDue(order))} a receber</p>
         </div>
       );
     }
@@ -387,7 +388,7 @@ export function ProductionBoard({ cards: initialCards, products }: { cards: Prod
                       })()}
                     </td>
                     <td className="px-4 py-3">
-                      {card.kind === "order" ? formatPrice(card.order.total - (card.order.depositAmount ?? 0)) : "—"}
+                      {card.kind === "order" ? formatPrice(orderBalanceDue(card.order)) : "—"}
                     </td>
                     <td className="px-4 py-3">
                       <Select

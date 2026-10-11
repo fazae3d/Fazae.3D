@@ -19,6 +19,7 @@ import {
   recordPaymentOutcome,
 } from "@/server/repositories/order-repository";
 import { notifyOwner } from "@/lib/owner-notify";
+import { LOW_STOCK_THRESHOLD } from "@/lib/badges";
 import { registerCouponUsage } from "@/server/repositories/coupon-repository";
 import { validateCouponWithFallback } from "@/server/coupon-validation";
 import { getSettings } from "@/server/repositories/settings-repository";
@@ -303,6 +304,19 @@ export async function processCheckoutPaymentAction(
       `O Mercado Pago cobrou o pagamento ${paymentResult.id} (status ${paymentResult.status}) para o pedido ${orderId}, mas não foi possível gravar o resultado no pedido.`,
       "O webhook deve reconciliar sozinho; se o pedido continuar como 'Pedido recebido', confira no Mercado Pago.",
     ]);
+  }
+
+  // Avisa o dono quando a venda deixa uma peça com pouco estoque (ou zerada).
+  const lowStock = resolvedItems
+    .map((item) => productsBySlug.get(item.productSlug))
+    .filter((p): p is NonNullable<typeof p> => Boolean(p) && p!.type !== "sob_encomenda")
+    .map((p) => ({ name: p.name, left: p.stock - (wantedBySlug.get(p.slug) ?? 0) }))
+    .filter((p) => p.left <= LOW_STOCK_THRESHOLD);
+  if (lowStock.length > 0) {
+    await notifyOwner(
+      "Estoque baixo depois de uma venda",
+      lowStock.map((p) => `${p.name}: ${p.left <= 0 ? "ZERADO" : `restam ${p.left}`}`),
+    );
   }
 
   if (appliedCouponCode) {

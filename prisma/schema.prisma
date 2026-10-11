@@ -249,6 +249,8 @@ model Order {
   reviews            Review[]
 
   @@index([userEmail])
+  @@index([createdAt])
+  @@index([status])
 }
 
 model Coupon {
@@ -464,4 +466,17 @@ model RateLimitBucket {
   key     String   @id
   count   Int
   resetAt DateTime
+}
+
+/** Registro de ações sensíveis feitas no painel (quem apagou/cancelou/alterou o quê e quando). */
+model AuditLog {
+  id         String   @id @default(cuid())
+  at         DateTime @default(now())
+  actorEmail String
+  action     String
+  targetType String
+  targetId   String
+  details    Json?
+
+  @@index([at])
 }
