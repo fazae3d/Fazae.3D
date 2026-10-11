@@ -1,6 +1,4 @@
 import { getProduct } from "@/lib/demo-data";
-import { withReadFallback } from "@/lib/db-fallback";
-import { fallbackProducts } from "@/server/demo-fallback";
 import type { Product } from "@/lib/types";
 import type { OrderItem } from "@/server/types";
 
@@ -13,12 +11,9 @@ export type CartItemLine = { productSlug: string; material: string; color: strin
  * (which only needs name/price) go to resolve a cart against the catalog.
  */
 export async function fetchProductsForLines(lines: CartItemLine[]): Promise<Map<string, Product>> {
-  // TODO(fase DB): remove o fallback quando a Fazaê tiver o próprio banco — hoje a leitura real falharia sem Supabase configurado.
-  const products = await Promise.all(
-    lines.map((line) =>
-      withReadFallback(() => getProduct(line.productSlug), fallbackProducts.find((p) => p.slug === line.productSlug)),
-    ),
-  );
+  // Sem fallback para o catálogo de demonstração: se o banco falhar, o erro sobe e o checkout recusa,
+  // em vez de cobrar preço de seed e perder o pedido.
+  const products = await Promise.all(lines.map((line) => getProduct(line.productSlug)));
   return new Map(products.filter((p): p is Product => Boolean(p)).map((p) => [p.slug, p] as const));
 }
 

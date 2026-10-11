@@ -3,6 +3,7 @@ import type { Order, OrderStatus } from "../types";
 import type { Prisma, ProductionStage } from "@/generated/prisma/client";
 import { getUsagesForProduct } from "./product-material-usage-repository";
 import { adjustRawMaterialStock } from "./raw-material-repository";
+import { randomInt } from "crypto";
 import { upsertCustomerFromContact } from "./customer-repository";
 
 export type { Order, OrderItem, OrderStatus, PaymentMethod } from "../types";
@@ -30,7 +31,63 @@ function toOrder(row: OrderRow): Order {
     productionStage: row.productionStage as Order["productionStage"],
     productionDeadline: row.productionDeadline?.toISOString() ?? undefined,
     depositAmount: row.depositAmount,
+    stockReserved: row.stockReserved,
   };
+}
+
+/** Lançada quando o estoque não cobre o pedido no momento da baixa (outra compra levou a última peça). */
+export class OutOfStockError extends Error {
+  constructor(public productName: string) {
+    super(`"${productName}" não tem estoque suficiente disponível.`);
+  }
+}
+
+type Tx = Prisma.TransactionClient;
+
+function quantitiesBySlug(items: Order["items"]) {
+  const totals = new Map<string, number>();
+  for (const item of items) totals.set(item.productSlug, (totals.get(item.productSlug) ?? 0) + item.quantity);
+  return totals;
+}
+
+/**
+ * Baixa o estoque dentro da mesma transação que cria o pedido, de forma atômica:
+ * `stock >= qty` na própria condição do UPDATE impede duas compras simultâneas de levarem a mesma peça.
+ * Produtos sob encomenda não têm estoque a baixar.
+ */
+async function reserveStock(tx: Tx, items: Order["items"]) {
+  const totals = quantitiesBySlug(items);
+  const products = await tx.product.findMany({ where: { slug: { in: [...totals.keys()] } } });
+  for (const product of products) {
+    if (product.type === "sob_encomenda") continue;
+    const qty = totals.get(product.slug) ?? 0;
+    const result = await tx.product.updateMany({
+      where: { slug: product.slug, stock: { gte: qty } },
+      data: { stock: { decrement: qty } },
+    });
+    if (result.count === 0) throw new OutOfStockError(product.name);
+  }
+}
+
+/** Devolve estoque e insumos de um pedido que tinha a reserva ativa. Idempotente: só age uma vez por pedido. */
+async function releaseReservation(orderId: string): Promise<void> {
+  const claimed = await db.order.updateMany({ where: { id: orderId, stockReserved: true }, data: { stockReserved: false } });
+  if (claimed.count === 0) return;
+  const row = await db.order.findUnique({ where: { id: orderId } });
+  if (!row) return;
+  const items = row.items as Order["items"];
+  const totals = quantitiesBySlug(items);
+  const products = await db.product.findMany({ where: { slug: { in: [...totals.keys()] } } });
+  for (const product of products) {
+    if (product.type === "sob_encomenda") continue;
+    await db.product.update({ where: { slug: product.slug }, data: { stock: { increment: totals.get(product.slug) ?? 0 } } });
+  }
+  for (const item of items) {
+    const usages = await getUsagesForProduct(item.productSlug);
+    for (const usage of usages) {
+      await adjustRawMaterialStock(usage.rawMaterialId, usage.quantity * item.quantity);
+    }
+  }
 }
 
 /**
@@ -64,19 +121,24 @@ async function determineProductionStage(order: Order): Promise<ProductionStage> 
 
 export async function addOrder(
   order: Order,
-  options?: { forceProductionPending?: boolean; productionStage?: ProductionStage },
+  options?: { forceProductionPending?: boolean; productionStage?: ProductionStage; reserveStock?: boolean },
 ): Promise<Order> {
   const { createdAt, address, ...rest } = order;
   const productionStage =
     options?.productionStage ?? (options?.forceProductionPending ? "inicio" : await determineProductionStage(order));
-  const created = await db.order.create({
-    data: {
-      ...rest,
-      createdAt: new Date(createdAt),
-      items: rest.items as unknown as Prisma.InputJsonValue,
-      address: address ? (address as unknown as Prisma.InputJsonValue) : undefined,
-      productionStage,
-    },
+  const reserve = options?.reserveStock === true;
+  const created = await db.$transaction(async (tx) => {
+    if (reserve) await reserveStock(tx, order.items);
+    return tx.order.create({
+      data: {
+        ...rest,
+        createdAt: new Date(createdAt),
+        items: rest.items as unknown as Prisma.InputJsonValue,
+        address: address ? (address as unknown as Prisma.InputJsonValue) : undefined,
+        productionStage,
+        stockReserved: reserve,
+      },
+    });
   });
 
   await consumeRawMaterialsForOrder(order);
@@ -131,22 +193,98 @@ export async function updateOrderStatus(
   return { success: true, order: toOrder(updated), previousStatus: existing.status as OrderStatus };
 }
 
+export type PaymentUpdateResult =
+  | { success: true; order: Order; previousStatus: OrderStatus }
+  | { success: false; reason: "not_found" | "amount_mismatch"; error: string };
+
 /**
- * Reconciles a Mercado Pago webhook notification with the order it belongs
- * to — looked up by `mpPaymentId` (set at order-creation time from the
- * gateway's synchronous response), never trusted from the webhook body itself.
+ * Reconciles a Mercado Pago payment with its order — found by `mpPaymentId`, or by the
+ * `external_reference` (our order id) when the order was saved before the payment id was
+ * recorded. Never trusts the webhook body: the caller passes what it re-fetched from the gateway.
+ *
+ * Status only moves forward: an "approved" notification advances a "Pedido recebido" order, but a
+ * repeated or late one can never pull an already "Enviado" order back. Refunds and chargebacks
+ * update the raw payment status only (the caller alerts the owner). Compare-and-set on the status
+ * makes two simultaneous notifications process once, so the customer isn't e-mailed twice.
  */
-export async function updateOrderPaymentStatus(
-  mpPaymentId: string,
-  data: { paymentStatus: string; status?: OrderStatus },
-): Promise<OrderStatusUpdateResult> {
-  const existing = await db.order.findUnique({ where: { mpPaymentId } });
-  if (!existing) return { success: false, error: "Pedido não encontrado para esse pagamento." };
-  const updated = await db.order.update({
-    where: { mpPaymentId },
-    data: { paymentStatus: data.paymentStatus, ...(data.status ? { status: data.status } : {}) },
+export async function applyPaymentUpdate(input: {
+  mpPaymentId: string;
+  externalReference?: string | null;
+  paymentStatus: string;
+  transactionAmount?: number;
+}): Promise<PaymentUpdateResult> {
+  const existing =
+    (await db.order.findUnique({ where: { mpPaymentId: input.mpPaymentId } })) ??
+    (input.externalReference ? await db.order.findUnique({ where: { id: input.externalReference } }) : null);
+  if (!existing) return { success: false, reason: "not_found", error: "Pedido não encontrado para esse pagamento." };
+
+  if (
+    input.paymentStatus === "approved" &&
+    input.transactionAmount !== undefined &&
+    Math.abs(input.transactionAmount - existing.total) > 0.01
+  ) {
+    return {
+      success: false,
+      reason: "amount_mismatch",
+      error: `Valor pago (${input.transactionAmount}) diferente do total do pedido (${existing.total}).`,
+    };
+  }
+
+  const previousStatus = existing.status as OrderStatus;
+  let nextStatus: OrderStatus = previousStatus;
+  if (previousStatus === "Pedido recebido") {
+    if (input.paymentStatus === "approved") nextStatus = "Pagamento aprovado";
+    else if (input.paymentStatus === "rejected" || input.paymentStatus === "cancelled") nextStatus = "Cancelado";
+  }
+
+  const claimed = await db.order.updateMany({
+    where: { id: existing.id, status: existing.status, paymentStatus: existing.paymentStatus },
+    data: { paymentStatus: input.paymentStatus, status: nextStatus, mpPaymentId: existing.mpPaymentId ?? input.mpPaymentId },
   });
-  return { success: true, order: toOrder(updated), previousStatus: existing.status as OrderStatus };
+  const current = await db.order.findUniqueOrThrow({ where: { id: existing.id } });
+  if (claimed.count === 0) {
+    // Outra notificação processou este pedido primeiro: nada a notificar de novo.
+    return { success: true, order: toOrder(current), previousStatus: current.status as OrderStatus };
+  }
+  if (nextStatus === "Cancelado") await releaseReservation(existing.id);
+  return { success: true, order: toOrder(current), previousStatus };
+}
+
+/** Grava o resultado do pagamento no pedido criado antes da cobrança. */
+export async function recordPaymentOutcome(
+  id: string,
+  data: { mpPaymentId: string; paymentStatus: string; status: OrderStatus; paymentMethod: Order["paymentMethod"] },
+): Promise<void> {
+  await db.order.update({ where: { id }, data });
+}
+
+/** Desfaz um pedido que nunca foi cobrado (pagamento recusado/falhou): devolve estoque e apaga o registro. */
+export async function discardUnpaidOrder(id: string): Promise<void> {
+  await releaseReservation(id);
+  await db.order.delete({ where: { id } }).catch(() => undefined);
+}
+
+/** Cancela um pedido ainda não pago (ex.: Pix/boleto vencido) e devolve o estoque reservado. */
+export async function cancelUnpaidOrder(id: string): Promise<boolean> {
+  const result = await db.order.updateMany({
+    where: { id, status: "Pedido recebido" },
+    data: { status: "Cancelado", paymentStatus: "cancelled" },
+  });
+  if (result.count === 0) return false;
+  await releaseReservation(id);
+  return true;
+}
+
+export async function findStaleUnpaidOrders(olderThan: Date): Promise<Order[]> {
+  const rows = await db.order.findMany({
+    where: {
+      channel: "online",
+      status: "Pedido recebido",
+      paymentStatus: { in: ["pending", "in_process"] },
+      createdAt: { lt: olderThan },
+    },
+  });
+  return rows.map(toOrder);
 }
 
 export async function updateOrderProduction(
@@ -175,7 +313,21 @@ export async function deleteOrder(id: string): Promise<DeleteOrderResult> {
   return { success: true };
 }
 
+// Sem 0/O/1/I/L: o cliente digita este código no rastreamento e lê por telefone.
+const ORDER_ID_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+
+/** `FAZ-` + 8 caracteres aleatórios criptográficos (~850 bilhões de combinações). Pedidos antigos (FAZ-123456) continuam válidos. */
 export function generateOrderId() {
-  const random = Math.floor(100000 + Math.random() * 900000);
-  return `FAZ-${random}`;
+  let code = "";
+  for (let i = 0; i < 8; i++) code += ORDER_ID_ALPHABET[randomInt(ORDER_ID_ALPHABET.length)];
+  return `FAZ-${code}`;
+}
+
+/** Gera um id que ainda não existe no banco (a colisão é improvável, mas o id também é a chave de idempotência do pagamento). */
+export async function generateUniqueOrderId(): Promise<string> {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const id = generateOrderId();
+    if (!(await db.order.findUnique({ where: { id }, select: { id: true } }))) return id;
+  }
+  throw new Error("Não foi possível gerar um número de pedido único.");
 }

@@ -38,7 +38,13 @@ export async function sendEmail({
   }
 
   try {
-    await resend.emails.send({ from: FROM_EMAIL, to, subject, html });
+    // O SDK do Resend não lança exceção em erro da API (domínio não verificado, cota, destinatário
+    // inválido...): devolve { error }. Sem checar isso, falha de envio era tratada como sucesso.
+    const { error } = await resend.emails.send({ from: FROM_EMAIL, to, subject, html });
+    if (error) {
+      console.error("[email] Resend recusou o envio", { to, subject, error });
+      return { success: false, error: "Falha ao enviar e-mail." };
+    }
     return { success: true };
   } catch (error) {
     console.error("[email] falha ao enviar", error);

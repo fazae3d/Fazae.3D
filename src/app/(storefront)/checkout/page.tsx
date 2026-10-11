@@ -17,7 +17,7 @@ import { getLocalDeliveryRules } from "@/lib/local-delivery";
 import { usePixDiscountPct } from "@/contexts/pix-discount-context";
 import { resolveOrderDiscount, round2 } from "@/lib/money";
 import { captureAbandonedCartAction, clearAbandonedCartAction } from "@/app/actions/abandoned-cart";
-import type { AddressInput } from "@/lib/validation";
+import type { CheckoutAddressInput } from "@/lib/validation";
 import type { Order } from "@/server/types";
 import type { PendingPaymentInstructions } from "@/app/(storefront)/checkout/actions";
 
@@ -29,7 +29,7 @@ export default function CheckoutPage() {
 
   const [step, setStep] = useState<CheckoutStep>("identificacao");
   const [guestEmail, setGuestEmail] = useState<string | null>(null);
-  const [address, setAddress] = useState<AddressInput | null>(null);
+  const [address, setAddress] = useState<CheckoutAddressInput | null>(null);
   const [shipping, setShipping] = useState<ShippingOption | null>(null);
   const [order, setOrder] = useState<Order | null>(null);
   const [paymentInstructions, setPaymentInstructions] = useState<PendingPaymentInstructions | undefined>(undefined);

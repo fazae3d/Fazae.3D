@@ -3,14 +3,22 @@
 import { z } from "zod";
 import { auth } from "@/auth";
 import { fetchProductsForLines, resolveCartItems } from "@/lib/resolve-cart-items";
-import { addressSchema } from "@/lib/validation";
+import { checkoutAddressSchema } from "@/lib/validation";
 import { SHIPPING_OPTIONS, computeShippingCost } from "@/lib/shipping";
 import { LOCAL_DELIVERY_LABEL, getLocalDeliveryRules, localDeliveryCost } from "@/lib/local-delivery";
 import { isLocalDeliveryCep } from "@/server/local-delivery";
 import { calculateShipping } from "@/lib/melhor-envio";
 import { computeCouponDiscount } from "@/lib/coupons";
 import { DEFAULT_PIX_DISCOUNT_PCT, resolveOrderDiscount, round2 } from "@/lib/money";
-import { addOrder, generateOrderId } from "@/server/repositories/order-repository";
+import {
+  OutOfStockError,
+  addOrder,
+  discardUnpaidOrder,
+  findOrdersByEmail,
+  generateUniqueOrderId,
+  recordPaymentOutcome,
+} from "@/server/repositories/order-repository";
+import { notifyOwner } from "@/lib/owner-notify";
 import { registerCouponUsage } from "@/server/repositories/coupon-repository";
 import { validateCouponWithFallback } from "@/server/coupon-validation";
 import { getSettings } from "@/server/repositories/settings-repository";
@@ -41,7 +49,7 @@ const shippingChoiceSchema = z.union([
 
 const checkoutInputSchema = z.object({
   items: z.array(checkoutItemSchema).min(1),
-  address: addressSchema,
+  address: checkoutAddressSchema,
   shipping: shippingChoiceSchema,
   couponCode: z.string().optional(),
   guestEmail: z.string().email().optional(),
@@ -104,9 +112,13 @@ export async function processCheckoutPaymentAction(
 
   // Stock is re-checked here too — the "Esgotado" state on the product
   // page is a UI courtesy, not the enforcement point.
+  const wantedBySlug = new Map<string, number>();
+  for (const item of resolvedItems) wantedBySlug.set(item.productSlug, (wantedBySlug.get(item.productSlug) ?? 0) + item.quantity);
   const outOfStockItem = resolvedItems.find((item) => {
     const product = productsBySlug.get(item.productSlug);
-    return !product || product.stock < item.quantity;
+    if (!product) return true;
+    if (product.type === "sob_encomenda") return false;
+    return product.stock < (wantedBySlug.get(item.productSlug) ?? item.quantity);
   });
   if (outOfStockItem) {
     return {
@@ -124,14 +136,20 @@ export async function processCheckoutPaymentAction(
 
   if (couponCode) {
     const result = await validateCouponWithFallback(couponCode, subtotal);
-    if (result.valid) {
-      appliedCouponCode = result.code;
-      if (result.type === "frete-gratis") {
-        freeShippingFromCoupon = true;
-      } else {
-        discount = computeCouponDiscount(subtotal, result.type, result.value);
-        couponIsPriceDiscount = true;
+    if (!result.valid) {
+      return { success: false, error: `${result.message} Remova o cupom no resumo do pedido e tente de novo.` };
+    }
+    appliedCouponCode = result.code;
+    if (result.type === "frete-gratis") {
+      freeShippingFromCoupon = true;
+    } else {
+      // Cupom de desconto vale uma vez por cliente (ex.: "primeira compra"). Pedido cancelado não conta.
+      const previousOrders = await findOrdersByEmail(email).catch(() => []);
+      if (previousOrders.some((o) => o.couponCode === result.code && o.status !== "Cancelado")) {
+        return { success: false, error: "Você já usou este cupom em outro pedido. Remova o cupom no resumo do pedido e tente de novo." };
       }
+      discount = computeCouponDiscount(subtotal, result.type, result.value);
+      couponIsPriceDiscount = true;
     }
   }
 
@@ -204,35 +222,20 @@ export async function processCheckoutPaymentAction(
   }
   const total = round2(Math.max(0, subtotal - discount) + shipping);
 
-  // Order id is generated up front (a pure/local helper, no DB write) so it
-  // can be sent to Mercado Pago as the external_reference before the order
-  // itself exists — the webhook and this id then always agree.
-  const orderId = generateOrderId();
+  const orderId = await generateUniqueOrderId();
+  const brickData = brickFormData as Record<string, unknown>;
+  const { phone, ...addressWithoutPhone } = address;
+  const customerPhone = phone.replace(/\D/g, "");
 
-  const paymentResult = await createMercadoPagoPayment({
-    transactionAmount: total,
-    description: `Pedido Fazaê ${orderId}`,
-    externalReference: orderId,
-    payerEmail: email,
-    formData: brickFormData as Record<string, unknown>,
-  });
-
-  if (!paymentResult.success) {
-    return { success: false, error: paymentResult.error };
-  }
-  if (paymentResult.status === "rejected") {
-    return {
-      success: false,
-      error: "Pagamento recusado. Verifique os dados informados ou tente outro método de pagamento.",
-    };
-  }
-
-  const orderStatus = statusForPayment(paymentResult.status);
-  const order: Order = {
+  // O pedido é gravado ANTES de cobrar: assim todo pagamento aprovado tem um pedido correspondente, e a
+  // baixa do estoque (atômica) acontece junto. Se algo falhar aqui, nada foi cobrado.
+  const draft: Order = {
     id: orderId,
     createdAt: new Date().toISOString(),
     channel: "online",
     userEmail: email,
+    customerName: address.recipient,
+    customerPhone,
     items: resolvedItems,
     subtotal,
     shipping,
@@ -240,17 +243,77 @@ export async function processCheckoutPaymentAction(
     discount,
     couponCode: appliedCouponCode,
     total,
-    paymentMethod: mapPaymentTypeToMethod(paymentResult.paymentTypeId),
-    paymentStatus: paymentResult.status as Order["paymentStatus"],
-    mpPaymentId: paymentResult.id,
-    address: { ...address, id: `addr-${Date.now()}`, label: "Entrega" },
-    status: orderStatus,
+    paymentMethod: isPix ? "pix" : "cartao",
+    paymentStatus: "pending",
+    address: { ...addressWithoutPhone, id: `addr-${Date.now()}`, label: "Entrega" },
+    status: "Pedido recebido",
   };
 
-  // TODO(fase DB): remove o fallback quando a Fazaê tiver o próprio banco — sem Supabase, o pedido não é
-  // persistido, mas o checkout ainda é concluído e a confirmação é exibida normalmente.
-  const savedOrder = await withReadFallback(() => addOrder(order), order);
-  if (appliedCouponCode) await withReadFallback(() => registerCouponUsage(appliedCouponCode), undefined);
+  try {
+    await addOrder(draft, { reserveStock: true });
+  } catch (error) {
+    if (error instanceof OutOfStockError) return { success: false, error: error.message };
+    console.error("[checkout] falha ao gravar o pedido antes do pagamento", error);
+    return { success: false, error: "Não foi possível registrar o pedido agora. Nada foi cobrado, tente de novo em instantes." };
+  }
+
+  const paymentResult = await createMercadoPagoPayment({
+    transactionAmount: total,
+    description: `Pedido Fazaê ${orderId}`,
+    externalReference: orderId,
+    payerEmail: email,
+    formData: brickData,
+  });
+
+  if (!paymentResult.success) {
+    await discardUnpaidOrder(orderId).catch((error) => console.error("[checkout] falha ao desfazer pedido", orderId, error));
+    return { success: false, error: paymentResult.error };
+  }
+  if (paymentResult.status === "rejected") {
+    await discardUnpaidOrder(orderId).catch((error) => console.error("[checkout] falha ao desfazer pedido", orderId, error));
+    return {
+      success: false,
+      error: "Pagamento recusado. Verifique os dados informados ou tente outro método de pagamento.",
+    };
+  }
+
+  const orderStatus = statusForPayment(paymentResult.status);
+  const outcome = {
+    mpPaymentId: paymentResult.id,
+    paymentStatus: paymentResult.status,
+    status: orderStatus,
+    paymentMethod: mapPaymentTypeToMethod(paymentResult.paymentTypeId),
+  };
+  const order: Order = { ...draft, ...outcome, paymentStatus: paymentResult.status as Order["paymentStatus"] };
+
+  // O dinheiro já foi cobrado: se gravar o resultado falhar, tenta de novo e, em último caso, avisa o dono
+  // (o webhook também reconcilia pelo código do pedido, então o pedido não se perde).
+  let outcomeSaved = false;
+  for (let attempt = 0; attempt < 3 && !outcomeSaved; attempt++) {
+    try {
+      await recordPaymentOutcome(orderId, outcome);
+      outcomeSaved = true;
+    } catch (error) {
+      console.error("[checkout] falha ao registrar o resultado do pagamento", orderId, attempt + 1, error);
+    }
+  }
+  if (!outcomeSaved) {
+    await notifyOwner(`ATENÇÃO: pagamento sem vínculo no pedido ${orderId}`, [
+      `O Mercado Pago cobrou o pagamento ${paymentResult.id} (status ${paymentResult.status}) para o pedido ${orderId}, mas não foi possível gravar o resultado no pedido.`,
+      "O webhook deve reconciliar sozinho; se o pedido continuar como 'Pedido recebido', confira no Mercado Pago.",
+    ]);
+  }
+
+  if (appliedCouponCode) {
+    await registerCouponUsage(appliedCouponCode).catch((error) => console.error("[checkout] falha ao contar uso do cupom", error));
+  }
+  const savedOrder = order;
+
+  await notifyOwner(`Novo pedido ${orderId}: R$ ${total.toFixed(2).replace(".", ",")}`, [
+    `Pedido ${orderId} de ${address.recipient} (${email}, ${phone}).`,
+    `Entrega: ${shippingMethod}. Pagamento: ${outcome.paymentMethod} (${paymentResult.status}).`,
+    "Abra o painel para acompanhar.",
+  ]);
 
   const introText =
     orderStatus === "Pagamento aprovado"

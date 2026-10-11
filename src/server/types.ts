@@ -42,7 +42,16 @@ export type OrderStatus =
 export type PaymentMethod = "pix" | "cartao" | "boleto";
 
 /** Raw Mercado Pago payment status — "pending"/"in_process" until a webhook (Pix/boleto) or the initial response (cartão) confirms it. */
-export type PaymentStatus = "pending" | "approved" | "in_process" | "rejected" | "cancelled";
+export type PaymentStatus =
+  | "pending"
+  | "approved"
+  | "authorized"
+  | "in_process"
+  | "in_mediation"
+  | "rejected"
+  | "cancelled"
+  | "refunded"
+  | "charged_back";
 
 export type SaleChannel = "online" | "presencial" | "whatsapp";
 
@@ -90,6 +99,8 @@ export type Order = {
   productionDeadline?: string;
   /** Sinal já recebido — saldo a receber é calculado (total - depositAmount), não armazenado. Defaults to 0. */
   depositAmount?: number;
+  /** True when checkout already deducted stock for this order, so cancelling it must give the stock back. */
+  stockReserved?: boolean;
 };
 
 export type CouponType = "percentual" | "fixo" | "frete-gratis";

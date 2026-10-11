@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FormField } from "../form-field";
-import { addressSchema, type AddressInput } from "@/lib/validation";
+import { checkoutAddressSchema, type CheckoutAddressInput } from "@/lib/validation";
+import { formatCEP, formatPhone } from "@/lib/br-format";
 import { formatCPF } from "@/lib/cpf";
 
 type ViaCepResponse = {
@@ -20,8 +21,8 @@ export function StepEndereco({
   onNext,
   onBack,
 }: {
-  defaultValues?: Partial<AddressInput>;
-  onNext: (data: AddressInput) => void;
+  defaultValues?: Partial<CheckoutAddressInput>;
+  onNext: (data: CheckoutAddressInput) => void;
   onBack: () => void;
 }) {
   const {
@@ -29,10 +30,11 @@ export function StepEndereco({
     handleSubmit,
     setValue,
     formState: { errors },
-  } = useForm<AddressInput>({ resolver: zodResolver(addressSchema), defaultValues });
+  } = useForm<CheckoutAddressInput>({ resolver: zodResolver(checkoutAddressSchema), defaultValues });
 
   const cpfField = register("cpf");
   const zipField = register("zip");
+  const phoneField = register("phone");
   const [cepLoading, setCepLoading] = useState(false);
   const [cepError, setCepError] = useState<string | null>(null);
 
@@ -81,6 +83,20 @@ export function StepEndereco({
         />
       </div>
 
+      <FormField
+        id="phone"
+        label="Telefone / WhatsApp"
+        placeholder="(84) 99999-9999"
+        inputMode="tel"
+        maxLength={15}
+        error={errors.phone?.message}
+        {...phoneField}
+        onChange={(e) => {
+          e.target.value = formatPhone(e.target.value);
+          phoneField.onChange(e);
+        }}
+      />
+
       <div className="grid grid-cols-2 gap-4">
         <div>
           <FormField
@@ -91,6 +107,12 @@ export function StepEndereco({
             maxLength={9}
             error={errors.zip?.message ?? cepError ?? undefined}
             {...zipField}
+            onChange={(e) => {
+              e.target.value = formatCEP(e.target.value);
+              zipField.onChange(e);
+              // Busca o endereço assim que o CEP fica completo, sem esperar sair do campo.
+              if (e.target.value.replace(/\D/g, "").length === 8) lookupCep(e.target.value);
+            }}
             onBlur={(e) => {
               zipField.onBlur(e);
               lookupCep(e.target.value);

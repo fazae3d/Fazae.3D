@@ -236,6 +236,11 @@ model Order {
    * Sinal já recebido — saldo a receber é calculado (total - depositAmount), não armazenado.
    */
   depositAmount      Float           @default(0)
+  /**
+   * True quando o checkout já baixou o estoque (e os insumos) deste pedido. Só pedidos com a reserva
+   * ativa devolvem estoque ao cancelar — pedidos antigos, anteriores à baixa automática, não.
+   */
+  stockReserved      Boolean         @default(false)
   reviews            Review[]
 
   @@index([userEmail])

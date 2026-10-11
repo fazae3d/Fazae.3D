@@ -49,13 +49,23 @@ export async function createMercadoPagoPayment({
   try {
     const payment = new Payment(client);
     const existingPayer = (formData.payer as Record<string, unknown> | undefined) ?? {};
+    // Só os campos que o Brick realmente envia: espalhar o formData inteiro deixaria o navegador
+    // definir opções do pagamento (captura manual, modo binário, informações adicionais...).
+    const allowed = Object.fromEntries(
+      ["token", "issuer_id", "payment_method_id", "installments"]
+        .filter((key) => formData[key] !== undefined)
+        .map((key) => [key, formData[key]]),
+    );
     const result = await payment.create({
       body: {
-        ...formData,
+        ...allowed,
         transaction_amount: transactionAmount,
         description,
         external_reference: externalReference,
-        payer: { ...existingPayer, email: payerEmail },
+        payer: {
+          email: payerEmail,
+          ...(existingPayer.identification ? { identification: existingPayer.identification } : {}),
+        },
         // Explicit per-payment webhook URL — doesn't depend on the "Notificações"
         // panel in the MP dashboard being configured correctly, which is easy to
         // get wrong (or leave unset) and silently stops every status update.
@@ -86,7 +96,7 @@ export async function createMercadoPagoPayment({
 }
 
 export type MercadoPagoPaymentLookupResult =
-  | { success: true; id: string; status: string; externalReference: string | null }
+  | { success: true; id: string; status: string; externalReference: string | null; transactionAmount?: number }
   | { success: false; error: string };
 
 /** Used by the webhook route — never trusts the notification payload's own status, always re-fetches from Mercado Pago. */
@@ -101,7 +111,13 @@ export async function getMercadoPagoPayment(id: string): Promise<MercadoPagoPaym
     if (!result.id || !result.status) {
       return { success: false, error: "Resposta inesperada do Mercado Pago." };
     }
-    return { success: true, id: String(result.id), status: result.status, externalReference: result.external_reference ?? null };
+    return {
+      success: true,
+      id: String(result.id),
+      status: result.status,
+      externalReference: result.external_reference ?? null,
+      transactionAmount: result.transaction_amount ?? undefined,
+    };
   } catch (error) {
     console.error("[mercadopago] falha ao consultar pagamento", error);
     return { success: false, error: "Falha ao consultar pagamento." };

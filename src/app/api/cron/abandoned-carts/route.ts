@@ -15,7 +15,8 @@ const ABANDONED_THRESHOLD_MS = 2 * 60 * 60 * 1000;
  */
 function isAuthorized(request: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
-  if (!secret) return true; // not configured yet — see .env.local note; degrades open like the other secrets in this app
+  // Em produção, sem CRON_SECRET a rota fica fechada (antes ficava aberta para qualquer um disparar e-mails).
+  if (!secret) return process.env.NODE_ENV !== "production";
   return request.headers.get("authorization") === `Bearer ${secret}`;
 }
 
@@ -46,8 +47,11 @@ export async function GET(request: NextRequest) {
       }),
     });
 
-    if (result.success) sent += 1;
-    await markAbandonedCartReminded(cart.id);
+    // Só marca como lembrado se o e-mail saiu; senão o próximo ciclo tenta de novo.
+    if (result.success) {
+      sent += 1;
+      await markAbandonedCartReminded(cart.id);
+    }
   }
 
   return NextResponse.json({ checked: carts.length, sent });

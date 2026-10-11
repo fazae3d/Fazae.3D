@@ -1,25 +1,17 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getMercadoPagoPayment } from "@/lib/mercadopago";
-import { updateOrderPaymentStatus } from "@/server/repositories/order-repository";
+import { applyPaymentUpdate } from "@/server/repositories/order-repository";
 import { notifyOrderStatusChange } from "@/lib/order-notifications";
-import type { OrderStatus } from "@/server/types";
-
-function orderStatusForPayment(paymentStatus: string): OrderStatus {
-  if (paymentStatus === "approved") return "Pagamento aprovado";
-  if (paymentStatus === "rejected" || paymentStatus === "cancelled") return "Cancelado";
-  return "Pedido recebido";
-}
+import { notifyOwner } from "@/lib/owner-notify";
 
 /**
  * Verifies the `x-signature` header per Mercado Pago's manifest scheme:
  * HMAC-SHA256("id:{data.id};request-id:{x-request-id};ts:{ts};", secret).
  * https://www.mercadopago.com.br/developers/pt/docs/checkout-api/additional-content/your-integrations/notifications/webhooks#bookmark_verificando_a_origem_da_notifica%C3%A7%C3%A3o
  *
- * Returns "valid" | "invalid" | "unconfigured" — the caller decides how to
- * treat "unconfigured" (no MERCADOPAGO_WEBHOOK_SECRET set yet) separately
- * from an actually forged request, so a missing secret degrades instead of
- * silently breaking every Pix/boleto confirmation in production.
+ * Returns "valid" | "invalid" | "unconfigured". Em produção, "unconfigured" é tratado como erro
+ * (falha fechada); fora dela, segue sem validar para facilitar testes locais.
  */
 function verifyWebhookSignature(request: NextRequest): "valid" | "invalid" | "unconfigured" {
   const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
@@ -53,6 +45,8 @@ function verifyWebhookSignature(request: NextRequest): "valid" | "invalid" | "un
  * Mercado Pago calls this whenever a payment's status changes — the only
  * way Pix/boleto ever move from "pending" to "approved", since those
  * happen well after the checkout page's own request has finished.
+ *
+ * Respostas 5xx fazem o Mercado Pago reenviar a notificação mais tarde; 200 encerra a entrega.
  */
 export async function POST(request: NextRequest) {
   const signatureStatus = verifyWebhookSignature(request);
@@ -61,10 +55,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "invalid signature" }, { status: 401 });
   }
   if (signatureStatus === "unconfigured") {
-    // TODO: remove this branch once MERCADOPAGO_WEBHOOK_SECRET is set in prod —
-    // até lá o webhook aceita a notificação sem verificar a origem, só reconsultando
-    // o pagamento na API do MP (mitiga, mas não substitui validar a assinatura).
-    console.warn("[mercadopago webhook] MERCADOPAGO_WEBHOOK_SECRET não configurado — pulando validação de assinatura");
+    if (process.env.NODE_ENV === "production") {
+      console.error("[mercadopago webhook] MERCADOPAGO_WEBHOOK_SECRET não configurado em produção — recusando");
+      return NextResponse.json({ error: "webhook not configured" }, { status: 503 });
+    }
+    console.warn("[mercadopago webhook] MERCADOPAGO_WEBHOOK_SECRET não configurado — pulando validação de assinatura (dev)");
   }
 
   let body: unknown = null;
@@ -90,17 +85,57 @@ export async function POST(request: NextRequest) {
   const payment = await getMercadoPagoPayment(String(paymentId));
   if (!payment.success) {
     console.error("[mercadopago webhook] falha ao consultar pagamento", paymentId, payment.error);
+    return NextResponse.json({ error: "payment lookup failed" }, { status: 502 });
+  }
+
+  let result;
+  try {
+    result = await applyPaymentUpdate({
+      mpPaymentId: payment.id,
+      externalReference: payment.externalReference,
+      paymentStatus: payment.status,
+      transactionAmount: payment.transactionAmount,
+    });
+  } catch (error) {
+    console.error("[mercadopago webhook] falha ao atualizar pedido", payment.id, error);
+    return NextResponse.json({ error: "order update failed" }, { status: 500 });
+  }
+
+  if (!result.success) {
+    console.warn("[mercadopago webhook]", result.reason, payment.id, result.error);
+    if (result.reason === "amount_mismatch") {
+      await notifyOwner(`ATENÇÃO: valor pago diferente do pedido (${payment.externalReference ?? payment.id})`, [
+        result.error,
+        `Pagamento Mercado Pago: ${payment.id}. O pedido NÃO foi marcado como pago; confira no painel do Mercado Pago.`,
+      ]);
+    } else if (payment.status === "approved") {
+      await notifyOwner(`ATENÇÃO: pagamento aprovado sem pedido (${payment.id})`, [
+        `O Mercado Pago aprovou o pagamento ${payment.id} (referência ${payment.externalReference ?? "sem referência"}), mas nenhum pedido correspondente foi encontrado.`,
+        "Confira o pedido no painel do Mercado Pago e crie a venda manualmente se necessário.",
+      ]);
+    }
     return NextResponse.json({ received: true });
   }
 
-  const result = await updateOrderPaymentStatus(payment.id, {
-    paymentStatus: payment.status,
-    status: orderStatusForPayment(payment.status),
-  });
-  if (!result.success) {
-    console.warn("[mercadopago webhook] pedido não encontrado para pagamento", payment.id);
-  } else {
-    await notifyOrderStatusChange(result.order, result.previousStatus);
+  if (payment.status === "approved" && result.order.status === "Cancelado") {
+    await notifyOwner(`ATENÇÃO: pagamento aprovado em pedido cancelado (${result.order.id})`, [
+      `O pagamento ${payment.id} foi aprovado, mas o pedido ${result.order.id} já estava cancelado (por falta de pagamento no prazo).`,
+      "Fale com o cliente: reative o pedido ou estorne o valor no Mercado Pago.",
+    ]);
+  }
+
+  await notifyOrderStatusChange(result.order, result.previousStatus);
+
+  if (result.order.status === "Pagamento aprovado" && result.previousStatus !== "Pagamento aprovado") {
+    await notifyOwner(`Pagamento aprovado: pedido ${result.order.id}`, [
+      `Pedido ${result.order.id} pago (R$ ${result.order.total.toFixed(2).replace(".", ",")}).`,
+      "Abra o painel para separar e enviar.",
+    ]);
+  }
+  if (payment.status === "refunded" || payment.status === "charged_back") {
+    await notifyOwner(`Reembolso/chargeback no pedido ${result.order.id}`, [
+      `O Mercado Pago registrou "${payment.status}" para o pedido ${result.order.id}. O status de entrega do pedido não foi alterado: confira e ajuste no painel.`,
+    ]);
   }
 
   return NextResponse.json({ received: true });

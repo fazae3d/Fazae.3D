@@ -57,7 +57,10 @@ export async function requestPasswordResetAction(input: unknown): Promise<Reques
     }),
   });
 
-  return { success: true, resetLink: emailResult.success ? undefined : resetPath };
+  // O link nunca volta para o navegador: quem pedisse o reset do e-mail de outra pessoa
+  // receberia o link e tomaria a conta. Falha de envio só é registrada no log.
+  if (!emailResult.success) console.error("[esqueci-senha] e-mail de redefinição não enviado para", user.email);
+  return { success: true };
 }
 
 export async function resetPasswordAction(token: string, input: unknown): Promise<ResetPasswordResult> {
