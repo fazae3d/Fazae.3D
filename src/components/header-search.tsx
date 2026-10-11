@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useProductSnapshot } from "@/hooks/use-product-snapshot";
 import { matchesSearch } from "@/lib/search";
@@ -16,6 +17,7 @@ export function HeaderSearch() {
   const { products } = useProductSnapshot();
   const pixPct = usePixDiscountPct();
   const inputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
 
   const results = useMemo(() => {
     const term = query.trim();
@@ -69,6 +71,14 @@ export function HeaderSearch() {
                   ref={inputRef}
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    // Enter abre a página de resultados completa (a lista abaixo mostra só os primeiros).
+                    if (e.key === "Enter" && query.trim()) {
+                      const term = query.trim();
+                      close();
+                      router.push(`/busca?q=${encodeURIComponent(term)}`);
+                    }
+                  }}
                   placeholder="Buscar produtos..."
                   className="min-w-0 flex-1 py-1 text-base text-paper outline-none placeholder:text-paper/40"
                 />

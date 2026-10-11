@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ButtonLink } from "../button";
 import { formatPrice } from "@/lib/format";
 import { PIX_RECEIVER_NOTICE } from "@/lib/site-config";
+import { trackEvent } from "@/lib/analytics";
 import type { Order } from "@/server/types";
 import type { PendingPaymentInstructions } from "@/app/(storefront)/checkout/actions";
 
 const isTestMode = process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY?.startsWith("TEST-") ?? false;
 
-function PixInstructions({ qrCode, qrCodeBase64 }: { qrCode?: string; qrCodeBase64?: string }) {
+export function PixInstructions({ qrCode, qrCodeBase64 }: { qrCode?: string; qrCodeBase64?: string }) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -60,7 +61,7 @@ function PixInstructions({ qrCode, qrCodeBase64 }: { qrCode?: string; qrCodeBase
   );
 }
 
-function BoletoInstructions({ ticketUrl }: { ticketUrl?: string }) {
+export function BoletoInstructions({ ticketUrl }: { ticketUrl?: string }) {
   if (!ticketUrl) return null;
   return (
     <div className="mt-8 flex w-full max-w-sm flex-col items-center gap-3 border border-petrol/40 bg-petrol/10 p-6">
@@ -87,6 +88,17 @@ export function StepConfirmacao({
   paymentInstructions?: PendingPaymentInstructions;
 }) {
   const isApproved = order.status === "Pagamento aprovado";
+
+  // Conversão para o Google Analytics (só dispara com consentimento): uma vez por pedido.
+  useEffect(() => {
+    trackEvent("purchase", {
+      transaction_id: order.id,
+      currency: "BRL",
+      value: order.total,
+      shipping: order.shipping,
+      items: order.items.map((i) => ({ item_id: i.productSlug, item_name: i.name, quantity: i.quantity, price: i.price })),
+    });
+  }, [order.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const testSuffix = isTestMode ? " (ambiente de testes)" : "";
   const paymentPhrase = isApproved
     ? `o pagamento foi aprovado${testSuffix}`

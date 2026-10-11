@@ -54,6 +54,7 @@ export default function CheckoutPage() {
           material: l.material,
           color: l.color,
           quantity: l.quantity,
+          ...(l.scale ? { scale: l.scale } : {}),
         })),
         address,
         shipping:

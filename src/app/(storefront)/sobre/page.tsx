@@ -75,7 +75,7 @@ export default function SobrePage() {
     <div>
       <section className="relative flex h-72 items-end overflow-hidden bg-ink text-paper sm:h-96">
         <img
-          src="/sobre-hero.png"
+          src="/sobre-hero.webp"
           alt="Impressora 3D da Fazaê imprimindo um vaso geométrico verde"
           className="absolute inset-0 h-full w-full object-cover"
         />

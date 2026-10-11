@@ -14,6 +14,7 @@ import {
   getRelatedProducts,
 } from "@/lib/demo-data";
 import { SITE_URL } from "@/lib/site-config";
+import { isSoldOut } from "@/lib/badges";
 import { withReadFallback } from "@/lib/db-fallback";
 import { fallbackProducts } from "@/server/demo-fallback";
 import { getPublishedReviews, getReviewStats } from "@/server/repositories/review-repository";
@@ -33,9 +34,19 @@ export async function generateMetadata({
     fallbackProducts.find((p) => p.slug === slug),
   );
   if (!product) return {};
+  const description = product.description.length > 160 ? `${product.description.slice(0, 157)}...` : product.description;
+  const image = product.images?.[0];
   return {
     title: product.name,
-    description: product.description,
+    description,
+    alternates: { canonical: `/produto/${product.slug}` },
+    openGraph: {
+      type: "website",
+      title: product.name,
+      description,
+      url: `/produto/${product.slug}`,
+      ...(image ? { images: [{ url: image }] } : {}),
+    },
   };
 }
 
@@ -70,13 +81,16 @@ export default async function ProductPage({ params }: PageProps<"/produto/[slug]
     description: product.description,
     category: product.categoryName,
     sku: product.slug,
+    brand: { "@type": "Brand", name: "Fazaê" },
+    ...(product.images && product.images.length > 0 ? { image: product.images } : {}),
     ...(product.price !== undefined
       ? {
           offers: {
             "@type": "Offer",
             priceCurrency: "BRL",
             price: product.price.toFixed(2),
-            availability: "https://schema.org/InStock",
+            itemCondition: "https://schema.org/NewCondition",
+            availability: isSoldOut(product) ? "https://schema.org/OutOfStock" : "https://schema.org/InStock",
             url: `${SITE_URL}/produto/${product.slug}`,
           },
         }

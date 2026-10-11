@@ -1,5 +1,6 @@
 "use client";
 
+import { isSoldOut } from "@/lib/badges";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ProductGrid } from "./product-grid";
@@ -144,6 +145,8 @@ function CatalogViewInner({ products, categories = [], fixedCategory, initialFil
       default:
         break;
     }
+    // Esgotados vão para o fim em qualquer ordenação (a ordenação do JS é estável, então a ordem escolhida se mantém dentro de cada grupo).
+    sorted.sort((a, b) => Number(isSoldOut(a)) - Number(isSoldOut(b)));
     return sorted;
   }, [scope, state]);
 

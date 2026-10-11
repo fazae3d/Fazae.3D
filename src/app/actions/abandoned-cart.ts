@@ -20,6 +20,7 @@ const cartLineSchema = z.object({
   material: z.string(),
   color: z.string(),
   quantity: z.number().int().min(1).max(99),
+  scale: z.string().max(30).optional(),
 });
 
 const captureSchema = z.object({
@@ -79,6 +80,7 @@ export async function getAbandonedCartLinesAction(id: string): Promise<Abandoned
     productSlug: item.productSlug,
     material: item.material,
     color: item.color,
+    ...(item.scale ? { scale: item.scale } : {}),
     quantity: item.quantity,
   }));
 }

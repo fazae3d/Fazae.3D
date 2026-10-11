@@ -39,6 +39,7 @@ const checkoutItemSchema = z.object({
   material: z.string(),
   color: z.string(),
   quantity: z.number().int().min(1).max(99),
+  scale: z.string().max(30).optional(),
 });
 
 const shippingChoiceSchema = z.union([

@@ -69,6 +69,8 @@ export type CartLine = {
   material: string;
   color: string;
   quantity: number;
+  /** Escala escolhida na página do produto (ex.: "1:64"), quando o produto tem opções de escala. */
+  scale?: string;
 };
 
 export type CustomRequestStatus = "novo" | "em_contato" | "orcamento_enviado" | "fechado" | "perdido";

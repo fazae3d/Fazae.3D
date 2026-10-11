@@ -87,7 +87,7 @@ export function renderEmailLayout({
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                   <tr>
                     <td align="left" valign="middle">
-                      <img src="${SITE_URL}/logo-header.png" alt="${escapeHtml(SITE_NAME)}" height="24" style="height:24px;width:auto;border:0;display:block;" />
+                      <img src="${SITE_URL}/logo-email.png" alt="${escapeHtml(SITE_NAME)}" height="24" style="height:24px;width:auto;border:0;display:block;" />
                     </td>
                     <td align="right" valign="middle">
                       <a href="${escapeHtml(contactUrl)}" style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:${COLORS.petrol};text-decoration:none;font-family:Arial,Helvetica,sans-serif;">
@@ -145,7 +145,7 @@ export function renderEmailLayout({
 
 /** Renders an order's line items as a small card-style list, used by both the confirmation and (optionally) status e-mails. */
 export function renderOrderItemsTable(
-  items: { name: string; material: string; color: string; quantity: number; price: number }[],
+  items: { name: string; material: string; color: string; scale?: string; quantity: number; price: number }[],
   formatPrice: (value: number) => string,
 ): string {
   const rows = items
@@ -154,7 +154,7 @@ export function renderOrderItemsTable(
       <tr>
         <td style="padding:12px 16px;${i > 0 ? `border-top:1px solid ${COLORS.border};` : ""}font-size:14px;color:${COLORS.ink};">
           ${item.quantity}× ${escapeHtml(item.name)}
-          <span style="color:${COLORS.graphite};">(${escapeHtml(item.material)}, ${escapeHtml(item.color)})</span>
+          <span style="color:${COLORS.graphite};">(${escapeHtml(item.material)}, ${escapeHtml(item.color)}${item.scale ? `, ${escapeHtml(item.scale)}` : ""})</span>
         </td>
         <td style="padding:12px 16px;${i > 0 ? `border-top:1px solid ${COLORS.border};` : ""}font-size:14px;color:${COLORS.ink};text-align:right;white-space:nowrap;">
           ${escapeHtml(formatPrice(item.price * item.quantity))}

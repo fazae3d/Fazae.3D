@@ -16,8 +16,8 @@ export default function TrocasEDevolucoesPage() {
           <h2 className="mb-2 text-sm text-paper label-caps">Peças prontas (pronta entrega)</h2>
           <p>
             Você tem até 7 dias corridos após o recebimento do pedido para solicitar troca ou devolução, conforme
-            o Código de Defesa do Consumidor. A peça deve estar sem uso e na embalagem original, acompanhada da
-            nota fiscal.
+            o Código de Defesa do Consumidor. A peça deve estar sem uso e na embalagem original, e você deve informar o
+            número do pedido.
           </p>
         </section>
         <section>
@@ -31,11 +31,12 @@ export default function TrocasEDevolucoesPage() {
         <section>
           <h2 className="mb-2 text-sm text-paper label-caps">Como solicitar</h2>
           <p>
-            Acesse Minha conta &gt; Meus pedidos e selecione o pedido desejado, ou entre em contato pela página de{" "}
+            Chame a gente pelo WhatsApp ou pela página de{" "}
             <a href="/contato" className="text-petrol hover:underline">
               Contato
-            </a>
-            .
+            </a>{" "}
+            informando o número do pedido (você encontra em Minha conta &gt; Meus pedidos) e o motivo. A gente responde e combina
+            tudo com você.
           </p>
         </section>
         <section>

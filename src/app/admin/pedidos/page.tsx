@@ -186,7 +186,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
                     className="flex items-center justify-between py-2 text-xs text-graphite"
                   >
                     <span>
-                      {item.name} · {item.categoryName} · {item.material} · {item.color} · Qtd {item.quantity}
+                      {item.name} · {item.categoryName} · {item.material} · {item.color}{item.scale ? ` · ${item.scale}` : ""} · Qtd {item.quantity}
                     </span>
                     <span>{formatPrice(item.price * item.quantity)}</span>
                   </li>

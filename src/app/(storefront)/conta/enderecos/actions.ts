@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { savedAddressSchema } from "@/lib/validation";
 import {
   addAddress,
+  findUserByEmail,
   removeAddress,
   updateAddress,
   type AddressMutationResult,
@@ -56,4 +57,16 @@ export async function deleteAddressAction(addressId: string): Promise<DeleteAddr
   const result = await removeAddress(email, addressId);
   if (result.success) revalidateAddressPaths();
   return result;
+}
+
+/** Endereços salvos da conta logada, para o checkout oferecer "usar este endereço". Vazio se não houver sessão. */
+export async function getMyAddressesAction() {
+  const email = await requireEmail();
+  if (!email) return [];
+  try {
+    const user = await findUserByEmail(email);
+    return user?.addresses ?? [];
+  } catch {
+    return [];
+  }
 }

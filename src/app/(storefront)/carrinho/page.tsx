@@ -72,7 +72,7 @@ function CarrinhoPageInner() {
               const product = getCartProduct(line.productSlug);
               if (!product || product.price === undefined) return null;
               return (
-                <li key={`${line.productSlug}-${line.material}-${line.color}`} className="flex gap-5 py-6">
+                <li key={`${line.productSlug}-${line.material}-${line.color}-${line.scale ?? ""}`} className="flex gap-5 py-6">
                   <Link href={`/produto/${product.slug}`} className="block h-32 w-28 shrink-0 overflow-hidden">
                     <ProductThumb product={product} color={line.color} className="h-full w-full" />
                   </Link>
@@ -82,20 +82,20 @@ function CarrinhoPageInner() {
                       {product.name}
                     </Link>
                     <p className="text-xs text-graphite">
-                      {line.material} · {line.color}
+                      {line.material} · {line.color}{line.scale ? ` · ${line.scale}` : ""}
                     </p>
                     <div className="mt-2 flex flex-wrap items-center justify-between gap-4">
                       <QuantityStepper
                         value={line.quantity}
-                        onChange={(q) => updateQuantity(line.productSlug, line.material, line.color, q)}
-                        max={product.stock}
+                        onChange={(q) => updateQuantity(line.productSlug, line.material, line.color, q, line.scale)}
+                        max={product.type === "sob_encomenda" ? 99 : product.stock}
                       />
                       <span className="text-sm font-medium">{formatPrice(product.price * line.quantity)}</span>
                     </div>
                     <div className="mt-1 flex gap-4">
                       <button
                         className="label-caps text-[11px] text-graphite hover:text-petrol hover:underline"
-                        onClick={() => removeLine(line.productSlug, line.material, line.color)}
+                        onClick={() => removeLine(line.productSlug, line.material, line.color, line.scale)}
                       >
                         Remover
                       </button>

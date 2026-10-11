@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useCart } from "@/contexts/cart-context";
 import { useWishlist } from "@/contexts/wishlist-context";
-import { LOW_STOCK_THRESHOLD, isSoldOut } from "@/lib/badges";
+import { LOW_STOCK_THRESHOLD, isMadeToOrder, isSoldOut } from "@/lib/badges";
 import { formatPrice } from "@/lib/format";
 import { pixPrice } from "@/lib/money";
 import { usePixDiscountPct } from "@/contexts/pix-discount-context";
@@ -99,7 +99,9 @@ function ProntaEntregaPanel({ product, header }: { product: Product; header: Rea
   const ctaRef = useRef<HTMLDivElement>(null);
 
   const soldOut = isSoldOut(product);
-  const lowStock = !soldOut && product.stock <= LOW_STOCK_THRESHOLD;
+  const madeToOrder = isMadeToOrder(product);
+  const maxQuantity = madeToOrder ? 20 : soldOut ? 1 : product.stock;
+  const lowStock = !soldOut && !madeToOrder && product.stock <= LOW_STOCK_THRESHOLD;
   const canBuy = !soldOut && product.price !== undefined && currentMaterial;
 
   useEffect(() => {
@@ -123,6 +125,7 @@ function ProntaEntregaPanel({ product, header }: { product: Product; header: Rea
     material: materialName,
     color,
     quantity,
+    ...(scale ? { scale } : {}),
   });
 
   const handleAddToCart = () => {
@@ -217,8 +220,12 @@ function ProntaEntregaPanel({ product, header }: { product: Product; header: Rea
       )}
 
       <div className="flex items-center gap-4">
-        <QuantityStepper value={quantity} onChange={setQuantity} max={soldOut ? 1 : product.stock} />
-        {soldOut ? (
+        <QuantityStepper value={quantity} onChange={setQuantity} max={maxQuantity} />
+        {madeToOrder ? (
+          <p className="text-xs text-petrol">
+            Feito sob encomenda{product.estimatedProductionDays ? ` · produção em até ${product.estimatedProductionDays} dia(s)` : ""}
+          </p>
+        ) : soldOut ? (
           <p className="text-xs text-graphite">Esgotado</p>
         ) : quantity >= product.stock ? (
           <p className="text-xs text-sand">Máximo em estoque: {product.stock}</p>
@@ -232,7 +239,7 @@ function ProntaEntregaPanel({ product, header }: { product: Product; header: Rea
       <div ref={ctaRef} className="flex flex-col gap-3">
         {soldOut ? (
           <p className="border border-paper/15 p-4 text-sm text-graphite">
-            Este produto está esgotado. Adicione aos favoritos para saber quando chegar novamente.
+            Este produto está esgotado no momento. Salve nos favoritos para conferir depois, ou fale com a gente pelo WhatsApp.
           </p>
         ) : !canBuy ? (
           <ButtonLink href={`/personalizado?ref=${product.slug}`} variant="primary" className="w-full text-center">

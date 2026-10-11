@@ -8,7 +8,7 @@ import { useCart } from "@/contexts/cart-context";
 import { useWishlist } from "@/contexts/wishlist-context";
 import { HeaderSearch } from "./header-search";
 import { SITE_NAME } from "@/lib/site-config";
-import { CATEGORIES } from "@/lib/categories";
+import { useMenuCategories } from "@/contexts/menu-categories-context";
 
 const SECONDARY_LINKS = [
   { href: "/#como-funciona", label: "Como funciona" },
@@ -16,10 +16,11 @@ const SECONDARY_LINKS = [
 ];
 
 function Logo({ className = "" }: { className?: string }) {
-  return <img src="/logo-header.png" alt={SITE_NAME} className={`h-7 w-auto sm:h-8 ${className}`} />;
+  return <img src="/logo-header.webp" alt={SITE_NAME} className={`h-7 w-auto sm:h-8 ${className}`} />;
 }
 
 function ProductsDropdown() {
+  const categories = useMenuCategories();
   return (
     <div className="group relative">
       <Link
@@ -43,7 +44,7 @@ function ProductsDropdown() {
       <div className="invisible absolute left-1/2 top-full -translate-x-1/2 pt-3 opacity-0 transition-all duration-200 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
         <div className="w-56 border border-paper/10 bg-ink p-2 shadow-lg">
           <ul>
-            {CATEGORIES.map((category) => (
+            {categories.map((category) => (
               <li key={category.slug}>
                 <Link
                   href={`/loja?categoria=${category.slug}`}
@@ -67,6 +68,7 @@ function ProductsDropdown() {
 }
 
 function MobileProductsAccordion({ open, onToggle, onNavigate }: { open: boolean; onToggle: () => void; onNavigate: () => void }) {
+  const categories = useMenuCategories();
   return (
     <div className="border-b border-paper/10">
       <button
@@ -90,7 +92,7 @@ function MobileProductsAccordion({ open, onToggle, onNavigate }: { open: boolean
       </button>
       {open && (
         <ul className="pb-3">
-          {CATEGORIES.map((category) => (
+          {categories.map((category) => (
             <li key={category.slug}>
               <Link
                 href={`/loja?categoria=${category.slug}`}

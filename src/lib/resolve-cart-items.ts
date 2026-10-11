@@ -2,7 +2,7 @@ import { getProduct } from "@/lib/demo-data";
 import type { Product } from "@/lib/types";
 import type { OrderItem } from "@/server/types";
 
-export type CartItemLine = { productSlug: string; material: string; color: string; quantity: number };
+export type CartItemLine = { productSlug: string; material: string; color: string; quantity: number; scale?: string };
 
 /**
  * Fetches the live catalog product for each cart line, keyed by slug — the
@@ -43,6 +43,7 @@ export async function resolveCartItems(
         color: line.color,
         quantity: line.quantity,
         price: product.price,
+        ...(line.scale ? { scale: line.scale } : {}),
       };
     })
     .filter((item): item is OrderItem => Boolean(item));

@@ -124,6 +124,22 @@ export async function getMercadoPagoPayment(id: string): Promise<MercadoPagoPaym
   }
 }
 
+export type PaymentInstructionsLookup = { qrCode?: string; qrCodeBase64?: string; ticketUrl?: string };
+
+/** Busca de novo o QR do Pix / link do boleto de um pagamento pendente, para a pessoa pagar depois sem refazer o pedido. */
+export async function getPendingPaymentInstructions(id: string): Promise<PaymentInstructionsLookup | null> {
+  if (!client) return null;
+  try {
+    const result = await new Payment(client).get({ id });
+    if (result.status !== "pending" && result.status !== "in_process") return null;
+    const data = result.point_of_interaction?.transaction_data;
+    return { qrCode: data?.qr_code, qrCodeBase64: data?.qr_code_base64, ticketUrl: data?.ticket_url };
+  } catch (error) {
+    console.error("[mercadopago] falha ao reconsultar instruções de pagamento", id, error);
+    return null;
+  }
+}
+
 /** Maps Mercado Pago's `payment_type_id` to this app's own PaymentMethod union, used for display/reporting only. */
 export function mapPaymentTypeToMethod(paymentTypeId: string): "pix" | "cartao" | "boleto" {
   if (paymentTypeId === "bank_transfer") return "pix";

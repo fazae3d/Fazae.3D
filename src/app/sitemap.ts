@@ -21,7 +21,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: route.priority,
   }));
 
-  const [categories, products] = await Promise.all([getAllCategories(), getAllProducts()]);
+  const [categories, products] = await Promise.all([
+    getAllCategories().catch(() => []),
+    getAllProducts().catch(() => []),
+  ]);
 
   const categoryEntries = categories.map((category) => ({
     url: `${SITE_URL}/categorias/${category.slug}`,

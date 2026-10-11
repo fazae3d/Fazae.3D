@@ -23,13 +23,13 @@ const STEPS = [
     n: "3",
     title: "Desenvolvemos seu projeto",
     description: "Nossa equipe transforma sua ideia em um projeto 3D exclusivo.",
-    image: "/how-it-works/step-3.png",
+    image: "/how-it-works/step-3.webp",
   },
   {
     n: "4",
     title: "Imprimimos com qualidade",
     description: "Produção com precisão, acabamento impecável.",
-    image: "/how-it-works/step-4.png",
+    image: "/how-it-works/step-4.webp",
   },
   {
     n: "5",
@@ -56,6 +56,8 @@ const TRUST_BADGES = [
 ];
 
 const ESSENCE_TAGLINE = "Criatividade, Tecnologia & Design.";
+
+export const metadata = { alternates: { canonical: "/" } };
 
 export default function Home() {
   return (
@@ -162,7 +164,7 @@ export default function Home() {
               </p>
             </div>
             <img
-              src="/ideia-projeto-peca.png"
+              src="/ideia-projeto-peca.webp"
               alt="Da ideia ao projeto 3D até a peça impressa"
               className="mx-auto w-full max-w-lg lg:max-w-none"
             />
@@ -173,7 +175,7 @@ export default function Home() {
       <section className="relative overflow-hidden bg-ink py-12 text-paper sm:py-16 lg:py-20">
         <FlowLines className="flow-lines-bg absolute inset-0 h-full w-full" variant="light" />
         <img
-          src="/essence-fmark.png"
+          src="/essence-fmark.webp"
           alt=""
           aria-hidden="true"
           className="absolute inset-0 h-full w-full object-cover opacity-10 lg:hidden"
@@ -203,7 +205,7 @@ export default function Home() {
             <p className="label-caps mt-8 text-sm text-petrol">{ESSENCE_TAGLINE}</p>
           </div>
           <img
-            src="/essence-fmark.png"
+            src="/essence-fmark.webp"
             alt="Marca Fazaê impressa em 3D ao lado de uma impressora em funcionamento"
             className="hidden h-full min-h-[280px] w-full object-cover lg:block"
             style={{

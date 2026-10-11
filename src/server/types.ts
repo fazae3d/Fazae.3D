@@ -67,6 +67,8 @@ export type OrderItem = {
   color: string;
   quantity: number;
   price: number;
+  /** Escala escolhida (ex.: "1:64"), quando o produto tem opções de escala. */
+  scale?: string;
 };
 
 export type Order = {

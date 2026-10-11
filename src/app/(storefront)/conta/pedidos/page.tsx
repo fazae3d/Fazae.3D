@@ -9,6 +9,8 @@ import { formatPrice } from "@/lib/format";
 import { findOrdersByEmail } from "@/server/repositories/order-repository";
 import { isEmailVerified } from "@/server/repositories/user-repository";
 import { ResendVerification } from "@/components/resend-verification";
+import { BoletoInstructions, PixInstructions } from "@/components/checkout/step-confirmacao";
+import { getPendingPaymentInstructions } from "@/lib/mercadopago";
 import { withReadFallback } from "@/lib/db-fallback";
 
 export const metadata: Metadata = {
@@ -22,6 +24,20 @@ export default async function PedidosPage() {
   // Conta sem e-mail confirmado não vê pedidos: quem cadastra o e-mail de outra pessoa não pode ler o histórico dela.
   const verified = email ? await withReadFallback(() => isEmailVerified(email), false) : false;
   const orders = email && verified ? await withReadFallback(() => findOrdersByEmail(email), []) : [];
+  // Pedidos com Pix/boleto ainda por pagar: busca o QR/boleto de novo no Mercado Pago para a pessoa pagar daqui.
+  const pendingPayments = new Map(
+    await Promise.all(
+      orders
+        .filter(
+          (o) =>
+            o.status === "Pedido recebido" &&
+            o.mpPaymentId &&
+            (o.paymentStatus === "pending" || o.paymentStatus === "in_process") &&
+            (o.paymentMethod === "pix" || o.paymentMethod === "boleto"),
+        )
+        .map(async (o) => [o.id, await getPendingPaymentInstructions(o.mpPaymentId!)] as const),
+    ),
+  );
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
@@ -61,6 +77,19 @@ export default async function PedidosPage() {
                 <span className="label-caps bg-petrol px-3 py-1.5 text-[10px] text-ink">{order.status}</span>
               </div>
 
+              {pendingPayments.get(order.id) && (
+                <div className="flex justify-center py-5">
+                  {order.paymentMethod === "pix" ? (
+                    <PixInstructions
+                      qrCode={pendingPayments.get(order.id)!.qrCode}
+                      qrCodeBase64={pendingPayments.get(order.id)!.qrCodeBase64}
+                    />
+                  ) : (
+                    <BoletoInstructions ticketUrl={pendingPayments.get(order.id)!.ticketUrl} />
+                  )}
+                </div>
+              )}
+
               <ul className="divide-y divide-paper/15">
                 {order.items.map((item) => (
                   <li key={`${item.productSlug}-${item.material}-${item.color}`} className="py-3 text-sm">
@@ -70,7 +99,7 @@ export default async function PedidosPage() {
                           {item.name}
                         </Link>
                         <p className="text-xs text-graphite">
-                          {item.categoryName} · {item.material} · {item.color} · Qtd {item.quantity}
+                          {item.categoryName} · {item.material} · {item.color}{item.scale ? ` · ${item.scale}` : ""} · Qtd {item.quantity}
                         </p>
                       </div>
                       <span>{formatPrice(item.price * item.quantity)}</span>

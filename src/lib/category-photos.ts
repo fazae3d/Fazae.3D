@@ -24,10 +24,10 @@ type CategoryPhoto =
 const BANNER_HEIGHT = "h-[220px] sm:h-[280px] lg:h-[320px]";
 
 export const CATEGORY_PHOTOS: Record<string, CategoryPhoto> = {
-  "casa-decor": { mode: "cover", src: "/categories/casa-decor.png", position: "center 60%", heightClass: BANNER_HEIGHT },
-  utilidades: { mode: "cover", src: "/categories/utilidades.png", position: "center 65%", heightClass: BANNER_HEIGHT },
-  "geek-pop": { mode: "cover", src: "/categories/geek-pop.png", position: "center 55%", heightClass: BANNER_HEIGHT },
-  decoracao: { mode: "cover", src: "/categories/decoracao.png", position: "center 60%", heightClass: BANNER_HEIGHT },
+  "casa-decor": { mode: "cover", src: "/categories/casa-decor.webp", position: "center 60%", heightClass: BANNER_HEIGHT },
+  utilidades: { mode: "cover", src: "/categories/utilidades.webp", position: "center 65%", heightClass: BANNER_HEIGHT },
+  "geek-pop": { mode: "cover", src: "/categories/geek-pop.webp", position: "center 55%", heightClass: BANNER_HEIGHT },
+  decoracao: { mode: "cover", src: "/categories/decoracao.webp", position: "center 60%", heightClass: BANNER_HEIGHT },
 };
 
 export function getCategoryPhoto(slug: string) {

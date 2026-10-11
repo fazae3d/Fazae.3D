@@ -11,7 +11,7 @@ export function Hero() {
   return (
     <section className="relative flex min-h-[440px] items-end overflow-hidden bg-ink text-paper sm:min-h-[520px] lg:min-h-[600px]">
       <img
-        src="/hero-collection.png"
+        src="/hero-collection.webp"
         alt="Coleção de peças impressas em 3D da Fazaê, em preto e verde-limão"
         fetchPriority="high"
         loading="eager"

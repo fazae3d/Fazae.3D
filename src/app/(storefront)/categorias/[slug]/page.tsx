@@ -4,27 +4,34 @@ import { SectionHeading } from "@/components/section-heading";
 import { CatalogView } from "@/components/catalog-view";
 import { ButtonLink } from "@/components/button";
 import { Breadcrumb } from "@/components/breadcrumb";
-import { CATEGORIES, getCategory } from "@/lib/categories";
+import { getCategory as getStaticCategory } from "@/lib/categories";
 import { getCategoryPhoto } from "@/lib/category-photos";
-import { getAllProducts } from "@/lib/demo-data";
+import { getAllCategories, getAllProducts } from "@/lib/demo-data";
 import { withReadFallback } from "@/lib/db-fallback";
 import { fallbackProducts } from "@/server/demo-fallback";
 
-export function generateStaticParams() {
-  return CATEGORIES.map((c) => ({ slug: c.slug }));
+/** Categoria do banco (inclui as criadas no painel); a lista fixa só entra de reserva se o banco falhar. */
+async function findCategory(slug: string) {
+  const fromDb = await withReadFallback(async () => (await getAllCategories()).find((c) => c.slug === slug), undefined);
+  if (fromDb) return { slug: fromDb.slug, label: fromDb.name, description: fromDb.description ?? "" };
+  return getStaticCategory(slug);
 }
 
 export async function generateMetadata({
   params,
 }: PageProps<"/categorias/[slug]">): Promise<Metadata> {
   const { slug } = await params;
-  const category = getCategory(slug);
-  return { title: category?.label ?? "Categoria" };
+  const category = await findCategory(slug);
+  return {
+    title: category?.label ?? "Categoria",
+    description: category?.description,
+    alternates: { canonical: `/categorias/${slug}` },
+  };
 }
 
 export default async function CategoryPage({ params }: PageProps<"/categorias/[slug]">) {
   const { slug } = await params;
-  const category = getCategory(slug);
+  const category = await findCategory(slug);
   if (!category) notFound();
 
   // TODO(fase DB): remove o fallback quando a Fazaê tiver o próprio banco — hoje a leitura real falharia sem Supabase configurado.

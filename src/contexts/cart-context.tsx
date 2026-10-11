@@ -1,5 +1,6 @@
 "use client";
 
+import { trackEvent } from "@/lib/analytics";
 import {
   createContext,
   useContext,
@@ -25,8 +26,8 @@ type CartContextValue = {
   openCart: () => void;
   closeCart: () => void;
   addLine: (line: CartLine) => void;
-  removeLine: (productSlug: string, material: string, color: string) => void;
-  updateQuantity: (productSlug: string, material: string, color: string, quantity: number) => void;
+  removeLine: (productSlug: string, material: string, color: string, scale?: string) => void;
+  updateQuantity: (productSlug: string, material: string, color: string, quantity: number, scale?: string) => void;
   clearCart: () => void;
   itemCount: number;
   subtotal: number;
@@ -65,31 +66,47 @@ export function CartProvider({ children }: { children: ReactNode }) {
     : rawLines;
 
   const addLine = (line: CartLine) => {
+    const added = getProduct(line.productSlug);
+    trackEvent("add_to_cart", {
+      currency: "BRL",
+      value: added?.price !== undefined ? added.price * line.quantity : undefined,
+      items: [{ item_id: line.productSlug, item_name: added?.name, quantity: line.quantity, price: added?.price }],
+    });
     cartStore.setValue((prev) => {
       const existing = prev.find(
-        (l) => l.productSlug === line.productSlug && l.material === line.material && l.color === line.color,
+        (l) =>
+          l.productSlug === line.productSlug &&
+          l.material === line.material &&
+          l.color === line.color &&
+          (l.scale ?? "") === (line.scale ?? ""),
       );
       if (existing) {
-        return prev.map((l) =>
-          l === existing ? { ...l, quantity: l.quantity + line.quantity } : l,
-        );
+        // Soma sem passar do estoque (peça sob encomenda não tem teto de estoque).
+        const product = getProduct(line.productSlug);
+        const cap = product && product.type !== "sob_encomenda" ? Math.max(1, product.stock) : 99;
+        return prev.map((l) => (l === existing ? { ...l, quantity: Math.min(cap, l.quantity + line.quantity) } : l));
       }
       return [...prev, line];
     });
     setIsOpen(true);
   };
 
-  const removeLine = (productSlug: string, material: string, color: string) => {
+  const removeLine = (productSlug: string, material: string, color: string, scale?: string) => {
     cartStore.setValue((prev) =>
-      prev.filter((l) => !(l.productSlug === productSlug && l.material === material && l.color === color)),
+      prev.filter(
+        (l) =>
+          !(l.productSlug === productSlug && l.material === material && l.color === color && (l.scale ?? "") === (scale ?? "")),
+      ),
     );
   };
 
-  const updateQuantity = (productSlug: string, material: string, color: string, quantity: number) => {
+  const updateQuantity = (productSlug: string, material: string, color: string, quantity: number, scale?: string) => {
+    const product = getProduct(productSlug);
+    const cap = product && product.type !== "sob_encomenda" ? Math.max(1, product.stock) : 99;
     cartStore.setValue((prev) =>
       prev.map((l) =>
-        l.productSlug === productSlug && l.material === material && l.color === color
-          ? { ...l, quantity: Math.max(1, quantity) }
+        l.productSlug === productSlug && l.material === material && l.color === color && (l.scale ?? "") === (scale ?? "")
+          ? { ...l, quantity: Math.min(cap, Math.max(1, quantity)) }
           : l,
       ),
     );

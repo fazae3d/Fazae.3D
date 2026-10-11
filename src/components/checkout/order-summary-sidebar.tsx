@@ -60,14 +60,14 @@ export function OrderSummarySidebar({
           const product = getCartProduct(line.productSlug);
           if (!product || product.price === undefined) return null;
           return (
-            <li key={`${line.productSlug}-${line.material}-${line.color}`} className="flex gap-3 pt-3 first:pt-0">
+            <li key={`${line.productSlug}-${line.material}-${line.color}-${line.scale ?? ""}`} className="flex gap-3 pt-3 first:pt-0">
               <div className="h-16 w-14 shrink-0 overflow-hidden">
                 <ProductThumb product={product} color={line.color} className="h-full w-full" />
               </div>
               <div className="flex-1 text-xs">
                 <p className="text-paper">{product.name}</p>
                 <p className="text-graphite">
-                  {line.material} · {line.color} · Qtd {line.quantity}
+                  {line.material} · {line.color}{line.scale ? ` · ${line.scale}` : ""} · Qtd {line.quantity}
                 </p>
               </div>
               <span className="text-xs text-paper">{formatPrice(product.price * line.quantity)}</span>

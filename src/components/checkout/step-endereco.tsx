@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FormField } from "../form-field";
 import { checkoutAddressSchema, type CheckoutAddressInput } from "@/lib/validation";
 import { formatCEP, formatPhone } from "@/lib/br-format";
+import { getMyAddressesAction } from "@/app/(storefront)/conta/enderecos/actions";
+import type { Address } from "@/server/types";
 import { formatCPF } from "@/lib/cpf";
 
 type ViaCepResponse = {
@@ -29,8 +31,31 @@ export function StepEndereco({
     register,
     handleSubmit,
     setValue,
+    getValues,
+    reset,
     formState: { errors },
   } = useForm<CheckoutAddressInput>({ resolver: zodResolver(checkoutAddressSchema), defaultValues });
+
+  const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
+  useEffect(() => {
+    // Quem está logado vê os endereços salvos da conta e preenche o formulário com um toque.
+    getMyAddressesAction().then(setSavedAddresses).catch(() => setSavedAddresses([]));
+  }, []);
+
+  const fillFromSavedAddress = (address: Address) => {
+    reset({
+      recipient: address.recipient,
+      cpf: address.cpf,
+      phone: getValues("phone") ?? "",
+      zip: address.zip,
+      street: address.street,
+      number: address.number,
+      complement: address.complement ?? "",
+      neighborhood: address.neighborhood,
+      city: address.city,
+      state: address.state,
+    });
+  };
 
   const cpfField = register("cpf");
   const zipField = register("zip");
@@ -65,6 +90,22 @@ export function StepEndereco({
   return (
     <form onSubmit={handleSubmit(onNext)} className="flex flex-col gap-5">
       <p className="label-caps text-xs text-graphite">Endereço de entrega</p>
+
+      {savedAddresses.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {savedAddresses.map((address) => (
+            <button
+              key={address.id}
+              type="button"
+              onClick={() => fillFromSavedAddress(address)}
+              className="border border-paper/15 px-4 py-2.5 text-left text-xs text-paper transition-colors hover:border-petrol"
+            >
+              <span className="label-caps block text-[10px] text-petrol">{address.label}</span>
+              {address.street}, {address.number} · {address.city}/{address.state}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         <FormField id="recipient" label="Destinatário" error={errors.recipient?.message} {...register("recipient")} />

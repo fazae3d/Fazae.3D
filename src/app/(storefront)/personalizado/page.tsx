@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { SectionHeading } from "@/components/section-heading";
 import { CustomOrderForm } from "@/components/custom-order-form";
+import { getProduct } from "@/lib/demo-data";
+import { withReadFallback } from "@/lib/db-fallback";
 
 export const metadata: Metadata = {
   title: "Peça sob encomenda",
@@ -14,7 +16,10 @@ const STEPS = [
   "Enviamos para você",
 ];
 
-export default function PersonalizadoPage() {
+export default async function PersonalizadoPage({ searchParams }: { searchParams: Promise<{ ref?: string }> }) {
+  const { ref } = await searchParams;
+  // Vindo da página de um produto ("personalizar este"): já preenche a descrição com o nome dele.
+  const refProduct = ref ? await withReadFallback(() => getProduct(ref), undefined) : undefined;
   return (
     <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8">
       <SectionHeading
@@ -35,7 +40,10 @@ export default function PersonalizadoPage() {
       </ol>
 
       <div className="mt-12 max-w-2xl">
-        <CustomOrderForm />
+        <CustomOrderForm
+          referenceProductSlug={refProduct?.slug}
+          defaultDescription={refProduct ? `Quero uma versão personalizada de: ${refProduct.name}. ` : undefined}
+        />
       </div>
     </div>
   );

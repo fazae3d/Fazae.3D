@@ -24,13 +24,6 @@ function InstagramIcon({ className }: { className?: string }) {
   );
 }
 
-function TikTokIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
-      <path d="M16.6 2h-3.2v13.6a2.8 2.8 0 1 1-2-2.68V9.7a5.9 5.9 0 1 0 5.2 5.86V8.4a8.1 8.1 0 0 0 4.6 1.44V6.6a4.9 4.9 0 0 1-4.6-4.6Z" />
-    </svg>
-  );
-}
 
 const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
   {
@@ -73,7 +66,7 @@ export async function Footer() {
       <div className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-6 border-b border-paper/15 pb-12 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <img src="/logo-header.png" alt={SITE_NAME} className="h-8 w-auto" />
+            <img src="/logo-header.webp" alt={SITE_NAME} className="h-8 w-auto" />
             <p className="label-caps mt-3 text-xs text-paper/60">{SITE_TAGLINE}</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -133,12 +126,6 @@ export async function Footer() {
                   <InstagramIcon className="h-4 w-4 shrink-0" />
                   Instagram
                 </a>
-              </li>
-              <li>
-                <span className="flex items-center gap-2 text-sm text-paper/85">
-                  <TikTokIcon className="h-4 w-4 shrink-0" />
-                  TikTok
-                </span>
               </li>
             </ul>
           </div>
