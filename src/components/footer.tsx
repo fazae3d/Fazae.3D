@@ -2,7 +2,7 @@ import Link from "next/link";
 import { FlowLines } from "./flow-lines";
 import { PaymentIcons } from "./payment-icons";
 import { SecurityBadge } from "./security-badge";
-import { DEFAULT_WHATSAPP_NUMBER, INSTAGRAM_URL, SITE_NAME, SITE_TAGLINE, getWhatsAppLink } from "@/lib/site-config";
+import { DEFAULT_WHATSAPP_NUMBER, INSTAGRAM_URL, SITE_NAME, SITE_TAGLINE, getWhatsAppLink, companyIdentification } from "@/lib/site-config";
 import { getSettings } from "@/server/repositories/settings-repository";
 import { withReadFallback } from "@/lib/db-fallback";
 
@@ -132,7 +132,10 @@ export async function Footer() {
         </div>
 
         <div className="flex flex-col gap-4 border-t border-paper/15 pt-8 text-xs text-paper/60 sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} {SITE_NAME}. Todos os direitos reservados.</p>
+          <div className="space-y-1">
+            <p>© {new Date().getFullYear()} {SITE_NAME}. Todos os direitos reservados.</p>
+            <p className="max-w-xl text-[11px] leading-relaxed">{companyIdentification()}</p>
+          </div>
           <div className="flex flex-wrap items-center gap-5">
             <SecurityBadge />
             <PaymentIcons />

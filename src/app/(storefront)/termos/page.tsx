@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Breadcrumb } from "@/components/breadcrumb";
+import { COMPANY } from "@/lib/site-config";
 
 export const metadata: Metadata = {
   title: "Termos de uso",
@@ -12,6 +13,18 @@ export default function TermosPage() {
       <h1 className="font-display mb-8 text-3xl sm:text-4xl">Termos de uso</h1>
 
       <div className="space-y-6 text-graphite">
+        <section>
+          <h2 className="mb-2 text-sm text-paper label-caps">Quem vende</h2>
+          <p>
+            Este site é operado por {COMPANY.legalName}
+            {COMPANY.cnpj ? `, CNPJ ${COMPANY.cnpj}` : ""}, com sede na {COMPANY.address}, CEP {COMPANY.zip}. Para falar
+            com a gente, use a página de{" "}
+            <a href="/contato" className="text-petrol hover:underline">
+              Contato
+            </a>{" "}
+            ou o WhatsApp.
+          </p>
+        </section>
         <section>
           <h2 className="mb-2 text-sm text-paper label-caps">Sobre a loja</h2>
           <p>

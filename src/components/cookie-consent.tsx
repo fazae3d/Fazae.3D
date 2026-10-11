@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CONSENT_STORAGE_KEY } from "@/lib/analytics";
 
-const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
+// ID público do Google Analytics da Fazaê (pode ser sobrescrito pela variável NEXT_PUBLIC_GA_ID na Vercel).
+const GA_ID = process.env.NEXT_PUBLIC_GA_ID ?? "G-40WGQ4CV8G";
 
 type Consent = "accepted" | "declined" | null;
 
@@ -19,8 +20,7 @@ function readConsent(): Consent {
 }
 
 /**
- * Aviso de cookies + carregamento do Google Analytics. Só aparece (e só carrega algo) se NEXT_PUBLIC_GA_ID estiver
- * configurada: sem medição não há cookie opcional para pedir consentimento. O Analytics só é carregado depois do "Aceitar".
+ * Aviso de cookies + carregamento do Google Analytics. O Analytics só é carregado depois do "Aceitar".
  */
 export function CookieConsent() {
   const [consent, setConsent] = useState<Consent>(null);
