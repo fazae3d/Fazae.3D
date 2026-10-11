@@ -30,7 +30,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // unthrottled password oracle (20 tries / 15 min / IP is generous
         // enough for a real user who fat-fingers a password twice).
         const ip = ipFromRequest(request);
-        const limited = rateLimit(`login:${ip}`, LOGIN_LIMIT, LOGIN_WINDOW_MS);
+        const limited = await rateLimit(`login:${ip}`, LOGIN_LIMIT, LOGIN_WINDOW_MS);
         if (!limited.allowed) return null;
 
         const parsed = loginSchema.safeParse(credentials);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getMercadoPagoPayment } from "@/lib/mercadopago";
 import { notifyOrderStatusChange } from "@/lib/order-notifications";
+import { pruneRateLimitBuckets } from "@/server/rate-limit";
 import { applyPaymentUpdate, cancelUnpaidOrder, findStaleUnpaidOrders } from "@/server/repositories/order-repository";
 
 /** Pix vence em 1 dia e boleto em 3: passado esse prazo com folga, um pedido ainda sem pagamento está abandonado. */
@@ -50,5 +51,6 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ checked: stale.length, cancelled, recovered });
+  const prunedBuckets = await pruneRateLimitBuckets().catch(() => 0);
+  return NextResponse.json({ checked: stale.length, cancelled, recovered, prunedBuckets });
 }

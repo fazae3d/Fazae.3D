@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { redirect } from "next/navigation";
 import { auth } from "@/auth";
+import { db } from "@/server/db";
 import { AdminNav } from "@/components/admin/admin-nav";
 import { AdminMobileNav } from "@/components/admin/admin-mobile-nav";
 import { AdminThemeToggle } from "@/components/admin/theme-toggle";
@@ -28,6 +30,18 @@ export const metadata: Metadata = {
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const session = await auth();
+  // O papel do JWT só é lido no login; aqui conferimos no banco, para quem perdeu o acesso de admin sair de imediato.
+  const email = session?.user?.email;
+  if (email) {
+    try {
+      const row = await db.user.findFirst({ where: { email: { equals: email, mode: "insensitive" } }, select: { role: true } });
+      if (!row || row.role !== "admin") redirect("/");
+    } catch (error) {
+      // redirect() lança um sinal interno do Next: só engolimos erro de banco, nunca o redirecionamento.
+      if (error instanceof Error && (error as { digest?: string }).digest?.startsWith("NEXT_REDIRECT")) throw error;
+      console.error("[admin] não foi possível reconferir o papel no banco; mantendo o da sessão", error);
+    }
+  }
 
   return (
     <div id="admin-shell" className="flex min-h-full bg-paper text-ink">

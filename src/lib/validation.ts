@@ -11,9 +11,9 @@ export type LoginInput = z.infer<typeof loginSchema>;
 
 export const signupSchema = z
   .object({
-    name: z.string().min(2, "Informe seu nome completo."),
-    email: z.string().min(1, "Informe seu e-mail.").email("E-mail inválido."),
-    password: z.string().min(8, "A senha deve ter no mínimo 8 caracteres."),
+    name: z.string().min(2, "Informe seu nome completo.").max(100, "Nome muito longo."),
+    email: z.string().min(1, "Informe seu e-mail.").email("E-mail inválido.").max(200, "E-mail muito longo."),
+    password: z.string().min(8, "A senha deve ter no mínimo 8 caracteres.").max(128, "Senha muito longa."),
     confirmPassword: z.string().min(1, "Confirme sua senha."),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -48,14 +48,14 @@ export const resetPasswordSchema = z
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 
 export const addressSchema = z.object({
-  recipient: z.string().min(2, "Informe o nome do destinatário."),
+  recipient: z.string().min(2, "Informe o nome do destinatário.").max(100, "Nome muito longo."),
   cpf: z.string().refine(isValidCPF, "CPF inválido."),
   zip: z.string().regex(/^\d{5}-?\d{3}$/, "CEP inválido. Use 8 números (ex: 59064-120)."),
-  street: z.string().min(2, "Informe a rua."),
-  number: z.string().min(1, "Informe o número."),
-  complement: z.string().optional(),
-  neighborhood: z.string().min(2, "Informe o bairro."),
-  city: z.string().min(2, "Informe a cidade."),
+  street: z.string().min(2, "Informe a rua.").max(150, "Rua muito longa."),
+  number: z.string().min(1, "Informe o número.").max(20, "Número muito longo."),
+  complement: z.string().max(80, "Complemento muito longo.").optional(),
+  neighborhood: z.string().min(2, "Informe o bairro.").max(100, "Bairro muito longo."),
+  city: z.string().min(2, "Informe a cidade.").max(100, "Cidade muito longa."),
   state: z
     .string()
     .transform((value) => value.trim().toUpperCase())
@@ -80,8 +80,8 @@ export type SavedAddressInput = z.infer<typeof savedAddressSchema>;
 export const contactSchema = z.object({
   name: z.string().min(2, "Informe seu nome."),
   email: z.string().min(1, "Informe seu e-mail.").email("E-mail inválido."),
-  subject: z.string().min(2, "Informe o assunto."),
-  message: z.string().min(10, "Escreva uma mensagem com pelo menos 10 caracteres."),
+  subject: z.string().min(2, "Informe o assunto.").max(150, "Assunto muito longo."),
+  message: z.string().min(10, "Escreva uma mensagem com pelo menos 10 caracteres.").max(3000, "Mensagem muito longa (máximo 3000 caracteres)."),
 });
 
 export type ContactInput = z.infer<typeof contactSchema>;

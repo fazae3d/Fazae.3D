@@ -32,6 +32,16 @@ export async function upsertAbandonedCart(input: UpsertAbandonedCartInput): Prom
   return toAbandonedCart(row);
 }
 
+export async function isEmailOptedOut(email: string): Promise<boolean> {
+  return Boolean(await db.emailOptOut.findUnique({ where: { email: email.toLowerCase() } }));
+}
+
+/** Registra o pedido de "não quero mais lembretes" e apaga o carrinho guardado. */
+export async function optOutOfReminders(email: string): Promise<void> {
+  await db.emailOptOut.upsert({ where: { email: email.toLowerCase() }, create: { email: email.toLowerCase() }, update: {} });
+  await db.abandonedCart.deleteMany({ where: { email: { equals: email, mode: "insensitive" } } });
+}
+
 /** No-ops when there's nothing to clear — called on every successful checkout, most of which never had a snapshot. */
 export async function deleteAbandonedCart(email: string): Promise<void> {
   await db.abandonedCart.deleteMany({ where: { email } });

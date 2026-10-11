@@ -2,10 +2,14 @@
 
 import { contactSchema } from "@/lib/validation";
 import { escapeHtml, sendEmail } from "@/lib/email";
+import { getClientIp, rateLimit } from "@/server/rate-limit";
 
 export type ContactResult = { success: true } | { success: false; error: string };
 
 export async function contactAction(input: unknown): Promise<ContactResult> {
+  const limited = await rateLimit(`contact:${await getClientIp()}`, 5, 30 * 60 * 1000);
+  if (!limited.allowed) return { success: false, error: "Muitas mensagens em pouco tempo. Tente de novo mais tarde." };
+
   const parsed = contactSchema.safeParse(input);
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };

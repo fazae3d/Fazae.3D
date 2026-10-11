@@ -5,6 +5,7 @@ import { resolveCartItems, type CartItemLine } from "@/lib/resolve-cart-items";
 import { getClientIp, rateLimit } from "@/server/rate-limit";
 import {
   deleteAbandonedCart,
+  isEmailOptedOut,
   getAbandonedCart,
   upsertAbandonedCart,
 } from "@/server/repositories/abandoned-cart-repository";
@@ -18,13 +19,13 @@ const cartLineSchema = z.object({
   productSlug: z.string(),
   material: z.string(),
   color: z.string(),
-  quantity: z.number().int().min(1),
+  quantity: z.number().int().min(1).max(99),
 });
 
 const captureSchema = z.object({
   email: z.string().email(),
   name: z.string().optional(),
-  lines: z.array(cartLineSchema).min(1),
+  lines: z.array(cartLineSchema).min(1).max(50),
 });
 
 /**
@@ -34,7 +35,7 @@ const captureSchema = z.object({
  */
 export async function captureAbandonedCartAction(input: unknown): Promise<void> {
   const ip = await getClientIp();
-  const limited = rateLimit(`abandoned-cart-capture:${ip}`, CAPTURE_LIMIT, CAPTURE_WINDOW_MS);
+  const limited = await rateLimit(`abandoned-cart-capture:${ip}`, CAPTURE_LIMIT, CAPTURE_WINDOW_MS);
   if (!limited.allowed) return;
 
   const parsed = captureSchema.safeParse(input);
@@ -45,8 +46,9 @@ export async function captureAbandonedCartAction(input: unknown): Promise<void> 
 
   const subtotal = round2(items.reduce((sum, item) => sum + item.price * item.quantity, 0));
 
-  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco — hoje a escrita real falharia sem Supabase configurado.
   try {
+    // Quem pediu para não receber lembretes não volta para a fila.
+    if (await isEmailOptedOut(parsed.data.email)) return;
     await upsertAbandonedCart({ email: parsed.data.email, name: parsed.data.name, items, subtotal });
   } catch {
     // Best-effort — never surfaces to the checkout UI, which doesn't await this action.

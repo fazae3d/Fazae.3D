@@ -28,6 +28,8 @@ export type DemoUser = {
   addresses: Address[];
   resetToken?: string;
   resetTokenExpiresAt?: string;
+  /** False/absent until the person proves they own the e-mail. */
+  emailVerified?: boolean;
 };
 
 export type OrderStatus =

@@ -11,7 +11,7 @@ export async function applyCouponAction(code: string, subtotal: number) {
   // for guessing valid codes — 20 tries / 10 min is plenty for a person
   // typing a code, not for a script trying a wordlist.
   const ip = await getClientIp();
-  const limited = rateLimit(`coupon:${ip}`, COUPON_LIMIT, COUPON_WINDOW_MS);
+  const limited = await rateLimit(`coupon:${ip}`, COUPON_LIMIT, COUPON_WINDOW_MS);
   if (!limited.allowed) {
     return { valid: false as const, message: "Muitas tentativas de cupom. Aguarde alguns minutos." };
   }

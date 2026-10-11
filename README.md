@@ -1,36 +1,35 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Fazaê 3D
 
-## Getting Started
+Loja de impressão 3D: vitrine, checkout com Mercado Pago (Pix, cartão e boleto), frete pelo Melhor Envio, entrega própria (motoboy) em Natal e Parnamirim, painel de gestão (pedidos, produção, estoque, finanças, consignação, precificação) e e-mails transacionais.
 
-First, run the development server:
+**Stack:** Next.js (App Router) · Prisma + Supabase Postgres · NextAuth · Mercado Pago · Melhor Envio · Resend · Vercel.
+
+## Rodando localmente
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env.local   # preencha os valores
+npx prisma migrate deploy
+npx prisma generate
+npm run dev                  # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Banco de dados
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Migrations ficam em `prisma/migrations` e são aplicadas à mão com `npx prisma migrate deploy` (o build da Vercel não roda migrations). **Aplique a migration antes de subir o código que depende dela.**
+- O mesmo banco serve ao desenvolvimento e à produção: cuidado ao testar com dados reais.
+- Não há contas de demonstração. Crie sua conta pelo site (`/cadastro`) e dê o papel de admin direto no banco:
+  `UPDATE "User" SET role = 'admin' WHERE email = 'voce@exemplo.com';`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Tarefas agendadas (Vercel Cron, ver `vercel.json`)
 
-## Learn More
+- `/api/cron/abandoned-carts`: lembrete de carrinho abandonado (1x/dia).
+- `/api/cron/expire-pending-orders`: cancela pedidos sem pagamento após 4 dias e devolve o estoque.
 
-To learn more about Next.js, take a look at the following resources:
+Ambas exigem `CRON_SECRET` em produção.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Regras importantes
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Preço, frete, desconto e Pix são **sempre recalculados no servidor** (`src/app/(storefront)/checkout/actions.ts`); o navegador só diz quais itens e qual forma de entrega.
+- O pedido é gravado **antes** da cobrança; a baixa de estoque é atômica e é devolvida se o pagamento for recusado ou vencer.
+- O webhook do Mercado Pago só avança o status do pedido e confere o valor pago.

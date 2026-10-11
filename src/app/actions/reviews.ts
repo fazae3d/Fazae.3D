@@ -5,6 +5,8 @@ import { findOrderById } from "@/server/repositories/order-repository";
 import { createReview, getReviewForOrderProduct } from "@/server/repositories/review-repository";
 import { withReadFallback, withMutationFallback } from "@/lib/db-fallback";
 import { firstName } from "@/lib/format";
+import { getClientIp, rateLimit } from "@/server/rate-limit";
+import { isEmailVerified } from "@/server/repositories/user-repository";
 import type { Review } from "@/server/types";
 
 export type SubmitReviewResult = { success: true; review: Review } | { success: false; error: string };
@@ -25,6 +27,10 @@ export async function submitReviewAction(input: {
 }): Promise<SubmitReviewResult> {
   const { orderId, productSlug, rating, text, guestEmail } = input;
 
+  const limited = await rateLimit(`review:${await getClientIp()}`, 10, 10 * 60 * 1000);
+  if (!limited.allowed) return { success: false, error: "Muitas tentativas. Aguarde alguns minutos." };
+  if (text && text.length > 2000) return { success: false, error: "O comentário pode ter até 2000 caracteres." };
+
   if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
     return { success: false, error: "Selecione uma nota de 1 a 5." };
   }
@@ -38,7 +44,8 @@ export async function submitReviewAction(input: {
   const sessionEmail = session?.user?.email?.toLowerCase();
   const providedEmail = guestEmail?.trim().toLowerCase();
   const orderEmail = order.userEmail?.toLowerCase();
-  const authorized = Boolean(orderEmail) && (sessionEmail === orderEmail || providedEmail === orderEmail);
+  const sessionOwns = Boolean(sessionEmail) && sessionEmail === orderEmail && (await isEmailVerified(sessionEmail!));
+  const authorized = Boolean(orderEmail) && (sessionOwns || providedEmail === orderEmail);
   if (!authorized) {
     return { success: false, error: "Não foi possível confirmar esse pedido." };
   }

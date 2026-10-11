@@ -38,7 +38,7 @@ const checkoutItemSchema = z.object({
   productSlug: z.string(),
   material: z.string(),
   color: z.string(),
-  quantity: z.number().int().min(1),
+  quantity: z.number().int().min(1).max(99),
 });
 
 const shippingChoiceSchema = z.union([
@@ -48,7 +48,7 @@ const shippingChoiceSchema = z.union([
 ]);
 
 const checkoutInputSchema = z.object({
-  items: z.array(checkoutItemSchema).min(1),
+  items: z.array(checkoutItemSchema).min(1).max(50),
   address: checkoutAddressSchema,
   shipping: shippingChoiceSchema,
   couponCode: z.string().optional(),
@@ -80,7 +80,7 @@ export async function processCheckoutPaymentAction(
   // Every call — success or failure — counts, so a script can't retry its
   // way past a declined card by hammering this action.
   const ip = await getClientIp();
-  const limited = rateLimit(`checkout:${ip}`, CHECKOUT_LIMIT, CHECKOUT_WINDOW_MS);
+  const limited = await rateLimit(`checkout:${ip}`, CHECKOUT_LIMIT, CHECKOUT_WINDOW_MS);
   if (!limited.allowed) {
     return { success: false, error: "Muitas tentativas de finalizar compra. Aguarde alguns minutos." };
   }

@@ -6,7 +6,8 @@ import Link from "next/link";
 import { trackOrderAction } from "@/app/(storefront)/rastreamento/actions";
 import { formatPrice } from "@/lib/format";
 import { ReviewCta } from "@/components/review-cta";
-import type { Order, OrderStatus } from "@/server/types";
+import type { OrderStatus } from "@/server/types";
+import type { PublicOrder } from "@/app/(storefront)/rastreamento/actions";
 
 const STATUS_SEQUENCE: OrderStatus[] = [
   "Pedido recebido",
@@ -21,7 +22,7 @@ export function TrackingForm({ initialOrderId = "" }: { initialOrderId?: string 
   const { data: session, status: sessionStatus } = useSession();
   const [orderId, setOrderId] = useState(initialOrderId);
   const [email, setEmail] = useState("");
-  const [order, setOrder] = useState<Order | null>(null);
+  const [order, setOrder] = useState<PublicOrder | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [loading, setLoading] = useState(false);
 

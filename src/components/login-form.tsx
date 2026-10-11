@@ -1,5 +1,6 @@
 "use client";
 
+import { safeCallbackUrl } from "@/lib/safe-redirect";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
@@ -10,7 +11,8 @@ import { FormField } from "./form-field";
 import { GoogleIcon } from "./google-icon";
 import { loginSchema, type LoginInput } from "@/lib/validation";
 
-export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
+export function LoginForm({ callbackUrl: rawCallbackUrl }: { callbackUrl: string }) {
+  const callbackUrl = safeCallbackUrl(rawCallbackUrl);
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
 

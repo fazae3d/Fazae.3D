@@ -1,39 +1,13 @@
-import bcrypt from "bcryptjs";
 import type { Category, Material } from "@/lib/types";
 import type { Coupon, Customer, DemoUser, ProductMaterialUsage, RawMaterial, StoredProduct } from "./types";
 
+/**
+ * Sem contas de demonstração: antes havia um admin com senha fixa no código, que seria criado em
+ * qualquer banco onde o seed rodasse. Contas reais são criadas pelo cadastro do site; o papel de
+ * admin é dado direto no banco.
+ */
 export function seedUsers(): DemoUser[] {
-  return [
-    {
-      id: "demo-user-1",
-      name: "Cliente Demo",
-      email: "demo@fazae3d.com.br",
-      passwordHash: bcrypt.hashSync("fazae1234", 10),
-      role: "customer",
-      addresses: [
-        {
-          id: "addr-1",
-          label: "Casa",
-          recipient: "Cliente Demo",
-          cpf: "529.982.247-25",
-          street: "Rua das Dunas",
-          number: "120",
-          neighborhood: "Ponta Negra",
-          city: "Natal",
-          state: "RN",
-          zip: "59090-000",
-        },
-      ],
-    },
-    {
-      id: "demo-admin-1",
-      name: "Admin Fazaê",
-      email: "teste@fazae.com",
-      passwordHash: bcrypt.hashSync("teste123", 10),
-      role: "admin",
-      addresses: [],
-    },
-  ];
+  return [];
 }
 
 export function seedCoupons(): Coupon[] {

@@ -7,6 +7,8 @@ import { ReorderButton } from "@/components/reorder-button";
 import { ReviewCta } from "@/components/review-cta";
 import { formatPrice } from "@/lib/format";
 import { findOrdersByEmail } from "@/server/repositories/order-repository";
+import { isEmailVerified } from "@/server/repositories/user-repository";
+import { ResendVerification } from "@/components/resend-verification";
 import { withReadFallback } from "@/lib/db-fallback";
 
 export const metadata: Metadata = {
@@ -16,9 +18,10 @@ export const metadata: Metadata = {
 export default async function PedidosPage() {
   const session = await auth();
   // TODO(fase DB): remove o fallback quando a Fazaê tiver o próprio banco — hoje a leitura real falharia sem Supabase configurado.
-  const orders = session?.user?.email
-    ? await withReadFallback(() => findOrdersByEmail(session.user!.email!), [])
-    : [];
+  const email = session?.user?.email;
+  // Conta sem e-mail confirmado não vê pedidos: quem cadastra o e-mail de outra pessoa não pode ler o histórico dela.
+  const verified = email ? await withReadFallback(() => isEmailVerified(email), false) : false;
+  const orders = email && verified ? await withReadFallback(() => findOrdersByEmail(email), []) : [];
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
@@ -31,7 +34,9 @@ export default async function PedidosPage() {
       />
       <h1 className="font-display mb-10 text-3xl sm:text-4xl">Meus pedidos</h1>
 
-      {orders.length === 0 ? (
+      {email && !verified ? (
+        <ResendVerification />
+      ) : orders.length === 0 ? (
         <div className="border border-paper/15 px-6 py-20 text-center">
           <p className="text-graphite">Você ainda não fez nenhum pedido.</p>
           <ButtonLink href="/loja" variant="primary" className="mt-6 inline-flex">

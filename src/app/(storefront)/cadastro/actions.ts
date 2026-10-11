@@ -3,8 +3,7 @@
 import { createUser, findUserByEmail } from "@/server/repositories/user-repository";
 import { getClientIp, rateLimit } from "@/server/rate-limit";
 import { signupSchema } from "@/lib/validation";
-import { withReadFallback } from "@/lib/db-fallback";
-import { fallbackUsers } from "@/server/demo-fallback";
+import { sendVerificationEmail } from "@/lib/email-verification";
 
 const SIGNUP_LIMIT = 10;
 const SIGNUP_WINDOW_MS = 10 * 60 * 1000;
@@ -13,7 +12,7 @@ export type SignupResult = { success: true } | { success: false; error: string }
 
 export async function signupAction(input: unknown): Promise<SignupResult> {
   const ip = await getClientIp();
-  const limited = rateLimit(`signup:${ip}`, SIGNUP_LIMIT, SIGNUP_WINDOW_MS);
+  const limited = await rateLimit(`signup:${ip}`, SIGNUP_LIMIT, SIGNUP_WINDOW_MS);
   if (!limited.allowed) {
     return { success: false, error: "Muitas tentativas. Aguarde alguns minutos e tente novamente." };
   }
@@ -25,10 +24,12 @@ export async function signupAction(input: unknown): Promise<SignupResult> {
 
   const { name, email, password } = parsed.data;
 
-  const existing = await withReadFallback(
-    () => findUserByEmail(email),
-    fallbackUsers.find((u) => u.email.toLowerCase() === email.toLowerCase()),
-  );
+  let existing;
+  try {
+    existing = await findUserByEmail(email);
+  } catch {
+    return { success: false, error: "Não foi possível criar a conta agora. Tente de novo em instantes." };
+  }
   if (existing) {
     return { success: false, error: "Já existe uma conta com esse e-mail." };
   }
@@ -38,10 +39,12 @@ export async function signupAction(input: unknown): Promise<SignupResult> {
   // com uma mensagem clara em vez de travar com um erro 500.
   try {
     await createUser({ name, email, password });
+    // Não bloqueia o cadastro se o e-mail falhar: a pessoa pode pedir o reenvio em "Meus pedidos".
+    await sendVerificationEmail(email, name).catch((error) => console.error("[cadastro] e-mail de confirmação", error));
   } catch {
     return {
       success: false,
-      error: "Não foi possível criar a conta agora. Configure o banco de dados (Supabase) para cadastros.",
+      error: "Não foi possível criar a conta agora. Tente de novo em instantes.",
     };
   }
   return { success: true };

@@ -49,6 +49,11 @@ model User {
   role                UserRole  @default(customer)
   resetToken          String?
   resetTokenExpiresAt DateTime?
+  /**
+   * Preenchido quando a pessoa prova que é dona do e-mail (link de confirmação, login Google ou redefinição de senha).
+   * Enquanto estiver vazio, a conta não vê pedidos: evita que alguém cadastre o e-mail de outra pessoa e leia o histórico dela.
+   */
+  emailVerifiedAt     DateTime?
   createdAt           DateTime  @default(now())
   addresses           Address[]
 }
@@ -446,4 +451,17 @@ model ProductionItem {
   updatedAt   DateTime        @updatedAt
 
   @@index([stage])
+}
+
+/** E-mails que pediram para não receber lembretes (carrinho abandonado). */
+model EmailOptOut {
+  email     String   @id
+  createdAt DateTime @default(now())
+}
+
+/** Contadores do limite de tentativas, compartilhados entre todas as instâncias do servidor. */
+model RateLimitBucket {
+  key     String   @id
+  count   Int
+  resetAt DateTime
 }

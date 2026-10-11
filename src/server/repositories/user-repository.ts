@@ -1,10 +1,15 @@
 import bcrypt from "bcryptjs";
-import { randomUUID } from "crypto";
+import { createHash, randomUUID } from "crypto";
 import { db } from "../db";
 import type { Address, DemoUser } from "../types";
 import type { Prisma } from "@/generated/prisma/client";
 
 export type { DemoUser };
+
+/** O token do link vai por e-mail em texto, mas no banco só fica o hash: um vazamento do banco não entrega links de redefinição válidos. */
+function hashResetToken(token: string) {
+  return createHash("sha256").update(token).digest("hex");
+}
 
 type UserRow = Prisma.UserGetPayload<{ include: { addresses: true } }>;
 type AddressRow = Prisma.AddressGetPayload<object>;
@@ -35,7 +40,23 @@ function toDemoUser(row: UserRow): DemoUser {
     addresses: row.addresses.map(toAddress),
     resetToken: row.resetToken ?? undefined,
     resetTokenExpiresAt: row.resetTokenExpiresAt?.toISOString(),
+    emailVerified: row.emailVerifiedAt !== null,
   };
+}
+
+export async function markEmailVerified(email: string): Promise<void> {
+  await db.user.updateMany({
+    where: { email: { equals: email, mode: "insensitive" }, emailVerifiedAt: null },
+    data: { emailVerifiedAt: new Date() },
+  });
+}
+
+export async function isEmailVerified(email: string): Promise<boolean> {
+  const row = await db.user.findFirst({
+    where: { email: { equals: email, mode: "insensitive" } },
+    select: { emailVerifiedAt: true },
+  });
+  return Boolean(row?.emailVerifiedAt);
 }
 
 export async function findUserByEmail(email: string): Promise<DemoUser | undefined> {
@@ -85,10 +106,22 @@ export async function createUser({
  */
 export async function findOrCreateOAuthUser({ name, email }: { name: string; email: string }): Promise<DemoUser> {
   const existing = await findUserByEmail(email);
-  if (existing) return existing;
+  if (existing) {
+    if (!existing.emailVerified) {
+      // O Google comprova que esta pessoa é dona do e-mail. Se a conta tinha sido criada antes, sem
+      // confirmação, quem a criou pode não ser o dono: a senha antiga é trocada por uma aleatória.
+      const row = await db.user.update({
+        where: { id: existing.id },
+        data: { emailVerifiedAt: new Date(), passwordHash: bcrypt.hashSync(randomUUID(), 10) },
+        include: { addresses: true },
+      });
+      return toDemoUser(row);
+    }
+    return existing;
+  }
 
   const row = await db.user.create({
-    data: { name, email, passwordHash: bcrypt.hashSync(randomUUID(), 10), role: "customer" },
+    data: { name, email, passwordHash: bcrypt.hashSync(randomUUID(), 10), role: "customer", emailVerifiedAt: new Date() },
     include: { addresses: true },
   });
   return toDemoUser(row);
@@ -121,14 +154,14 @@ export async function setPasswordResetToken(
   if (!user) return null;
   const row = await db.user.update({
     where: { email: user.email },
-    data: { resetToken: token, resetTokenExpiresAt: new Date(expiresAt) },
+    data: { resetToken: hashResetToken(token), resetTokenExpiresAt: new Date(expiresAt) },
     include: { addresses: true },
   });
   return toDemoUser(row);
 }
 
 export async function findUserByResetToken(token: string): Promise<DemoUser | undefined> {
-  const row = await db.user.findFirst({ where: { resetToken: token }, include: { addresses: true } });
+  const row = await db.user.findFirst({ where: { resetToken: hashResetToken(token) }, include: { addresses: true } });
   return row ? toDemoUser(row) : undefined;
 }
 
@@ -141,7 +174,13 @@ export async function resetPasswordWithToken(token: string, newPassword: string)
   }
   await db.user.update({
     where: { id: user.id },
-    data: { passwordHash: bcrypt.hashSync(newPassword, 10), resetToken: null, resetTokenExpiresAt: null },
+    // Quem recebeu o link no e-mail comprovou que é dono dele: a conta passa a contar como verificada.
+    data: {
+      passwordHash: bcrypt.hashSync(newPassword, 10),
+      resetToken: null,
+      resetTokenExpiresAt: null,
+      emailVerifiedAt: new Date(),
+    },
   });
   return { success: true };
 }

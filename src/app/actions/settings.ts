@@ -16,7 +16,17 @@ import { DEFAULT_WHATSAPP_NUMBER } from "@/lib/site-config";
  */
 export async function getSettingsSnapshotAction() {
   try {
-    return await getSettings();
+    const s = await getSettings();
+    // Só o que a loja precisa: margem, custo de hora/energia, taxa de falha e CEP de origem não saem do servidor.
+    return {
+      freeShippingThreshold: s.freeShippingThreshold,
+      whatsappNumber: s.whatsappNumber,
+      whatsappMessageTemplate: s.whatsappMessageTemplate,
+      customOrderIntroText: s.customOrderIntroText,
+      localDeliveryThreshold: s.localDeliveryThreshold,
+      localDeliveryFee: s.localDeliveryFee,
+      pixDiscountPct: s.pixDiscountPct,
+    };
   } catch {
     return { freeShippingThreshold: 299.9, whatsappNumber: DEFAULT_WHATSAPP_NUMBER };
   }

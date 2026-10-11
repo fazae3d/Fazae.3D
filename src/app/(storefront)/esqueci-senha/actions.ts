@@ -29,7 +29,7 @@ export type RequestResetResult = { success: true; resetLink?: string };
  */
 export async function requestPasswordResetAction(input: unknown): Promise<RequestResetResult> {
   const ip = await getClientIp();
-  const limited = rateLimit(`reset-request:${ip}`, RESET_REQUEST_LIMIT, RESET_REQUEST_WINDOW_MS);
+  const limited = await rateLimit(`reset-request:${ip}`, RESET_REQUEST_LIMIT, RESET_REQUEST_WINDOW_MS);
   if (!limited.allowed) return { success: true };
 
   const parsed = forgotPasswordSchema.safeParse(input);

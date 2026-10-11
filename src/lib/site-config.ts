@@ -1,5 +1,5 @@
 /** Placeholder production domain — update when the real domain is confirmed. */
-export const SITE_URL = "https://www.fazae3d.com.br";
+export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.fazae3d.com.br";
 export const SITE_NAME = "Fazaê";
 export const SITE_TAGLINE = "Você imagina. A gente cria.";
 

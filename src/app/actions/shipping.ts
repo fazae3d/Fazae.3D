@@ -6,11 +6,14 @@ import { fallbackProducts } from "@/server/demo-fallback";
 import { getSettings } from "@/server/repositories/settings-repository";
 import { calculateShipping, type ShippingQuote } from "@/lib/melhor-envio";
 import { isLocalDeliveryCep } from "@/server/local-delivery";
+import { getClientIp, rateLimit } from "@/server/rate-limit";
 
 export type ShippingQuoteInput = { productSlug: string; quantity: number };
 
 /** True when the CEP is in a city served by our own motoboy delivery (Natal/Parnamirim). */
 export async function checkLocalDeliveryAction(destinationCep: string): Promise<boolean> {
+  const limited = await rateLimit(`cep-check:${await getClientIp()}`, 60, 10 * 60 * 1000);
+  if (!limited.allowed) return false;
   return isLocalDeliveryCep(destinationCep);
 }
 
@@ -26,7 +29,9 @@ export async function quoteShippingAction(
   items: ShippingQuoteInput[],
 ): Promise<ShippingQuote[]> {
   const digits = destinationCep.replace(/\D/g, "");
-  if (digits.length !== 8 || items.length === 0) return [];
+  if (digits.length !== 8 || items.length === 0 || items.length > 50) return [];
+  const limited = await rateLimit(`shipping-quote:${await getClientIp()}`, 40, 10 * 60 * 1000);
+  if (!limited.allowed) return [];
 
   const settings = await withReadFallback(() => getSettings(), { freeShippingThreshold: 299.9, whatsappNumber: "" });
   if (!settings.originCep) return [];

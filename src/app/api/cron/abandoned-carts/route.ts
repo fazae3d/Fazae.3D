@@ -3,7 +3,13 @@ import { sendEmail } from "@/lib/email";
 import { getEmailContactUrl, renderEmailLayout, renderOrderItemsTable, renderTotalHighlight } from "@/lib/email-template";
 import { firstName, formatPrice } from "@/lib/format";
 import { SITE_URL } from "@/lib/site-config";
-import { getRemindableAbandonedCarts, markAbandonedCartReminded } from "@/server/repositories/abandoned-cart-repository";
+import {
+  getRemindableAbandonedCarts,
+  isEmailOptedOut,
+  markAbandonedCartReminded,
+} from "@/server/repositories/abandoned-cart-repository";
+import { createSignedToken } from "@/server/signed-token";
+import { UNSUBSCRIBE_PURPOSE } from "@/lib/reminder-unsubscribe";
 
 /** How long a cart sits untouched before it's considered abandoned. */
 const ABANDONED_THRESHOLD_MS = 2 * 60 * 60 * 1000;
@@ -30,6 +36,11 @@ export async function GET(request: NextRequest) {
 
   let sent = 0;
   for (const cart of carts) {
+    if (await isEmailOptedOut(cart.email)) {
+      await markAbandonedCartReminded(cart.id);
+      continue;
+    }
+    const unsubscribeUrl = `${SITE_URL}/cancelar-lembretes?token=${createSignedToken(UNSUBSCRIBE_PURPOSE, cart.email, null)}`;
     const greeting = cart.name ? `E aí, ${firstName(cart.name)}!` : "Oi, tudo bem?";
     const recoveryUrl = `${SITE_URL}/carrinho?recuperar=${cart.id}`;
 
@@ -41,7 +52,7 @@ export async function GET(request: NextRequest) {
         eyebrow: "Carrinho",
         greeting,
         heading: "Ainda dá tempo de levar pra casa!",
-        bodyHtml: `<p style="margin:0;">Reparamos que você deixou uns produtos bem legais no carrinho e não chegou a finalizar a compra. Guardamos tudo certinho pra você!</p>${renderOrderItemsTable(cart.items, formatPrice)}${renderTotalHighlight("Total:", formatPrice(cart.subtotal))}`,
+        bodyHtml: `<p style="margin:0;">Reparamos que você deixou uns produtos bem legais no carrinho e não chegou a finalizar a compra. Guardamos tudo certinho pra você!</p>${renderOrderItemsTable(cart.items, formatPrice)}${renderTotalHighlight("Total:", formatPrice(cart.subtotal))}<p style="margin:20px 0 0;font-size:12px;color:#A6A6A0;">Não quer mais receber lembretes de carrinho? <a href="${unsubscribeUrl}" style="color:#A6A6A0;">Cancelar lembretes</a>.</p>`,
         action: { label: "Finalizar compra", url: recoveryUrl },
         contactUrl,
       }),
