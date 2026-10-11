@@ -35,12 +35,24 @@ function toSettings(row: {
   };
 }
 
-export async function getSettings(): Promise<StoreSettings> {
+/**
+ * Quase toda página lê as configurações (layout, rodapé, checkout...), e elas quase nunca mudam. Um cache curto por instância
+ * evita uma ida ao banco por página (isso pesava no tempo de resposta). É limpo assim que o painel salva uma alteração.
+ */
+const SETTINGS_CACHE_TTL_MS = 60_000;
+let settingsCache: { at: number; value: StoreSettings } | null = null;
+
+/** `fresh: true` ignora o cache: usado onde o valor decide quanto o cliente paga (checkout), para nunca cobrar com um percentual/frete desatualizado. */
+export async function getSettings(options?: { fresh?: boolean }): Promise<StoreSettings> {
+  if (!options?.fresh && settingsCache && Date.now() - settingsCache.at < SETTINGS_CACHE_TTL_MS) return settingsCache.value;
   const row = await db.settings.findUniqueOrThrow({ where: { id: SETTINGS_ID } });
-  return toSettings(row);
+  const value = toSettings(row);
+  settingsCache = { at: Date.now(), value };
+  return value;
 }
 
 export async function updateSettings(input: Partial<StoreSettings>): Promise<StoreSettings> {
   const row = await db.settings.update({ where: { id: SETTINGS_ID }, data: input });
+  settingsCache = null;
   return toSettings(row);
 }

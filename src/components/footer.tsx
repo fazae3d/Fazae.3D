@@ -32,6 +32,8 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
       { href: "/loja", label: "Catálogo" },
       { href: "/loja?filtro=novidades", label: "Novidades" },
       { href: "/personalizado", label: "Sob encomenda" },
+      { href: "/impressao-3d/natal", label: "Impressão 3D em Natal" },
+      { href: "/impressao-3d/parnamirim", label: "Impressão 3D em Parnamirim" },
     ],
   },
   {
@@ -47,6 +49,7 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
     title: "Institucional",
     links: [
       { href: "/sobre", label: "Sobre a Fazaê" },
+      { href: "/guias", label: "Guias e dicas" },
       { href: "/privacidade", label: "Privacidade" },
       { href: "/termos", label: "Termos" },
     ],

@@ -6,7 +6,9 @@ import { getSettings } from "@/server/repositories/settings-repository";
 import { withReadFallback } from "@/lib/db-fallback";
 
 export const metadata: Metadata = {
-  title: "Contato",
+  title: "Contato e atendimento",
+  description: "Fale com a Fazaê 3D pelo WhatsApp ou pelo formulário. Tire dúvidas sobre pedidos, prazos, frete e peças sob encomenda.",
+  alternates: { canonical: "/contato" },
 };
 
 export default async function ContatoPage() {

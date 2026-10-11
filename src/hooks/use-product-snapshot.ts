@@ -4,6 +4,26 @@ import { useCallback, useEffect, useState } from "react";
 import { getCatalogSnapshotAction } from "@/app/actions/catalog";
 import type { Category, Product } from "@/lib/types";
 
+type Snapshot = Awaited<ReturnType<typeof getCatalogSnapshotAction>>;
+
+/**
+ * Vários componentes da mesma página (carrinho, busca, recentes, favoritos...) usam este hook e cada um disparava a sua própria
+ * chamada ao servidor, buscando o catálogo inteiro várias vezes por visita. Agora a primeira chamada é compartilhada por todos
+ * durante alguns segundos; `refresh()` continua forçando uma leitura nova.
+ */
+const SNAPSHOT_TTL_MS = 30_000;
+let sharedSnapshot: { at: number; promise: Promise<Snapshot> } | null = null;
+
+function loadSnapshot(force: boolean): Promise<Snapshot> {
+  if (!force && sharedSnapshot && Date.now() - sharedSnapshot.at < SNAPSHOT_TTL_MS) return sharedSnapshot.promise;
+  const promise = getCatalogSnapshotAction();
+  sharedSnapshot = { at: Date.now(), promise };
+  promise.catch(() => {
+    if (sharedSnapshot?.promise === promise) sharedSnapshot = null;
+  });
+  return promise;
+}
+
 /**
  * Client-side catalog snapshot, fetched via a Server Action on mount.
  * Every consumer of this hook gets its own copy — call `refresh()` at a
@@ -15,8 +35,8 @@ export function useProductSnapshot() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loaded, setLoaded] = useState(false);
 
-  const refresh = useCallback(async () => {
-    const snapshot = await getCatalogSnapshotAction();
+  const refresh = useCallback(async (force = true) => {
+    const snapshot = await loadSnapshot(force);
     setProducts(snapshot.products);
     setCategories(snapshot.categories);
     setLoaded(true);
@@ -29,7 +49,7 @@ export function useProductSnapshot() {
     // this from a derived-state anti-pattern, but this genuinely is the
     // documented "fetch in an effect" shape.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    refresh();
+    refresh(false);
   }, [refresh]);
 
   const getProduct = useCallback((slug: string) => products.find((p) => p.slug === slug), [products]);

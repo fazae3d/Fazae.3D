@@ -5,7 +5,10 @@ import { getProduct } from "@/lib/demo-data";
 import { withReadFallback } from "@/lib/db-fallback";
 
 export const metadata: Metadata = {
-  title: "Peça sob encomenda",
+  title: "Peça personalizada sob encomenda: orçamento de impressão 3D",
+  description:
+    "Quer uma peça única? Conte sua ideia e receba orçamento de impressão 3D personalizada: chaveiros, miniaturas, presentes e peças sob medida. Atendimento em Natal e Parnamirim e envio para todo o Brasil.",
+  alternates: { canonical: "/personalizado" },
 };
 
 const STEPS = [

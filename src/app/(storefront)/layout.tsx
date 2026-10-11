@@ -14,15 +14,35 @@ import { withReadFallback } from "@/lib/db-fallback";
 import { DEFAULT_PIX_DISCOUNT_PCT } from "@/lib/money";
 import { getSettings } from "@/server/repositories/settings-repository";
 import { WishlistProvider } from "@/contexts/wishlist-context";
-import { SITE_NAME, SITE_URL } from "@/lib/site-config";
+import { COMPANY, INSTAGRAM_URL, SITE_NAME, SITE_URL } from "@/lib/site-config";
+import { JsonLd } from "@/components/json-ld";
 
+/** Loja física/online com endereço e área de atendimento: ajuda o Google a mostrar a Fazaê em buscas locais ("impressão 3D Natal"). */
 const ORGANIZATION_JSON_LD = {
   "@context": "https://schema.org",
-  "@type": "Organization",
-  name: SITE_NAME,
+  "@type": "Store",
+  name: `${SITE_NAME} 3D`,
+  legalName: COMPANY.legalName,
   url: SITE_URL,
+  logo: `${SITE_URL}/logo-email.png`,
+  image: `${SITE_URL}/opengraph-image`,
   description:
-    "Fazaê é impressão 3D e ideias: peças prontas e sob encomenda, do funcional ao decorativo. Você imagina, a gente cria.",
+    "Impressão 3D em Natal e Parnamirim: peças prontas e sob encomenda, do funcional ao decorativo. Você imagina, a gente cria.",
+  address: {
+    "@type": "PostalAddress",
+    streetAddress: "Rua Luís Nogueira Filho, 419",
+    addressLocality: "Parnamirim",
+    addressRegion: "RN",
+    postalCode: COMPANY.zip,
+    addressCountry: "BR",
+  },
+  areaServed: [
+    { "@type": "City", name: "Natal" },
+    { "@type": "City", name: "Parnamirim" },
+    { "@type": "Country", name: "Brasil" },
+  ],
+  sameAs: [INSTAGRAM_URL],
+  ...(COMPANY.cnpj ? { taxID: COMPANY.cnpj } : {}),
 };
 
 const WEBSITE_JSON_LD = {
@@ -51,15 +71,12 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
     <PixDiscountProvider pct={pixDiscountPct}>
     <CartProvider>
       <WishlistProvider>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(ORGANIZATION_JSON_LD) }}
-        />
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(WEBSITE_JSON_LD) }} />
+        <JsonLd data={ORGANIZATION_JSON_LD} />
+        <JsonLd data={WEBSITE_JSON_LD} />
         <div
           aria-hidden="true"
           className="pointer-events-none fixed inset-0 bg-cover bg-center opacity-[0.15]"
-          style={{ backgroundImage: "url(/bg-texture.jpg)" }}
+          style={{ backgroundImage: "url(/bg-texture.webp)" }}
         />
         <div className="flex min-h-full flex-col">
           <AnnouncementBar />

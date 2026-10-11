@@ -3,6 +3,8 @@ import { Breadcrumb } from "@/components/breadcrumb";
 
 export const metadata: Metadata = {
   title: "Trocas e devoluções",
+  description: "Veja como funcionam trocas, devoluções e reembolso na Fazaê 3D: prazos, condições e como solicitar.",
+  alternates: { canonical: "/trocas-e-devolucoes" },
 };
 
 export default function TrocasEDevolucoesPage() {

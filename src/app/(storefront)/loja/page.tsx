@@ -6,8 +6,11 @@ import { withReadFallback } from "@/lib/db-fallback";
 import { fallbackCategories, fallbackProducts } from "@/server/demo-fallback";
 
 export const metadata: Metadata = {
-  title: "Loja",
-  description: "Explore todo o catálogo de impressão 3D da Fazaê: decoração, geek & pop, casa e utilidades.",
+  title: "Loja de peças impressas em 3D",
+  description:
+    "Chaveiros, decoração, itens geek e utilidades impressos em 3D. Compre online na Fazaê, com entrega por motoboy em Natal e Parnamirim e envio para todo o Brasil.",
+  // Filtros e ordenação (?categoria=, ?ordenar=...) geram a mesma página: o Google deve indexar só a principal.
+  alternates: { canonical: "/loja" },
 };
 
 export default async function LojaPage({ searchParams }: PageProps<"/loja">) {

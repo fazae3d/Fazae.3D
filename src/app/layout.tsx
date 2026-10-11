@@ -16,27 +16,32 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
+const SEO_TITLE = "Fazaê 3D | Impressão 3D em Natal e Parnamirim";
 const DESCRIPTION =
-  "Fazaê é impressão 3D e ideias: peças prontas e sob encomenda, do funcional ao decorativo. Você imagina, a gente cria.";
+  "Impressão 3D em Natal e Parnamirim: chaveiros, decoração e peças personalizadas, prontas ou sob encomenda. Entrega por motoboy na região e envio para todo o Brasil.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: SITE_NAME,
-    template: `%s | ${SITE_NAME}`,
+    default: SEO_TITLE,
+    template: `%s | ${SITE_NAME} 3D`,
   },
   description: DESCRIPTION,
+  // Código de verificação do Google Search Console (opcional: também dá para verificar pelo DNS).
+  ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+    ? { verification: { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION } }
+    : {}),
   openGraph: {
     type: "website",
     locale: "pt_BR",
     siteName: SITE_NAME,
-    title: SITE_TAGLINE,
+    title: SEO_TITLE,
     description: DESCRIPTION,
     url: SITE_URL,
   },
   twitter: {
     card: "summary_large_image",
-    title: SITE_TAGLINE,
+    title: SEO_TITLE,
     description: DESCRIPTION,
   },
   robots: {

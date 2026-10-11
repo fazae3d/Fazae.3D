@@ -24,7 +24,7 @@ export function CatalogTeaserCard({ href, slug, category, title, tone, photo }: 
     >
       <div className="relative aspect-[4/5] overflow-hidden bg-mist">
         {photo ? (
-          <img
+          <img loading="lazy" decoding="async"
             src={photo}
             alt=""
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"

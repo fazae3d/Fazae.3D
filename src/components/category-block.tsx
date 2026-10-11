@@ -16,7 +16,7 @@ export function CategoryBlock({ href, tone, title, description, cta, image, imag
     <Link href={href} className="group relative block aspect-[3/4] overflow-hidden">
       <div className="h-full w-full transition-transform duration-700 group-hover:scale-105">
         {image ? (
-          <img
+          <img loading="lazy" decoding="async"
             src={image}
             alt={title}
             className="h-full w-full object-cover"

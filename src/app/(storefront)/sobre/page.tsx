@@ -4,8 +4,10 @@ import { ButtonLink } from "@/components/button";
 import { SectionHeading } from "@/components/section-heading";
 
 export const metadata: Metadata = {
-  title: "Sobre a Fazaê",
-  description: "Conheça a Fazaê: impressão 3D própria, peças prontas e sob encomenda em Natal/RN.",
+  title: "Sobre a Fazaê: impressão 3D feita em Parnamirim/RN",
+  description:
+    "Conheça a Fazaê 3D: produzimos cada peça com impressoras próprias em Parnamirim/RN. Tecnologia, design e criatividade em chaveiros, decoração e peças personalizadas.",
+  alternates: { canonical: "/sobre" },
 };
 
 function BoltIcon() {

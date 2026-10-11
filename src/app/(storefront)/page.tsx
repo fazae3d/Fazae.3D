@@ -11,13 +11,13 @@ const STEPS = [
     n: "1",
     title: "Você tem uma ideia",
     description: "Tudo começa com sua inspiração.",
-    image: "/how-it-works/step-1.png",
+    image: "/how-it-works/step-1.webp",
   },
   {
     n: "2",
     title: "Fale com a gente",
     description: "Conte sua ideia, envie referências ou um esboço.",
-    image: "/how-it-works/step-2.png",
+    image: "/how-it-works/step-2.webp",
   },
   {
     n: "3",
@@ -35,7 +35,7 @@ const STEPS = [
     n: "5",
     title: "Enviamos para você",
     description: "Embalamos com cuidado e enviamos para todo o Brasil.",
-    image: "/how-it-works/step-5.png",
+    image: "/how-it-works/step-5.webp",
   },
 ];
 
@@ -49,15 +49,18 @@ function ShieldCheckIcon({ className }: { className?: string }) {
 }
 
 const TRUST_BADGES = [
-  { label: "Projeto personalizado", icon: "/trust-badges/icon-personalizado.png" },
-  { label: "Feito sob medida", icon: "/trust-badges/icon-medida.png" },
-  { label: "Produção em 3D", icon: "/trust-badges/icon-producao.png" },
-  { label: "Envio para todo o Brasil", icon: "/trust-badges/icon-envio.png" },
+  { label: "Projeto personalizado", icon: "/trust-badges/icon-personalizado.webp" },
+  { label: "Feito sob medida", icon: "/trust-badges/icon-medida.webp" },
+  { label: "Produção em 3D", icon: "/trust-badges/icon-producao.webp" },
+  { label: "Envio para todo o Brasil", icon: "/trust-badges/icon-envio.webp" },
 ];
 
 const ESSENCE_TAGLINE = "Criatividade, Tecnologia & Design.";
 
-export const metadata = { alternates: { canonical: "/" } };
+export const metadata = {
+  title: { absolute: "Fazaê 3D | Impressão 3D em Natal e Parnamirim: peças prontas e sob encomenda" },
+  alternates: { canonical: "/" },
+};
 
 export default function Home() {
   return (
@@ -79,7 +82,7 @@ export default function Home() {
           {CATALOG_TEASER.slice(0, 4).map((item) => (
             <CatalogTeaserCard
               key={item.slug}
-              href={`/loja?categoria=${item.categorySlug}`}
+              href={`/categorias/${item.categorySlug}`}
               slug={item.slug}
               category={item.categoryLabel ?? getCategory(item.categorySlug)?.label ?? item.categorySlug}
               title={item.title}
@@ -109,7 +112,7 @@ export default function Home() {
                     {step.n}
                   </div>
                   <div className="mx-auto mt-3 flex h-28 w-32 items-center justify-center sm:mt-5 sm:h-44 sm:w-48">
-                    <img src={step.image} alt="" className="max-h-full max-w-full object-contain" />
+                    <img loading="lazy" decoding="async" src={step.image} alt="" className="max-h-full max-w-full object-contain" />
                   </div>
                   <p className="mt-3 text-sm font-bold text-paper sm:mt-5 sm:text-base">{step.title}</p>
                   <p className="mt-1 text-xs text-paper/60 sm:mt-1.5 sm:text-sm">{step.description}</p>
@@ -150,7 +153,7 @@ export default function Home() {
               <ul className="mt-6 grid grid-cols-2 gap-x-6 gap-y-3">
                 {TRUST_BADGES.map((badge) => (
                   <li key={badge.label} className="flex items-center gap-2 text-xs text-paper/75">
-                    <img src={badge.icon} alt="" className="h-5 w-5 shrink-0 object-contain" />
+                    <img loading="lazy" decoding="async" src={badge.icon} alt="" className="h-5 w-5 shrink-0 object-contain" />
                     {badge.label}
                   </li>
                 ))}
@@ -163,7 +166,7 @@ export default function Home() {
                 Seus dados e ideias estão 100% seguros com a gente.
               </p>
             </div>
-            <img
+            <img loading="lazy" decoding="async"
               src="/ideia-projeto-peca.webp"
               alt="Da ideia ao projeto 3D até a peça impressa"
               className="mx-auto w-full max-w-lg lg:max-w-none"
@@ -174,7 +177,7 @@ export default function Home() {
 
       <section className="relative overflow-hidden bg-ink py-12 text-paper sm:py-16 lg:py-20">
         <FlowLines className="flow-lines-bg absolute inset-0 h-full w-full" variant="light" />
-        <img
+        <img loading="lazy" decoding="async"
           src="/essence-fmark.webp"
           alt=""
           aria-hidden="true"
@@ -204,7 +207,7 @@ export default function Home() {
             </div>
             <p className="label-caps mt-8 text-sm text-petrol">{ESSENCE_TAGLINE}</p>
           </div>
-          <img
+          <img loading="lazy" decoding="async"
             src="/essence-fmark.webp"
             alt="Marca Fazaê impressa em 3D ao lado de uma impressora em funcionamento"
             className="hidden h-full min-h-[280px] w-full object-cover lg:block"

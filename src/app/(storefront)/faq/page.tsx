@@ -2,9 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Accordion } from "@/components/accordion";
 import { Breadcrumb } from "@/components/breadcrumb";
+import { JsonLd } from "@/components/json-ld";
 
 export const metadata: Metadata = {
-  title: "FAQ",
+  title: "Perguntas frequentes",
+  description:
+    "Dúvidas sobre prazo de entrega, pagamento, peças sob encomenda, trocas e devoluções na Fazaê 3D? Veja as respostas.",
+  alternates: { canonical: "/faq" },
 };
 
 const FAQ_ITEMS = [
@@ -112,6 +116,17 @@ export default function FaqPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-16 sm:px-6 lg:px-8">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: FAQ_ITEMS.map((item) => ({
+            "@type": "Question",
+            name: item.title,
+            acceptedAnswer: { "@type": "Answer", text: item.plainAnswer },
+          })),
+        }}
+      />
       <Breadcrumb items={[{ label: "Início", href: "/" }, { label: "FAQ" }]} />
       <h1 className="font-display mb-10 text-3xl sm:text-4xl">Perguntas frequentes</h1>
       <Accordion items={FAQ_ITEMS} defaultOpenIndex={-1} />

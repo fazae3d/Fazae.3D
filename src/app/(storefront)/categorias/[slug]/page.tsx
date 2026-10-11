@@ -23,8 +23,10 @@ export async function generateMetadata({
   const { slug } = await params;
   const category = await findCategory(slug);
   return {
-    title: category?.label ?? "Categoria",
-    description: category?.description,
+    title: category ? `${category.label} em 3D` : "Categoria",
+    description: category
+      ? `${category.label}. ${category.description || "Peças impressas em 3D."} Compre online com entrega por motoboy em Natal e Parnamirim e envio para todo o Brasil.`.slice(0, 200)
+      : undefined,
     alternates: { canonical: `/categorias/${slug}` },
   };
 }

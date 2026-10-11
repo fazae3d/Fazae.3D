@@ -47,7 +47,7 @@ function ProductsDropdown() {
             {categories.map((category) => (
               <li key={category.slug}>
                 <Link
-                  href={`/loja?categoria=${category.slug}`}
+                  href={`/categorias/${category.slug}`}
                   className="block px-3 py-2.5 text-sm text-paper transition-colors hover:bg-paper/5 hover:text-petrol"
                 >
                   {category.label}
@@ -95,7 +95,7 @@ function MobileProductsAccordion({ open, onToggle, onNavigate }: { open: boolean
           {categories.map((category) => (
             <li key={category.slug}>
               <Link
-                href={`/loja?categoria=${category.slug}`}
+                href={`/categorias/${category.slug}`}
                 onClick={onNavigate}
                 className="block py-2.5 pl-4 text-sm text-graphite transition-colors hover:text-petrol"
               >

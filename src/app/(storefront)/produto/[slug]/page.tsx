@@ -34,10 +34,11 @@ export async function generateMetadata({
     fallbackProducts.find((p) => p.slug === slug),
   );
   if (!product) return {};
-  const description = product.description.length > 160 ? `${product.description.slice(0, 157)}...` : product.description;
+  const flat = product.description.replace(/\s+/g, " ").trim();
+  const description = flat.length > 155 ? `${flat.slice(0, 152).trimEnd()}...` : flat;
   const image = product.images?.[0];
   return {
-    title: product.name,
+    title: `${product.name} | Impressão 3D`,
     description,
     alternates: { canonical: `/produto/${product.slug}` },
     openGraph: {

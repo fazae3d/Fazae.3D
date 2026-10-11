@@ -156,7 +156,7 @@ export async function processCheckoutPaymentAction(
   }
 
   const settings = await withReadFallback(
-    () => getSettings(),
+    () => getSettings({ fresh: true }),
     { freeShippingThreshold: 299.9, whatsappNumber: DEFAULT_WHATSAPP_NUMBER },
   );
   const { freeShippingThreshold, originCep } = settings;
