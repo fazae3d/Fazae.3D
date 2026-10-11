@@ -53,6 +53,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async signIn({ user, account }) {
       if (account?.provider === "google" && user.email) {
         const dbUser = await findOrCreateOAuthUserWithFallback({ name: user.name ?? user.email, email: user.email });
+        if (!dbUser) return false;
         user.id = dbUser.id;
         user.role = dbUser.role;
       }

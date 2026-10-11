@@ -23,7 +23,17 @@ export default async function ContaPage() {
       <Breadcrumb items={[{ label: "Início", href: "/" }, { label: "Minha conta" }]} />
       <div className="mb-10 flex items-center justify-between">
         <h1 className="font-display text-3xl sm:text-4xl">Minha conta</h1>
-        <SignOutButton />
+        <div className="flex items-center gap-4">
+          {session?.user?.role === "admin" && (
+            <Link
+              href="/admin"
+              className="label-caps rounded-full bg-petrol px-5 py-2.5 text-[11px] text-ink transition-colors hover:bg-paper"
+            >
+              Ir para o painel admin
+            </Link>
+          )}
+          <SignOutButton />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-10 sm:grid-cols-2">
