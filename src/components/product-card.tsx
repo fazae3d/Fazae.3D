@@ -34,14 +34,31 @@ export function ProductCard({ product }: { product: Product }) {
 
   return (
     <Link href={`/produto/${product.slug}`} className="group block">
-      <div className="relative aspect-[4/5] overflow-hidden bg-mist">
+      <div className="relative aspect-square overflow-hidden bg-mist">
         <div
           className={`h-full w-full transition-transform duration-500 group-hover:scale-105 ${
             soldOut ? "opacity-50" : ""
           }`}
         >
           {product.images && product.images.length > 0 ? (
-            <img loading="lazy" decoding="async" src={product.images[0]} alt={product.name} className="h-full w-full object-contain" />
+            <>
+              {/* Fundo: a própria foto, ampliada e desfocada, ocupa as sobras do quadrado (sem faixas vazias e sem cortar a foto). */}
+              <img
+                loading="lazy"
+                decoding="async"
+                src={product.images[0]}
+                alt=""
+                aria-hidden="true"
+                className="absolute inset-0 h-full w-full scale-125 object-cover opacity-70 blur-xl"
+              />
+              <img
+                loading="lazy"
+                decoding="async"
+                src={product.images[0]}
+                alt={product.name}
+                className="relative h-full w-full object-contain"
+              />
+            </>
           ) : (
             <ProductArt slug={product.slug} tone={product.imageTone} className="h-full w-full" />
           )}
