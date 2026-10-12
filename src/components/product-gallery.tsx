@@ -10,6 +10,14 @@ const SWIPE_THRESHOLD_PX = 50;
 export function ProductGallery({ product }: { product: Product }) {
   const [active, setActive] = useState(0);
   const [zoomOpen, setZoomOpen] = useState(false);
+  // Proporção real de cada foto (largura/altura), descoberta quando ela carrega: o quadro principal se ajusta à foto em vez de ter
+  // uma proporção fixa, então não sobram faixas vazias em cima e embaixo. Limitada para uma foto muito comprida não ficar gigante.
+  const [ratios, setRatios] = useState<Record<string, number>>({});
+  const rememberRatio = (img: HTMLImageElement | null, key: string) => {
+    if (!img || !img.naturalWidth || !img.naturalHeight) return;
+    const ratio = Math.min(1.6, Math.max(0.7, img.naturalWidth / img.naturalHeight));
+    setRatios((prev) => (prev[key] === ratio ? prev : { ...prev, [key]: ratio }));
+  };
   const touchStartX = useRef<number | null>(null);
   const images = product.images ?? [];
   const hasPhotos = images.length > 0;
@@ -46,14 +54,14 @@ export function ProductGallery({ product }: { product: Product }) {
             key={slot}
             type="button"
             onClick={() => setActive(i)}
-            className={`relative aspect-[4/5] w-20 shrink-0 overflow-hidden border bg-mist transition-colors sm:w-24 ${
+            className={`relative aspect-square w-20 shrink-0 overflow-hidden border bg-mist transition-colors sm:w-24 ${
               active === i ? "border-petrol" : "border-paper/15"
             }`}
             aria-label={hasPhotos ? `Ver foto ${i + 1}` : `Ver ${VIEWS[i].toLowerCase()}`}
             aria-current={active === i}
           >
             {hasPhotos ? (
-              <img src={slot} alt="" className="h-full w-full object-contain" />
+              <img src={slot} alt="" className="h-full w-full object-cover" />
             ) : (
               <ProductArt slug={product.slug} tone={product.imageTone} className="h-full w-full" />
             )}
@@ -65,11 +73,18 @@ export function ProductGallery({ product }: { product: Product }) {
           type="button"
           disabled={!hasPhotos}
           onClick={() => setZoomOpen(true)}
-          className={`relative block aspect-[4/5] w-full overflow-hidden bg-mist ${hasPhotos ? "cursor-zoom-in" : "cursor-default"}`}
+          style={{ aspectRatio: hasPhotos ? (ratios[images[active]] ?? 1) : 4 / 5 }}
+          className={`relative block w-full overflow-hidden bg-mist ${hasPhotos ? "cursor-zoom-in" : "cursor-default"}`}
           aria-label={hasPhotos ? "Ampliar foto do produto" : undefined}
         >
           {hasPhotos ? (
-            <img src={images[active]} alt={product.name} className="h-full w-full object-contain" />
+            <img
+              ref={(el) => rememberRatio(el, images[active])}
+              src={images[active]}
+              alt={product.name}
+              onLoad={(e) => rememberRatio(e.currentTarget, images[active])}
+              className="h-full w-full object-contain"
+            />
           ) : (
             <ProductArt slug={product.slug} tone={product.imageTone} className="h-full w-full" />
           )}
