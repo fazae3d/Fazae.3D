@@ -13,7 +13,11 @@ declare global {
 }
 
 function createPrismaClient() {
-  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL, max: 5 });
+  const adapter = new PrismaPg({
+    connectionString: process.env.DATABASE_URL,
+    // Durante o build a Vercel gera páginas em vários processos ao mesmo tempo: uma conexão por processo evita estourar o limite do pooler.
+    max: process.env.NEXT_PHASE === "phase-production-build" ? 1 : 5,
+  });
   return new PrismaClient({ adapter });
 }
 

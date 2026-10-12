@@ -16,6 +16,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx prisma generate
+      - name: Gerar tipos das rotas do Next
+        run: npx next typegen
       - name: Tipos (TypeScript)
         run: npx tsc --noEmit
       - name: Testes das regras de preço, frete, desconto e relatórios
