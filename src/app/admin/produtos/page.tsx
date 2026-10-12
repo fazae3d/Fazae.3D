@@ -6,7 +6,7 @@ import { fallbackCategories, fallbackProducts } from "@/server/demo-fallback";
 import { matchesSearch } from "@/lib/search";
 import { formatPrice } from "@/lib/format";
 import { DeleteProductButton } from "@/components/admin/delete-product-button";
-import { SelectField } from "@/components/select-field";
+import { ProductFilters } from "@/components/admin/product-filters";
 import { ProductThumb } from "@/components/product-thumb";
 import type { Product } from "@/lib/types";
 
@@ -50,10 +50,14 @@ export default async function AdminProductsPage({
   const products = allProducts
     .filter((p) => !query || matchesSearch(p, query))
     .filter((p) => !categoryFilter || p.categorySlug === categoryFilter)
-    .filter((p) => !statusFilter || (statusFilter === "esgotado" ? isSoldOut(p) : !isSoldOut(p)))
+    .filter((p) => {
+      if (!statusFilter) return true;
+      if (statusFilter === "oculto") return Boolean(p.hidden);
+      // "Ativo" e "Esgotado" falam só do que está à venda; rascunhos têm o próprio filtro.
+      if (p.hidden) return false;
+      return statusFilter === "esgotado" ? isSoldOut(p) : !isSoldOut(p);
+    })
     .sort(SORTERS[sort]);
-
-  const hasFilters = query || categoryFilter || statusFilter || sort !== "name";
 
   return (
     <div>
@@ -67,54 +71,18 @@ export default async function AdminProductsPage({
         </Link>
       </div>
 
-      <form className="mb-6 flex flex-wrap gap-3" action="/admin/produtos">
-        <input
-          type="text"
-          name="q"
-          defaultValue={query}
-          placeholder="Buscar por produto ou categoria"
-          className="min-w-[220px] flex-1 border border-mist px-3 py-2.5 text-base outline-none focus:border-petrol sm:text-sm"
-        />
-        <SelectField
-          name="category"
-          defaultValue={categoryFilter}
-          className="min-w-[180px] border border-mist bg-paper px-3 py-2.5 text-sm focus:border-petrol"
-          options={[
-            { value: "", label: "Todas as categorias" },
-            ...categories.map((c) => ({ value: c.slug, label: c.name })),
-          ]}
-        />
-        <SelectField
-          name="status"
-          defaultValue={statusFilter}
-          className="min-w-[160px] border border-mist bg-paper px-3 py-2.5 text-sm focus:border-petrol"
-          options={[
-            { value: "", label: "Todos os status" },
-            { value: "ativo", label: "Ativo" },
-            { value: "esgotado", label: "Esgotado" },
-          ]}
-        />
-        <SelectField
-          name="sort"
-          defaultValue={sort}
-          className="min-w-[160px] border border-mist bg-paper px-3 py-2.5 text-sm focus:border-petrol"
-          options={(Object.keys(SORT_LABELS) as SortKey[]).map((key) => ({ value: key, label: SORT_LABELS[key] }))}
-        />
-        <button
-          type="submit"
-          className="label-caps border border-ink px-5 py-2.5 text-xs transition-colors hover:bg-ink hover:text-paper"
-        >
-          Aplicar
-        </button>
-        {hasFilters && (
-          <Link
-            href="/admin/produtos"
-            className="label-caps flex items-center px-2 text-[11px] text-graphite hover:text-petrol"
-          >
-            Limpar
-          </Link>
-        )}
-      </form>
+      <ProductFilters
+        initial={{ q: query, category: categoryFilter, status: statusFilter, sort }}
+        defaultSort="name"
+        categoryOptions={[{ value: "", label: "Todas as categorias" }, ...categories.map((c) => ({ value: c.slug, label: c.name }))]}
+        statusOptions={[
+          { value: "", label: "Todos os status" },
+          { value: "ativo", label: "Ativo" },
+          { value: "esgotado", label: "Esgotado" },
+          { value: "oculto", label: "Oculto (rascunho)" },
+        ]}
+        sortOptions={(Object.keys(SORT_LABELS) as SortKey[]).map((key) => ({ value: key, label: SORT_LABELS[key] }))}
+      />
 
       <p className="mb-4 text-sm text-graphite">{products.length} produto(s) encontrado(s)</p>
 
