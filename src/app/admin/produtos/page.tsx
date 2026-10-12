@@ -152,7 +152,9 @@ export default async function AdminProductsPage({
                   <td className="px-4 py-3">{product.price !== undefined ? formatPrice(product.price) : "Sob consulta"}</td>
                   <td className="px-4 py-3">{product.stock}</td>
                   <td className="px-4 py-3">
-                    {isSoldOut(product) ? (
+                    {product.hidden ? (
+                      <span className="label-caps border border-sand/60 px-2 py-0.5 text-[10px] text-sand">Oculto (rascunho)</span>
+                    ) : isSoldOut(product) ? (
                       <span className="label-caps text-[10px] text-graphite">Esgotado</span>
                     ) : (
                       <span className="label-caps text-[10px] text-petrol">Ativo</span>

@@ -1,6 +1,7 @@
 "use server";
 
 import { getAllCategories, getAllProducts } from "@/lib/demo-data";
+import { publicCategories, publicProducts } from "@/lib/visibility";
 import { fallbackCategories, fallbackProducts } from "@/server/demo-fallback";
 
 /**
@@ -17,7 +18,10 @@ export async function getCatalogSnapshotAction() {
   try {
     const [products, categories] = await Promise.all([getAllProducts(), getAllCategories()]);
     // laborCost (custo de mão de obra) é dado interno: não vai para o navegador.
-    return { products: products.map(({ laborCost: _laborCost, ...publicProduct }) => publicProduct), categories };
+    return {
+      products: publicProducts(products).map(({ laborCost: _laborCost, ...publicProduct }) => publicProduct),
+      categories: publicCategories(categories),
+    };
   } catch {
     return { products: fallbackProducts, categories: fallbackCategories };
   }

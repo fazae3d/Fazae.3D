@@ -1,6 +1,7 @@
 import { getAllProducts } from "@/lib/demo-data";
 import { isSoldOut } from "@/lib/badges";
 import { SITE_URL } from "@/lib/site-config";
+import { isPubliclyVisible } from "@/lib/visibility";
 
 export const revalidate = 3600;
 
@@ -30,6 +31,7 @@ export async function GET() {
   }
 
   const items = products
+    .filter(isPubliclyVisible)
     .filter((p) => p.price !== undefined && p.images && p.images.length > 0)
     .filter((p) => !EXCLUDED_FROM_FEED.has(p.slug) && !EXCLUDED_NAME_PATTERN.test(p.name))
     .map((p) => {

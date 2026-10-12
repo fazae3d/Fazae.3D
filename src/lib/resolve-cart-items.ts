@@ -14,7 +14,7 @@ export async function fetchProductsForLines(lines: CartItemLine[]): Promise<Map<
   // Sem fallback para o catálogo de demonstração: se o banco falhar, o erro sobe e o checkout recusa,
   // em vez de cobrar preço de seed e perder o pedido.
   const products = await Promise.all(lines.map((line) => getProduct(line.productSlug)));
-  return new Map(products.filter((p): p is Product => Boolean(p)).map((p) => [p.slug, p] as const));
+  return new Map(products.filter((p): p is Product => Boolean(p) && !p!.hidden).map((p) => [p.slug, p] as const));
 }
 
 /**

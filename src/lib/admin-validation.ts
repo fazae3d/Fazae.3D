@@ -41,6 +41,7 @@ export const productFormSchema = z.object({
   tagsRaw: z.string().optional(),
   isNew: z.boolean().optional(),
   isBestSeller: z.boolean().optional(),
+  hidden: z.boolean().optional(),
   imageTone: z.enum(["fitness", "surf", "street", "lifestyle", "ink", "sand"]).optional(),
   images: z.array(z.string()).optional(),
   laborCost: z.union([z.number().min(0), z.literal("")]).optional(),

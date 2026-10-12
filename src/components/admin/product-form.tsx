@@ -90,6 +90,7 @@ export function ProductForm({
           tagsRaw: product.tags.join(", "),
           isNew: product.isNew ?? false,
           isBestSeller: product.isBestSeller ?? false,
+          hidden: product.hidden ?? false,
           imageTone: product.imageTone,
           images: product.images ?? [],
           laborCost: product.laborCost ?? "",
@@ -749,6 +750,10 @@ export function ProductForm({
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" className="h-4 w-4" {...register("isBestSeller")} />
           Best seller
+        </label>
+        <label className="flex items-center gap-2 text-sm" title="Rascunho: o produto fica salvo aqui no painel, mas não aparece na loja, na busca nem no Google, e não pode ser comprado.">
+          <input type="checkbox" className="h-4 w-4" {...register("hidden")} />
+          Ocultar na loja (rascunho)
         </label>
       </div>
 

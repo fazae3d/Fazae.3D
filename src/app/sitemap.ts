@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { getAllCategories, getAllProducts } from "@/lib/demo-data";
 import { SITE_URL } from "@/lib/site-config";
+import { publicCategories, publicProducts } from "@/lib/visibility";
 
 const STATIC_ROUTES: { path: string; priority: number; changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"] }[] = [
   { path: "/", priority: 1, changeFrequency: "daily" },
@@ -32,13 +33,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     getAllProducts().catch(() => []),
   ]);
 
-  const categoryEntries = categories.map((category) => ({
+  const categoryEntries = publicCategories(categories).map((category) => ({
     url: `${SITE_URL}/categorias/${category.slug}`,
     changeFrequency: "weekly" as const,
     priority: 0.6,
   }));
 
-  const productEntries = products.map((product) => ({
+  const productEntries = publicProducts(products).map((product) => ({
     url: `${SITE_URL}/produto/${product.slug}`,
     changeFrequency: "weekly" as const,
     priority: 0.6,

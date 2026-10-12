@@ -9,6 +9,7 @@ import { PixDiscountProvider } from "@/contexts/pix-discount-context";
 import { MenuCategoriesProvider } from "@/contexts/menu-categories-context";
 import { getAllCategories } from "@/lib/demo-data";
 import { CATEGORIES } from "@/lib/categories";
+import { publicCategories } from "@/lib/visibility";
 import { withReadFallback } from "@/lib/db-fallback";
 import { DEFAULT_PIX_DISCOUNT_PCT } from "@/lib/money";
 import { getSettings } from "@/server/repositories/settings-repository";
@@ -62,7 +63,7 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
     DEFAULT_PIX_DISCOUNT_PCT,
   );
   const menuCategories = await withReadFallback(
-    async () => (await getAllCategories()).map((c) => ({ slug: c.slug, label: c.name })),
+    async () => publicCategories(await getAllCategories()).map((c) => ({ slug: c.slug, label: c.name })),
     CATEGORIES.map((c) => ({ slug: c.slug, label: c.label })),
   );
   return (

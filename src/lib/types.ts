@@ -52,6 +52,8 @@ export type Product = {
   estimatedProductionDays?: number;
   isNew?: boolean;
   isBestSeller?: boolean;
+  /** Rascunho: oculto na loja e fora de busca, categorias, sitemap e feed. Visível e editável no painel. */
+  hidden?: boolean;
   tags: string[];
   relatedSlugs?: string[];
   /** Stock level — drives the "Esgotado"/"Últimas peças" badges and purchase gating. Only meaningful for pronta_entrega. */

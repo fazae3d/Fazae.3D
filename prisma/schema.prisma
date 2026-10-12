@@ -140,6 +140,11 @@ model Product {
    * Tratamento visual da imagem ilustrativa (fitness, surf, street...) usado quando o produto ainda não tem foto.
    */
   imageTone               String?
+  /**
+   * Rascunho: produto cadastrado mas ainda não publicado. Fica oculto na loja (listas, busca, categorias, sitemap, feed do
+   * Google e compra), mas continua aparecendo e editável no painel.
+   */
+  hidden                  Boolean                @default(false)
   materialUsages          ProductMaterialUsage[]
   reviews                 Review[]
   consignmentItems        ConsignmentItem[]

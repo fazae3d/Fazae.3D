@@ -8,10 +8,12 @@ import { getCategory as getStaticCategory } from "@/lib/categories";
 import { getCategoryPhoto } from "@/lib/category-photos";
 import { getAllCategories, getAllProducts } from "@/lib/demo-data";
 import { withReadFallback } from "@/lib/db-fallback";
+import { UNCATEGORIZED_SLUG, publicProducts } from "@/lib/visibility";
 import { fallbackProducts } from "@/server/demo-fallback";
 
 /** Categoria do banco (inclui as criadas no painel); a lista fixa só entra de reserva se o banco falhar. */
 async function findCategory(slug: string) {
+  if (slug === UNCATEGORIZED_SLUG) return undefined;
   const fromDb = await withReadFallback(async () => (await getAllCategories()).find((c) => c.slug === slug), undefined);
   if (fromDb) return { slug: fromDb.slug, label: fromDb.name, description: fromDb.description ?? "" };
   return getStaticCategory(slug);
@@ -37,7 +39,7 @@ export default async function CategoryPage({ params }: PageProps<"/categorias/[s
   if (!category) notFound();
 
   // TODO(fase DB): remove o fallback quando a Fazaê tiver o próprio banco — hoje a leitura real falharia sem Supabase configurado.
-  const products = await withReadFallback(() => getAllProducts(), fallbackProducts);
+  const products = publicProducts(await withReadFallback(() => getAllProducts(), fallbackProducts));
   const hasItems = products.some((p) => p.categorySlug === category.slug);
   const photo = getCategoryPhoto(category.slug);
 

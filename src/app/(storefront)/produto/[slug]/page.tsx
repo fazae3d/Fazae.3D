@@ -14,6 +14,7 @@ import {
   getRelatedProducts,
 } from "@/lib/demo-data";
 import { SITE_URL } from "@/lib/site-config";
+import { publicProducts } from "@/lib/visibility";
 import { isSoldOut } from "@/lib/badges";
 import { withReadFallback } from "@/lib/db-fallback";
 import { fallbackProducts } from "@/server/demo-fallback";
@@ -33,7 +34,7 @@ export async function generateMetadata({
     () => getProduct(slug),
     fallbackProducts.find((p) => p.slug === slug),
   );
-  if (!product) return {};
+  if (!product || product.hidden) return {};
   const flat = product.description.replace(/\s+/g, " ").trim();
   const description = flat.length > 155 ? `${flat.slice(0, 152).trimEnd()}...` : flat;
   const image = product.images?.[0];
@@ -57,7 +58,7 @@ export default async function ProductPage({ params }: PageProps<"/produto/[slug]
     () => getProduct(slug),
     fallbackProducts.find((p) => p.slug === slug),
   );
-  if (!product) notFound();
+  if (!product || product.hidden) notFound();
 
   const [related, categoryProducts, reviews, reviewStats] = await Promise.all([
     withReadFallback(
@@ -71,7 +72,7 @@ export default async function ProductPage({ params }: PageProps<"/produto/[slug]
     withReadFallback(() => getPublishedReviews(product.slug), []),
     withReadFallback(() => getReviewStats(product.slug), { average: 0, count: 0 }),
   ]);
-  const youMayLike = categoryProducts
+  const youMayLike = publicProducts(categoryProducts)
     .filter((p) => p.slug !== product.slug && !related.some((r) => r.slug === p.slug))
     .slice(0, 4);
 

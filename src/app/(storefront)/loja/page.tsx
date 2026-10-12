@@ -3,6 +3,7 @@ import { Breadcrumb } from "@/components/breadcrumb";
 import { CatalogView } from "@/components/catalog-view";
 import { getAllCategories, getAllProducts } from "@/lib/demo-data";
 import { withReadFallback } from "@/lib/db-fallback";
+import { publicCategories, publicProducts } from "@/lib/visibility";
 import { fallbackCategories, fallbackProducts } from "@/server/demo-fallback";
 
 export const metadata: Metadata = {
@@ -18,10 +19,12 @@ export default async function LojaPage({ searchParams }: PageProps<"/loja">) {
   const filtro = typeof params.filtro === "string" ? params.filtro : undefined;
   const initialFilter = filtro === "novidades" || filtro === "mais-vendidos" ? filtro : undefined;
   // TODO(fase DB): remove o fallback quando a Fazaê tiver o próprio banco — hoje a leitura real falharia sem Supabase configurado.
-  const [products, categories] = await Promise.all([
+  const [allProducts, allCategories] = await Promise.all([
     withReadFallback(() => getAllProducts(), fallbackProducts),
     withReadFallback(() => getAllCategories(), fallbackCategories),
   ]);
+  const products = publicProducts(allProducts);
+  const categories = publicCategories(allCategories);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
