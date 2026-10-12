@@ -25,6 +25,7 @@ function toProduct(row: ProductRow): Product {
     isBestSeller: rest.isBestSeller || undefined,
     relatedSlugs: rest.relatedSlugs.length > 0 ? rest.relatedSlugs : undefined,
     laborCost: rest.laborCost ?? undefined,
+    imageTone: (rest.imageTone ?? undefined) as Product["imageTone"],
     categoryName: category.name,
   };
 }

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { slugify } from "@/lib/slug";
+import { compressImage } from "@/lib/compress-image";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { Select } from "@/components/select";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -148,7 +149,7 @@ export function ProductForm({
     setUploadingIndex(index);
     try {
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", await compressImage(file));
       const result = await uploadImageAction(formData);
       if (!result.success) {
         setUploadError(result.error);

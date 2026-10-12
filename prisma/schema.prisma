@@ -136,6 +136,10 @@ model Product {
    * Mão de obra/custos fixos por peça — usado no cálculo de custo de produção.
    */
   laborCost               Float?
+  /**
+   * Tratamento visual da imagem ilustrativa (fitness, surf, street...) usado quando o produto ainda não tem foto.
+   */
+  imageTone               String?
   materialUsages          ProductMaterialUsage[]
   reviews                 Review[]
   consignmentItems        ConsignmentItem[]

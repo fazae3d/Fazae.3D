@@ -29,7 +29,9 @@ function describeMutationError(error: unknown, fallbackMessage: string): string 
   if (code === "P2002") return "Já existe um registro com esses dados.";
   if (code === "P2003") return "Este item está em uso em outro cadastro (pedido, produção, consignação...) e não pode ser alterado ou excluído por enquanto.";
   if (code === "P2025") return "Registro não encontrado. Atualize a página e tente de novo.";
-  return fallbackMessage;
+  // Código curto (ex.: P2022, PrismaClientValidationError) para o admin informar ao suporte; o detalhe completo fica no log do servidor.
+  const label = code ?? (error as { name?: string } | null)?.name;
+  return label && label !== "Error" ? `${fallbackMessage} (código: ${label})` : fallbackMessage;
 }
 
 export async function withMutationFallback<T extends { success: boolean }>(

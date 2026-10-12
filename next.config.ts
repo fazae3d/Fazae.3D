@@ -6,6 +6,9 @@ const nextConfig: NextConfig = {
   // (e.g. testing on a phone) — without this, Next 16 silently blocks
   // those requests as cross-origin and the page loads but never hydrates,
   // so every button looks dead even though the markup is correct.
+  // Fotos de celular passam de 1 MB (limite padrão das ações do servidor). O formulário já reduz a foto antes de enviar;
+  // isto é uma folga de segurança (a Vercel aceita no máximo ~4,5 MB por requisição).
+  experimental: { serverActions: { bodySizeLimit: "4mb" } },
   allowedDevOrigins: ["192.168.1.144", "192.168.88.118"],
   async redirects() {
     return Object.entries(SLUG_ALIASES).map(([from, to]) => ({
