@@ -11,6 +11,9 @@ import {
   simplifiedDRE,
 } from "@/lib/finance-stats";
 import { formatPrice } from "@/lib/format";
+import { round2 } from "@/lib/money";
+import { storeMonthKey } from "@/lib/store-time";
+import { MonthFilter } from "@/components/admin/month-filter";
 import { getAllConsignmentVisits } from "@/server/repositories/consignment-repository";
 import { ExpenseManager } from "@/components/admin/expense-manager";
 
@@ -35,19 +38,46 @@ function KpiCard({
   );
 }
 
-export default async function AdminFinancePage() {
-  const [salesOrders, expenses, visits] = await Promise.all([
+const MONTH_NAMES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+
+function monthLabel(key: string) {
+  const [year, month] = key.split("-");
+  return `${MONTH_NAMES[Number(month) - 1]} de ${year}`;
+}
+
+export default async function AdminFinancePage({ searchParams }: { searchParams: Promise<{ mes?: string }> }) {
+  const { mes } = await searchParams;
+  const selectedMonth = mes && /^\d{4}-(0[1-9]|1[0-2])$/.test(mes) ? mes : "";
+  const [salesOrders, allExpenses, visits] = await Promise.all([
     withReadFallback(() => getAllOrders(), fallbackOrders),
     withReadFallback(() => getAllExpenses(), fallbackExpenses),
     withReadFallback(() => getAllConsignmentVisits(), []),
   ]);
   // O dinheiro recebido dos lojistas em consignação também é receita: entra junto com as vendas.
-  const orders = [...salesOrders, ...consignmentVisitsAsOrders(visits)];
+  const allOrders = [...salesOrders, ...consignmentVisitsAsOrders(visits)];
+
+  // Meses disponíveis no filtro: todos os que têm venda ou gasto, mais o mês atual (mais recente primeiro).
+  const orderMonth = (o: { createdAt: string }) => storeMonthKey(new Date(o.createdAt));
+  // Gastos são datas sem horário (meia-noite UTC): valem pelo calendário, sem deslocar fuso.
+  const expenseMonth = (e: { purchaseDate: string }) => new Date(e.purchaseDate).toISOString().slice(0, 7);
+  const monthKeys = Array.from(
+    new Set([...allOrders.map(orderMonth), ...allExpenses.map(expenseMonth), storeMonthKey(new Date())]),
+  ).sort((a, b) => b.localeCompare(a));
+  const monthOptions = [
+    { value: "", label: "Todos os meses" },
+    ...monthKeys.map((key) => ({ value: key, label: monthLabel(key) })),
+  ];
+
+  // Com um mês escolhido, o DRE, os gastos e a lista de despesas mostram só aquele mês.
+  const orders = selectedMonth ? allOrders.filter((o) => orderMonth(o) === selectedMonth) : allOrders;
+  const expenses = selectedMonth ? allExpenses.filter((e) => expenseMonth(e) === selectedMonth) : allExpenses;
+  const totalSpent = round2(expenses.reduce((sum, e) => sum + e.totalValue, 0));
 
   const dre = simplifiedDRE(orders, expenses);
-  const payback = investmentPayback(orders, expenses);
-  const goal = growthGoal(orders, 5, 12);
-  const cashFlow = cashFlowByMonth(orders, expenses, 6);
+  // Payback, meta e fluxo de caixa olham o período todo (o fluxo já separa mês a mês).
+  const payback = investmentPayback(allOrders, allExpenses);
+  const goal = growthGoal(allOrders, 5, 12);
+  const cashFlow = cashFlowByMonth(allOrders, allExpenses, 6);
   const categoryBreakdown = expenseCategoryBreakdown(expenses);
   const maxCategoryTotal = Math.max(1, ...categoryBreakdown.map((c) => c.total));
 
@@ -59,8 +89,19 @@ export default async function AdminFinancePage() {
         comercial com saúde financeira do negócio.
       </p>
 
-      <p className="label-caps mb-3 text-[11px] text-graphite">DRE simplificado (regime de caixa)</p>
-      <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border border-mist p-4">
+        <MonthFilter value={selectedMonth} options={monthOptions} />
+        <p className="text-xs text-graphite">
+          {selectedMonth
+            ? `Mostrando só ${monthLabel(selectedMonth)}: resultado, gastos e despesas. Payback, meta e fluxo de caixa continuam do período todo.`
+            : "Mostrando todos os meses. Escolha um mês para ver o custo e o resultado só dele."}
+        </p>
+      </div>
+
+      <p className="label-caps mb-3 text-[11px] text-graphite">
+        DRE simplificado (regime de caixa){selectedMonth ? `: ${monthLabel(selectedMonth)}` : ""}
+      </p>
+      <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
         <KpiCard
           label="Receita bruta"
           value={formatPrice(dre.grossRevenue)}
@@ -82,6 +123,11 @@ export default async function AdminFinancePage() {
         />
         <KpiCard label="Custos diretos" value={formatPrice(dre.cogs)} sublabel="Material + embalagem" />
         <KpiCard label="Despesas operacionais" value={formatPrice(dre.operatingExpenses)} />
+        <KpiCard
+          label={selectedMonth ? "Gastos do mês (todos)" : "Gastos totais (todos)"}
+          value={formatPrice(totalSpent)}
+          sublabel="Inclui equipamento, que fica fora do lucro operacional"
+        />
         <KpiCard
           label="Lucro operacional"
           value={formatPrice(dre.operatingProfit)}
@@ -168,7 +214,9 @@ export default async function AdminFinancePage() {
 
       {categoryBreakdown.length > 0 && (
         <div className="mb-8 border border-mist p-5">
-          <p className="label-caps mb-4 text-[11px] text-graphite">Gastos por categoria (total)</p>
+          <p className="label-caps mb-4 text-[11px] text-graphite">
+            Gastos por categoria ({selectedMonth ? monthLabel(selectedMonth) : "total"})
+          </p>
           <ul className="space-y-3">
             {categoryBreakdown.map((c) => (
               <li key={c.category}>
