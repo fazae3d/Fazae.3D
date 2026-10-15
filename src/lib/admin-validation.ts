@@ -220,3 +220,30 @@ export const registerConsignmentVisitSchema = z.object({
 });
 
 export type RegisterConsignmentVisitInput = z.infer<typeof registerConsignmentVisitSchema>;
+
+export const quoteItemSchema = z.object({
+  description: z.string().trim().min(1, "Descreva cada item do orçamento."),
+  details: z.string().optional(),
+  quantity: z.number("Informe uma quantidade válida.").int("Informe uma quantidade válida.").min(1, "Quantidade mínima é 1."),
+  unitPrice: z.number("Informe um valor válido.").min(0, "O valor não pode ser negativo."),
+  productSlug: z.string().optional(),
+});
+
+export const quoteFormSchema = z.object({
+  customerName: z.string().trim().min(2, "Informe o nome do cliente."),
+  customerPhone: z.string().optional(),
+  customerEmail: z.union([z.string().email("E-mail inválido."), z.literal("")]).optional(),
+  customerDocument: z.string().optional(),
+  customerAddress: z.string().optional(),
+  title: z.string().optional(),
+  items: z.array(quoteItemSchema).min(1, "Adicione ao menos um item."),
+  discount: z.number("Informe um desconto válido.").min(0, "O desconto não pode ser negativo."),
+  shipping: z.number("Informe um frete válido.").min(0, "O frete não pode ser negativo."),
+  validUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Informe até quando o orçamento vale."),
+  deliveryTime: z.string().optional(),
+  paymentTerms: z.string().optional(),
+  notes: z.string().optional(),
+  linkedRequestId: z.string().optional(),
+});
+
+export type QuoteFormInput = z.infer<typeof quoteFormSchema>;

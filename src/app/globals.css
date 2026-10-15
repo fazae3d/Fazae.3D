@@ -84,25 +84,112 @@ body {
 }
 
 /*
- * Admin panel theme toggle — scoped to its own subtree (not the storefront,
- * which stays dark-first/brand-only). Light is the default, matching the
- * ink-on-paper tokens as declared in :root; dark re-maps the same
- * bg-paper/text-ink/border-mist utility classes already used throughout
- * every admin page/component, so no per-component changes were needed.
+ * Painel de gestão (/admin): escuro por padrão (identidade da marca: preto #111 + verde-limão #B6FF00) e com
+ * opção de modo claro. Tudo fica escopado em #admin-shell para nunca vazar para a loja, que continua sempre escura.
+ * As telas usam as mesmas classes de cor da loja (bg-paper, text-ink, border-mist, text-petrol): aqui só
+ * remapeamos os valores de cada modo, sem mexer em cada componente.
  */
 [data-admin-theme="dark"] {
+  --admin-surface: #171717;
+  --admin-sidebar: #0c0c0c;
+  --admin-focus: #b6ff00;
   --color-paper: #111111;
   --color-ink: #f4f4f0;
-  --color-mist: #2f2f2f;
-  /* Without this, native form controls (select's own dropdown popup, date
-     pickers) keep rendering with the browser's light-mode chrome — white
-     background, dark text — regardless of our custom dark tokens above,
-     making <select> options unreadable once opened. */
+  --color-mist: #2a2a2a;
+  /* Sem isso os controles nativos (lista do select, calendário) abririam com o visual claro do navegador. */
   color-scheme: dark;
 }
 
 [data-admin-theme="light"] {
+  --color-paper: #f4f4f0;
+  --color-ink: #111111;
+  --color-graphite: #5e5e58;
+  --color-mist: #dcdcd4;
+  --admin-surface: #ffffff;
+  --admin-sidebar: #ffffff;
+  --admin-focus: #4d6b32;
   color-scheme: light;
+}
+
+#admin-shell .admin-sidebar {
+  background: var(--admin-sidebar);
+}
+
+/* Cartões: o visual antigo era só uma moldura; agora têm fundo próprio e cantos arredondados. */
+#admin-shell .admin-card,
+#admin-shell :is(div, section, li, form, details, article).border.border-mist {
+  background: var(--admin-surface);
+}
+
+/* Rótulos deixam de ser CAIXA ALTA espaçada (visual de site) e viram texto normal de sistema. */
+#admin-shell .label-caps {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+}
+
+/* Cantos arredondados em tudo que tem moldura completa — dentro de @layer components para que
+   utilitários explícitos (rounded-full, rounded-lg...) continuem mandando. */
+@layer components {
+  #admin-shell .border:not(table, tr, td, th, hr) {
+    border-radius: 0.625rem;
+  }
+  #admin-shell :is(input, select, textarea, button).border {
+    border-radius: 0.5rem;
+  }
+}
+
+/* Botão preenchido de verde-limão sempre com texto escuro (no tema escuro "ink" é claro e não dava leitura). */
+#admin-shell .bg-petrol {
+  color: #111111;
+}
+
+#admin-shell :focus-visible {
+  outline: 2px solid var(--admin-focus);
+  outline-offset: 2px;
+}
+
+/* Item ativo do menu, aba ativa e filtro ativo. */
+#admin-shell .admin-nav-active {
+  background: rgba(182, 255, 0, 0.1);
+  color: var(--color-petrol);
+}
+#admin-shell .admin-tab-active {
+  border-color: var(--color-petrol);
+  color: var(--color-ink);
+}
+#admin-shell .admin-chip-active {
+  background: var(--color-petrol);
+  border-color: var(--color-petrol);
+  color: #111111;
+  font-weight: 600;
+}
+
+/* Modo claro: o verde-limão não tem contraste sobre fundo claro, então texto/links usam o verde-oliva da marca. */
+[data-admin-theme="light"] .text-petrol,
+[data-admin-theme="light"] .hover:text-petrol:hover,
+[data-admin-theme="light"] .group:hover .group-hover:text-petrol {
+  color: var(--color-sand);
+}
+[data-admin-theme="light"] .admin-nav-active {
+  background: #111111;
+  color: #f4f4f0;
+}
+[data-admin-theme="light"] .admin-nav-active svg {
+  color: var(--color-petrol);
+}
+[data-admin-theme="light"] .admin-tab-active {
+  border-color: #111111;
+}
+[data-admin-theme="light"] .text-red-400,
+[data-admin-theme="light"] .text-red-500 {
+  color: #b91c1c;
+}
+[data-admin-theme="light"] .text-amber-500 {
+  color: #a16207;
+}
+[data-admin-theme="light"] .text-sky-400 {
+  color: #0369a1;
 }
 
 /*
@@ -149,4 +236,11 @@ a,
     animation-duration: 0.001ms !important;
     transition-duration: 0.001ms !important;
   }
+}
+
+/* Títulos de página do painel: tamanho único em todas as telas (antes cada uma tinha o seu). */
+#admin-shell h1.font-display {
+  font-size: 1.65rem;
+  line-height: 2.1rem;
+  letter-spacing: -0.01em;
 }

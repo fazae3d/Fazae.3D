@@ -9,6 +9,7 @@ import { safeCallbackUrl } from "./safe-redirect";
 import { storeDayKey, storeMonthKey } from "./store-time";
 import { orderBalanceDue, periodComparison, revenueByDay } from "./admin-stats";
 import { toCsv } from "./csv";
+import { computeQuoteTotals, daysUntil, isQuoteExpired, quoteDisplayStatus, quoteNumberLabel, validityEndOfDay, validityFromNow } from "./quote";
 import type { Product } from "./types";
 import type { Order } from "@/server/types";
 
@@ -121,5 +122,35 @@ describe("relatórios (fuso de Natal, cancelados fora)", () => {
     expect(orderBalanceDue(order({ paymentStatus: "approved" }))).toBe(0);
     expect(orderBalanceDue(order({ status: "Cancelado" }))).toBe(0);
     expect(orderBalanceDue(order({ channel: "presencial", depositAmount: 30 }))).toBe(70);
+  });
+});
+
+describe('orçamentos', () => {
+  it('numeração ORC-0007', () => {
+    expect(quoteNumberLabel(7)).toBe('ORC-0007');
+    expect(quoteNumberLabel(1234)).toBe('ORC-1234');
+  });
+  it('totais: desconto nunca passa do subtotal e frete negativo vira zero', () => {
+    const items = [{ quantity: 3, unitPrice: 9.9 }, { quantity: 1, unitPrice: 50 }];
+    expect(computeQuoteTotals(items, 0, 0)).toEqual({ subtotal: 79.7, discount: 0, shipping: 0, total: 79.7 });
+    expect(computeQuoteTotals(items, 10, 12.5).total).toBe(82.2);
+    expect(computeQuoteTotals(items, 999, 0).total).toBe(0);
+    expect(computeQuoteTotals(items, -5, -3)).toMatchObject({ discount: 0, shipping: 0 });
+  });
+  it('validade vale até o fim do dia (fuso da loja)', () => {
+    const valid = validityEndOfDay('2026-10-20').toISOString();
+    expect(valid).toBe('2026-10-21T02:59:59.000Z');
+    const quote = { status: 'enviado' as const, validUntil: valid };
+    expect(isQuoteExpired(quote, new Date('2026-10-20T23:00:00-03:00'))).toBe(false);
+    expect(isQuoteExpired(quote, new Date('2026-10-21T00:30:00-03:00'))).toBe(true);
+    expect(quoteDisplayStatus(quote, new Date('2026-10-22T12:00:00-03:00'))).toBe('vencido');
+    // aprovado/recusado nunca viram "vencido"
+    expect(quoteDisplayStatus({ status: 'aprovado', validUntil: valid }, new Date('2027-01-01T00:00:00Z'))).toBe('aprovado');
+  });
+  it('dias restantes e validade padrão', () => {
+    const now = new Date('2026-10-15T12:00:00-03:00');
+    expect(validityFromNow(7, now)).toBe('2026-10-22');
+    expect(daysUntil(validityEndOfDay('2026-10-18').toISOString(), now)).toBe(3);
+    expect(daysUntil(validityEndOfDay('2026-10-14').toISOString(), now)).toBe(-1);
   });
 });

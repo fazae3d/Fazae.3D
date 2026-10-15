@@ -15,79 +15,18 @@ import {
   isActiveOrder,
   orderBalanceDue,
 } from "@/lib/admin-stats";
+import { daysUntil, quoteDisplayStatus } from "@/lib/quote";
 import { RevenueChart } from "@/components/admin/revenue-chart";
+import { PageHeader } from "@/components/admin/page-header";
 import { getAllOrders } from "@/server/repositories/order-repository";
+import { getAllQuotes } from "@/server/repositories/quote-repository";
 import { getAllRawMaterials } from "@/server/repositories/raw-material-repository";
 import { readWithStatus } from "@/lib/db-fallback";
 import { fallbackCategories, fallbackOrders, fallbackProducts, fallbackRawMaterials } from "@/server/demo-fallback";
 
+export const metadata = { title: "Visão geral" };
+
 const REVENUE_WINDOW_DAYS = 14;
-
-// Same red/amber convention as production-board.tsx's deadlineClass: overdue
-// is red, due within 3 days is amber, everything else stays neutral.
-function deadlineTextClass(diffDays: number) {
-  if (diffDays < 0) return "text-red-500";
-  if (diffDays <= 3) return "text-amber-500";
-  return "text-graphite";
-}
-
-function formatDeadline(iso: string) {
-  return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
-}
-
-function DollarIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className={className}>
-      <path d="M12 2v20M17 6.5c0-1.93-2.24-3.5-5-3.5S7 4.57 7 6.5 9.24 10 12 10s5 1.57 5 3.5-2.24 3.5-5 3.5-5-1.57-5-3.5" />
-    </svg>
-  );
-}
-
-function TagIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M12.6 2.9 3.6 11.9a2 2 0 0 0 0 2.8l5.7 5.7a2 2 0 0 0 2.8 0l9-9a2 2 0 0 0 .59-1.42V4a1 1 0 0 0-1-1h-5.87a2 2 0 0 0-1.42.59Z" />
-      <circle cx="16.5" cy="7.5" r="1.2" fill="currentColor" stroke="none" />
-    </svg>
-  );
-}
-
-function BoxIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="m3.5 7.5 8.5-4 8.5 4-8.5 4-8.5-4Z" />
-      <path d="M3.5 7.5v9l8.5 4 8.5-4v-9M12 11.5v9" />
-    </svg>
-  );
-}
-
-function AlertIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M12 3 2 20h20L12 3Z" />
-      <path d="M12 10v4" />
-      <circle cx="12" cy="17" r="0.6" fill="currentColor" stroke="none" />
-    </svg>
-  );
-}
-
-function XCircleIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className={className}>
-      <circle cx="12" cy="12" r="9" />
-      <path d="m9 9 6 6m0-6-6 6" />
-    </svg>
-  );
-}
-
-function ClockIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 7v5l3.5 2" />
-    </svg>
-  );
-}
 
 function StatTile({
   label,
@@ -95,7 +34,6 @@ function StatTile({
   sublabel,
   secondaryValue,
   trend,
-  icon,
 }: {
   label: string;
   value: string;
@@ -103,49 +41,74 @@ function StatTile({
   /** e.g. "+R$ 120,00 em aberto" — shown in amber under the main value. */
   secondaryValue?: string;
   trend?: { pct: number | null; hasCurrent: boolean };
-  icon?: ReactNode;
 }) {
   return (
-    <div className="border border-mist p-5">
-      <div className="flex items-center gap-3">
-        {icon && (
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-petrol/10 text-petrol">
-            {icon}
-          </div>
+    <div className="admin-card rounded-xl border border-mist p-5">
+      <p className="text-xs text-graphite">{label}</p>
+      <div className="mt-1.5 flex items-baseline gap-2">
+        <p className="font-display text-2xl tracking-tight">{value}</p>
+        {trend && trend.pct !== null && (
+          <span className={`text-xs font-medium ${trend.pct >= 0 ? "text-petrol" : "text-red-500"}`}>
+            {trend.pct >= 0 ? "▲" : "▼"} {Math.abs(trend.pct).toFixed(0)}%
+          </span>
         )}
-        <div>
-          <p className="label-caps text-[11px] text-graphite">{label}</p>
-          <div className="mt-1 flex items-baseline gap-2">
-            <p className="font-display text-2xl">{value}</p>
-            {trend && trend.pct !== null && (
-              <span className={`label-caps text-[10px] ${trend.pct >= 0 ? "text-petrol" : "text-red-600"}`}>
-                {trend.pct >= 0 ? "▲" : "▼"} {Math.abs(trend.pct).toFixed(0)}%
-              </span>
-            )}
-            {trend && trend.pct === null && trend.hasCurrent && (
-              <span className="label-caps text-[10px] text-petrol">Novo</span>
-            )}
-          </div>
-        </div>
+        {trend && trend.pct === null && trend.hasCurrent && <span className="text-xs font-medium text-petrol">Novo</span>}
       </div>
-      {secondaryValue && <p className="mt-2 text-xs text-amber-500">{secondaryValue}</p>}
+      {secondaryValue && <p className="mt-1.5 text-xs text-amber-500">{secondaryValue}</p>}
       {sublabel && <p className="mt-1 text-xs text-graphite">{sublabel}</p>}
     </div>
   );
 }
 
+type AttentionItem = { key: string; count: number; label: string; hint: string; href: string; tone: "warn" | "bad" | "info" };
+
+const ATTENTION_TONE = {
+  warn: "bg-amber-500/15 text-amber-500",
+  bad: "bg-red-500/15 text-red-400",
+  info: "bg-sky-500/15 text-sky-400",
+} as const;
+
+function AttentionCard({ item }: { item: AttentionItem }) {
+  return (
+    <Link
+      href={item.href}
+      className="admin-card group flex items-center gap-4 rounded-xl border border-mist p-4 transition-colors hover:border-petrol"
+    >
+      <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-lg font-semibold ${ATTENTION_TONE[item.tone]}`}>
+        {item.count}
+      </span>
+      <span className="min-w-0">
+        <span className="block text-sm font-medium">{item.label}</span>
+        <span className="block truncate text-xs text-graphite">{item.hint}</span>
+      </span>
+    </Link>
+  );
+}
+
+function Panel({ title, children, footer }: { title: string; children: ReactNode; footer?: ReactNode }) {
+  return (
+    <div className="admin-card rounded-xl border border-mist p-5">
+      <p className="mb-4 text-sm font-semibold">{title}</p>
+      {children}
+      {footer}
+    </div>
+  );
+}
+
 export default async function AdminDashboardPage() {
-  const [productsResult, categoriesResult, ordersResult, rawMaterialsResult] = await Promise.all([
+  const [productsResult, categoriesResult, ordersResult, rawMaterialsResult, quotesResult] = await Promise.all([
     readWithStatus(() => getAllProducts(), fallbackProducts),
     readWithStatus(() => getAllCategories(), fallbackCategories),
     readWithStatus(() => getAllOrders(), fallbackOrders),
     readWithStatus(() => getAllRawMaterials(), fallbackRawMaterials),
+    readWithStatus(() => getAllQuotes(), []),
   ]);
   const products = productsResult.data;
   const categories = categoriesResult.data;
   const orders = ordersResult.data;
   const rawMaterials = rawMaterialsResult.data;
-  const showingFallbackData = [productsResult, categoriesResult, ordersResult, rawMaterialsResult].some(
+  const quotes = quotesResult.data;
+  const showingFallbackData = [productsResult, categoriesResult, ordersResult, rawMaterialsResult, quotesResult].some(
     (r) => r.usedFallback,
   );
 
@@ -164,15 +127,62 @@ export default async function AdminDashboardPage() {
   const receivableInProduction = round2(activeProductionOrders.reduce((sum, o) => sum + orderBalanceDue(o), 0));
   const lowStockRawMaterials = rawMaterials.filter((rm) => rm.stock <= (rm.minStock ?? 0));
 
-  const upcomingDeadlines = activeProductionOrders
-    .filter((o) => o.productionDeadline)
-    .map((o) => ({
-      order: o,
-      diffDays: Math.floor((new Date(o.productionDeadline!).getTime() - Date.now()) / 86_400_000),
-    }))
-    .filter((entry) => entry.diffDays <= 3)
-    .sort((a, b) => a.diffDays - b.diffDays)
-    .slice(0, 5);
+  const lateOrSoonDeadlines = activeProductionOrders.filter(
+    (o) => o.productionDeadline && Math.floor((new Date(o.productionDeadline).getTime() - Date.now()) / 86_400_000) <= 3,
+  );
+  const lateDeadlines = lateOrSoonDeadlines.filter((o) => new Date(o.productionDeadline!).getTime() < Date.now());
+
+  // "A enviar" = já pago, ainda sem código de rastreio e sem ter saído (mesma regra da tela de Pedidos).
+  const toShip = orders.filter((o) => (o.status === "Pagamento aprovado" || o.status === "Em preparação") && !o.tracking);
+
+  const quotesWithStatus = quotes.map((quote) => ({ quote, status: quoteDisplayStatus(quote) }));
+  const quotesSent = quotesWithStatus.filter((x) => x.status === "enviado");
+  const quotesExpiring = quotesSent.filter((x) => daysUntil(x.quote.validUntil) <= 3);
+  const quotesOpen = quotesWithStatus.filter((x) => x.status === "enviado" || x.status === "rascunho");
+  const quotesOpenValue = round2(quotesOpen.reduce((sum, x) => sum + x.quote.total, 0));
+
+  const attention: AttentionItem[] = [
+    {
+      key: "enviar",
+      count: toShip.length,
+      label: toShip.length === 1 ? "Pedido para enviar" : "Pedidos para enviar",
+      hint: "Já pagos e ainda sem rastreio",
+      href: "/admin/pedidos?status=a-enviar",
+      tone: "warn" as const,
+    },
+    {
+      key: "atraso",
+      count: lateOrSoonDeadlines.length,
+      label: "Prazos de produção",
+      hint: lateDeadlines.length ? `${lateDeadlines.length} atrasado(s)` : "Vencem em até 3 dias",
+      href: "/admin/producao",
+      tone: lateDeadlines.length ? ("bad" as const) : ("warn" as const),
+    },
+    {
+      key: "orc",
+      count: quotesSent.length,
+      label: "Orçamentos aguardando",
+      hint: quotesExpiring.length ? `${quotesExpiring.length} vence(m) em até 3 dias` : "Resposta do cliente pendente",
+      href: "/admin/orcamentos?status=enviado",
+      tone: quotesExpiring.length ? ("warn" as const) : ("info" as const),
+    },
+    {
+      key: "estoque",
+      count: soldOut.length + lowStock.length,
+      label: "Produtos com estoque baixo",
+      hint: `${soldOut.length} esgotado(s) · ${lowStock.length} acabando`,
+      href: "/admin/estoque",
+      tone: soldOut.length ? ("bad" as const) : ("warn" as const),
+    },
+    {
+      key: "insumos",
+      count: lowStockRawMaterials.length,
+      label: "Insumos acabando",
+      hint: `de ${rawMaterials.length} insumo(s) cadastrados`,
+      href: "/admin/insumos",
+      tone: "warn" as const,
+    },
+  ].filter((item) => item.count > 0);
 
   const revenueTrend = periodComparison(orders, 7);
   const chartData = revenueByDay(orders, REVENUE_WINDOW_DAYS);
@@ -186,94 +196,104 @@ export default async function AdminDashboardPage() {
 
   return (
     <div>
-      <h1 className="font-display mb-8 text-2xl sm:text-3xl">Dashboard</h1>
+      <PageHeader
+        title="Visão geral"
+        description={`${products.length} produtos em ${categories.length} categorias · ${orders.length} pedidos no total`}
+        actions={
+          <>
+            <Link href="/admin/vendas/nova" className="rounded-lg border border-mist px-3.5 py-2 text-sm transition-colors hover:border-petrol">
+              Lançar venda
+            </Link>
+            <Link href="/admin/produtos/novo" className="rounded-lg border border-mist px-3.5 py-2 text-sm transition-colors hover:border-petrol">
+              Novo produto
+            </Link>
+            <Link href="/admin/orcamentos/novo" className="rounded-lg bg-petrol px-3.5 py-2 text-sm font-semibold transition-opacity hover:opacity-90">
+              Novo orçamento
+            </Link>
+          </>
+        }
+      />
 
       {showingFallbackData && (
-        <div className="mb-6 border border-sand/50 bg-sand/10 px-4 py-3 text-xs text-sand">
+        <div className="mb-6 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-500">
           Não foi possível conectar ao banco de dados agora. Os números abaixo são dados de exemplo, não reais.
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+      <section className="mb-8">
+        <h2 className="mb-3 text-sm font-semibold">Precisa de atenção</h2>
+        {attention.length === 0 ? (
+          <div className="admin-card rounded-xl border border-mist px-5 py-4 text-sm text-graphite">
+            Tudo em dia: nenhum envio parado, prazo apertado ou estoque acabando.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {attention.map((item) => (
+              <AttentionCard key={item.key} item={item} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatTile
-          icon={<DollarIcon className="h-4.5 w-4.5" />}
           label="Faturamento confirmado"
           value={formatPrice(confirmedRevenue)}
           secondaryValue={pendingRevenue > 0 ? `+${formatPrice(pendingRevenue)} em aberto` : undefined}
-          sublabel={`${orders.length} pedido(s)`}
+          sublabel="Últimos 7 dias comparados aos 7 anteriores"
           trend={{ pct: revenueTrend.pct, hasCurrent: revenueTrend.current > 0 }}
         />
-        <StatTile icon={<TagIcon className="h-4.5 w-4.5" />} label="Ticket médio" value={formatPrice(averageTicket)} />
+        <StatTile label="Ticket médio" value={formatPrice(averageTicket)} sublabel={`${activeOrders.length} pedido(s) ativos`} />
         <StatTile
-          icon={<BoxIcon className="h-4.5 w-4.5" />}
-          label="Produtos"
-          value={String(products.length)}
-          sublabel={`${categories.length} categoria(s)`}
-        />
-        <StatTile
-          icon={<AlertIcon className="h-4.5 w-4.5" />}
-          label="Estoque baixo"
-          value={String(lowStock.length)}
-          sublabel={`≤ ${LOW_STOCK_THRESHOLD} peças`}
-        />
-        <StatTile icon={<XCircleIcon className="h-4.5 w-4.5" />} label="Esgotados" value={String(soldOut.length)} />
-        <StatTile
-          icon={<ClockIcon className="h-4.5 w-4.5" />}
           label="A receber (produção)"
           value={formatPrice(receivableInProduction)}
           sublabel={`${activeProductionOrders.length} pedido(s) em produção`}
         />
         <StatTile
-          icon={<AlertIcon className="h-4.5 w-4.5" />}
-          label="Insumos com estoque baixo"
-          value={String(lowStockRawMaterials.length)}
-          sublabel={`de ${rawMaterials.length} insumo(s)`}
+          label="Orçamentos em aberto"
+          value={formatPrice(quotesOpenValue)}
+          sublabel={`${quotesOpen.length} orçamento(s) · ${quotesSent.length} aguardando resposta`}
         />
       </div>
 
-      <div className="mt-10 grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <RevenueChart data={chartData} />
         </div>
 
-        <div className="border border-mist p-5">
-          <p className="label-caps mb-4 text-[11px] text-graphite">Pedidos por status</p>
+        <Panel title="Pedidos por status">
           {statuses.length === 0 ? (
             <p className="text-xs text-graphite">Nenhum pedido registrado ainda.</p>
           ) : (
-            <ul className="space-y-2.5">
+            <ul className="space-y-3">
               {statuses.map((s) => (
                 <li key={s.status}>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-ink">{s.status}</span>
+                  <div className="flex items-center justify-between text-sm">
+                    <span>{s.status}</span>
                     <span className="text-graphite">{s.count}</span>
                   </div>
-                  <div className="mt-1 h-1 w-full bg-mist">
-                    <div
-                      className="h-1 bg-petrol"
-                      style={{ width: `${(s.count / maxStatusCount) * 100}%` }}
-                    />
+                  <div className="mt-1.5 h-1.5 w-full rounded-full bg-mist">
+                    <div className="h-1.5 rounded-full bg-petrol" style={{ width: `${(s.count / maxStatusCount) * 100}%` }} />
                   </div>
                 </li>
               ))}
             </ul>
           )}
-        </div>
+        </Panel>
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="border border-mist p-5">
-          <p className="label-caps mb-4 text-[11px] text-graphite">Mais vendidos</p>
+        <Panel title="Mais vendidos">
           {bestSellers.length === 0 ? (
             <p className="text-xs text-graphite">Nenhuma venda registrada ainda.</p>
           ) : (
             <ul className="divide-y divide-mist">
               {bestSellers.map((p, i) => (
-                <li key={p.slug} className="flex items-center justify-between py-2.5 text-sm first:pt-0">
-                  <div className="flex items-center gap-3">
-                    <span className="label-caps w-4 text-[11px] text-graphite">{i + 1}</span>
-                    <div>
-                      <Link href={`/admin/produtos/${p.slug}`} className="hover:text-petrol">
+                <li key={p.slug} className="flex items-center justify-between gap-3 py-2.5 text-sm first:pt-0">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="w-4 text-xs text-graphite">{i + 1}</span>
+                    <div className="min-w-0">
+                      <Link href={`/admin/produtos/${p.slug}`} className="block truncate hover:text-petrol">
                         {p.name}
                       </Link>
                       <p className="text-xs text-graphite">
@@ -281,154 +301,63 @@ export default async function AdminDashboardPage() {
                       </p>
                     </div>
                   </div>
-                  <span className="text-sm font-medium">{formatPrice(p.revenue)}</span>
+                  <span className="shrink-0 text-sm font-medium">{formatPrice(p.revenue)}</span>
                 </li>
               ))}
             </ul>
           )}
-        </div>
+        </Panel>
 
-        <div className="border border-mist p-5">
-          <p className="label-caps mb-4 text-[11px] text-graphite">Formas de pagamento</p>
+        <Panel title="Formas de pagamento">
           {orders.length === 0 ? (
             <p className="text-xs text-graphite">Nenhum pedido registrado ainda.</p>
           ) : (
             <ul className="space-y-3">
               {payments.map((p) => (
                 <li key={p.method}>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-ink">{p.label}</span>
-                    <span className="text-graphite">
+                  <div className="flex items-center justify-between text-sm">
+                    <span>{p.label}</span>
+                    <span className="text-xs text-graphite">
                       {p.count} pedido(s) · {formatPrice(p.revenue)}
                     </span>
                   </div>
-                  <div className="mt-1 h-1 w-full bg-mist">
-                    <div
-                      className="h-1 bg-sand"
-                      style={{ width: `${(p.revenue / maxPaymentRevenue) * 100}%` }}
-                    />
+                  <div className="mt-1.5 h-1.5 w-full rounded-full bg-mist">
+                    <div className="h-1.5 rounded-full bg-sand" style={{ width: `${(p.revenue / maxPaymentRevenue) * 100}%` }} />
                   </div>
                 </li>
               ))}
             </ul>
           )}
-        </div>
+        </Panel>
 
-        <div className="border border-mist p-5">
-          <p className="label-caps mb-4 text-[11px] text-graphite">Vendas por canal</p>
+        <Panel
+          title="Vendas por canal"
+          footer={
+            <Link href="/admin/vendas/nova" className="mt-4 inline-block text-sm text-petrol hover:underline">
+              Lançar venda manual →
+            </Link>
+          }
+        >
           {orders.length === 0 ? (
             <p className="text-xs text-graphite">Nenhum pedido registrado ainda.</p>
           ) : (
             <ul className="space-y-3">
               {channels.map((c) => (
                 <li key={c.channel}>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-ink">{c.label}</span>
-                    <span className="text-graphite">
+                  <div className="flex items-center justify-between text-sm">
+                    <span>{c.label}</span>
+                    <span className="text-xs text-graphite">
                       {c.count} pedido(s) · {formatPrice(c.revenue)}
                     </span>
                   </div>
-                  <div className="mt-1 h-1 w-full bg-mist">
-                    <div
-                      className="h-1 bg-petrol"
-                      style={{ width: `${(c.revenue / maxChannelRevenue) * 100}%` }}
-                    />
+                  <div className="mt-1.5 h-1.5 w-full rounded-full bg-mist">
+                    <div className="h-1.5 rounded-full bg-petrol" style={{ width: `${(c.revenue / maxChannelRevenue) * 100}%` }} />
                   </div>
                 </li>
               ))}
             </ul>
           )}
-          <Link
-            href="/admin/vendas/nova"
-            className="label-caps mt-4 inline-block text-[11px] text-petrol hover:underline"
-          >
-            Lançar venda manual →
-          </Link>
-        </div>
-      </div>
-
-      {(lowStock.length > 0 || soldOut.length > 0) && (
-        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {lowStock.length > 0 && (
-            <div className="border border-mist p-5">
-              <p className="label-caps mb-3 text-[11px] text-graphite">Estoque baixo</p>
-              <ul className="space-y-2">
-                {lowStock.map((p) => (
-                  <li key={p.slug} className="flex items-center justify-between text-sm">
-                    <Link href={`/admin/produtos/${p.slug}`} className="hover:text-petrol">
-                      {p.name}
-                    </Link>
-                    <span className="text-sand">{p.stock} un.</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {soldOut.length > 0 && (
-            <div className="border border-mist p-5">
-              <p className="label-caps mb-3 text-[11px] text-graphite">Esgotados</p>
-              <ul className="space-y-2">
-                {soldOut.map((p) => (
-                  <li key={p.slug} className="flex items-center justify-between text-sm">
-                    <Link href={`/admin/produtos/${p.slug}`} className="hover:text-petrol">
-                      {p.name}
-                    </Link>
-                    <span className="text-graphite">0 un.</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      )}
-
-      {upcomingDeadlines.length > 0 && (
-        <div className="mt-6 border border-mist p-5">
-          <p className="label-caps mb-3 text-[11px] text-graphite">Prazos próximos/atrasados</p>
-          <ul className="divide-y divide-mist">
-            {upcomingDeadlines.map(({ order, diffDays }) => (
-              <li key={order.id} className="flex flex-wrap items-center justify-between gap-3 py-2.5 text-sm first:pt-0">
-                <div>
-                  <Link href="/admin/producao" className="text-ink hover:text-petrol">
-                    {order.customerName ?? order.userEmail ?? "Não identificado"}
-                  </Link>
-                  <p className="text-xs text-graphite">Pedido {order.id}</p>
-                </div>
-                <span className={`label-caps text-[11px] ${deadlineTextClass(diffDays)}`}>
-                  {formatDeadline(order.productionDeadline!)}
-                  {diffDays < 0 ? " · atrasado" : diffDays === 0 ? " · hoje" : ` · ${diffDays}d`}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      <div className="mt-10 flex flex-wrap gap-3">
-        <Link
-          href="/admin/produtos/novo"
-          className="label-caps border border-ink px-5 py-3 text-xs transition-colors hover:bg-ink hover:text-paper"
-        >
-          Novo produto
-        </Link>
-        <Link
-          href="/admin/categorias/novo"
-          className="label-caps border border-ink px-5 py-3 text-xs transition-colors hover:bg-ink hover:text-paper"
-        >
-          Nova categoria
-        </Link>
-        <Link
-          href="/admin/estoque"
-          className="label-caps border border-ink px-5 py-3 text-xs transition-colors hover:bg-ink hover:text-paper"
-        >
-          Gerenciar estoque
-        </Link>
-        <Link
-          href="/admin/pedidos"
-          className="label-caps border border-ink px-5 py-3 text-xs transition-colors hover:bg-ink hover:text-paper"
-        >
-          Ver pedidos
-        </Link>
+        </Panel>
       </div>
     </div>
   );

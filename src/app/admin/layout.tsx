@@ -4,15 +4,19 @@ import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/server/db";
-import { AdminNav } from "@/components/admin/admin-nav";
+import { AdminIcon } from "@/components/admin/admin-icons";
+import { AdminNav, SectionTabs } from "@/components/admin/admin-nav";
 import { AdminMobileNav } from "@/components/admin/admin-mobile-nav";
+import { AdminSearch } from "@/components/admin/admin-search";
 import { AdminThemeToggle } from "@/components/admin/theme-toggle";
+import { ToastProvider } from "@/components/admin/toast";
 import { SignOutButton } from "@/components/sign-out-button";
 
 /**
  * Runs synchronously as the parser reaches it — before the subtree paints —
- * so the panel never flashes light before switching to a saved dark
- * preference. Targets #admin-shell by id (not document.currentScript —
+ * so the panel never flashes light before switching to a saved preference.
+ * O padrão é o escuro (identidade da marca); quem escolher claro fica salvo no navegador.
+ * Targets #admin-shell by id (not document.currentScript —
  * Next.js can relocate inline <script> tags out of their JSX position,
  * which left this pointed at <html> instead of the intended wrapper) and
  * scoped to that element (not html/body) so the override never leaks into
@@ -22,11 +26,24 @@ import { SignOutButton } from "@/components/sign-out-button";
 const INIT_THEME_SCRIPT = `(function(){try{var t=localStorage.getItem('admin-theme')||'dark';document.getElementById('admin-shell').setAttribute('data-admin-theme',t);}catch(e){}})();`;
 
 export const metadata: Metadata = {
-  title: "Painel administrativo",
+  title: { default: "Gestão", template: "%s · Gestão Fazaê" },
   // Middleware already blocks non-admin sessions; this just keeps the
   // panel itself out of search results.
   robots: { index: false, follow: false },
 };
+
+/** Contadores do menu: o que está esperando ação (pedidos pagos sem envio, orçamentos aguardando resposta). */
+async function loadNavBadges(): Promise<Record<string, number>> {
+  try {
+    const [toShip, quotesSent] = await Promise.all([
+      db.order.count({ where: { status: { in: ["Pagamento aprovado", "Em preparação"] }, tracking: null } }),
+      db.quote.count({ where: { status: "enviado" } }),
+    ]);
+    return { pedidos: toShip, orcamentos: quotesSent };
+  } catch {
+    return {};
+  }
+}
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const session = await auth();
@@ -43,39 +60,57 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     }
   }
 
+  const badges = await loadNavBadges();
+  const userName = session?.user?.name ?? "Administrador";
+
   return (
-    <div id="admin-shell" className="flex min-h-full bg-paper text-ink">
+    <div id="admin-shell" data-admin-theme="dark" suppressHydrationWarning className="flex min-h-full bg-paper text-ink">
       <script dangerouslySetInnerHTML={{ __html: INIT_THEME_SCRIPT }} />
-      <aside className="hidden w-56 shrink-0 border-r border-mist px-4 py-6 lg:block">
-        <div className="flex items-center gap-2 px-3">
-          <Link href="/admin" className="font-display text-lg tracking-tight">
-            Fazaê <span className="text-petrol">admin</span>
+      <aside className="admin-sidebar hidden w-64 shrink-0 flex-col border-r border-mist lg:sticky lg:top-0 lg:flex lg:h-screen">
+        <div className="px-6 pb-4 pt-6">
+          <Link href="/admin" className="block leading-none">
+            <span className="font-display text-[1.65rem] font-extrabold italic tracking-tight text-petrol">Fazaê</span>
+            <span className="mt-1 block text-[11px] font-medium tracking-wide text-graphite">Sistema de gestão</span>
           </Link>
-          <AdminThemeToggle />
         </div>
-        <div className="mt-8">
-          <AdminNav />
+        <div className="flex-1 overflow-y-auto px-3 py-2">
+          <AdminNav badges={badges} />
+        </div>
+        <div className="border-t border-mist p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-petrol text-sm font-bold text-[#111]">
+              {userName.trim().charAt(0).toUpperCase()}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium">{userName}</p>
+              <SignOutButton className="!text-xs" />
+            </div>
+          </div>
         </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-mist px-4 py-4 sm:px-6">
-          <div className="flex items-center gap-3">
-            <AdminMobileNav />
-            <div>
-              <p className="label-caps text-xs text-graphite">Painel administrativo</p>
-              <p className="text-sm">{session?.user?.name}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link href="/" className="label-caps text-xs text-graphite transition-colors hover:text-petrol">
-              Ver loja
+        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-mist bg-paper/90 px-4 py-3 backdrop-blur sm:px-6">
+          <AdminMobileNav badges={badges} />
+          <AdminSearch />
+          <div className="ml-auto flex items-center gap-2">
+            <Link
+              href="/"
+              target="_blank"
+              className="hidden items-center gap-1.5 rounded-lg border border-mist px-3 py-2 text-sm text-graphite transition-colors hover:border-petrol hover:text-ink sm:flex"
+            >
+              Ver loja <AdminIcon name="external" className="h-3.5 w-3.5" />
             </Link>
-            <SignOutButton />
+            <AdminThemeToggle />
           </div>
         </header>
 
-        <main className="min-w-0 flex-1 p-4 sm:p-6">{children}</main>
+        <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
+          <ToastProvider>
+            <SectionTabs />
+            {children}
+          </ToastProvider>
+        </main>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AdminIcon } from "./admin-icons";
 
 type AdminTheme = "light" | "dark";
 
@@ -10,30 +11,12 @@ function applyTheme(theme: AdminTheme) {
   document.getElementById("admin-shell")?.setAttribute("data-admin-theme", theme);
 }
 
-function SunIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className={className}>
-      <circle cx="12" cy="12" r="4.5" />
-      <path d="M12 2.5v2.2M12 19.3v2.2M4.9 4.9l1.55 1.55M17.55 17.55l1.55 1.55M2.5 12h2.2M19.3 12h2.2M4.9 19.1l1.55-1.55M17.55 6.45l1.55-1.55" />
-    </svg>
-  );
-}
-
-function MoonIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z" />
-    </svg>
-  );
-}
-
-/** Reads/writes localStorage directly (no React state needed before mount) — see the inline script in admin/layout.tsx that sets the initial attribute before paint. */
+/** Lê/grava o localStorage direto — o script inline do admin/layout.tsx define o atributo inicial antes da pintura (padrão: escuro). */
 export function AdminThemeToggle() {
   const [theme, setTheme] = useState<AdminTheme | null>(null);
 
   useEffect(() => {
-    const current =
-      (document.getElementById("admin-shell")?.getAttribute("data-admin-theme") as AdminTheme | null) ?? "light";
+    const current = (document.getElementById("admin-shell")?.getAttribute("data-admin-theme") as AdminTheme | null) ?? "dark";
     setTheme(current);
   }, []);
 
@@ -44,7 +27,7 @@ export function AdminThemeToggle() {
     try {
       localStorage.setItem(STORAGE_KEY, next);
     } catch {
-      // Private browsing / storage disabled — theme just won't persist across reloads.
+      // Navegação privada / armazenamento bloqueado: o tema só não persiste entre visitas.
     }
   };
 
@@ -52,10 +35,11 @@ export function AdminThemeToggle() {
     <button
       type="button"
       onClick={toggle}
-      aria-label={theme === "dark" ? "Mudar para modo claro" : "Mudar para modo escuro"}
-      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-mist text-graphite transition-colors hover:border-petrol hover:text-petrol"
+      aria-label={theme === "light" ? "Mudar para modo escuro" : "Mudar para modo claro"}
+      title={theme === "light" ? "Modo escuro" : "Modo claro"}
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-mist text-graphite transition-colors hover:border-petrol hover:text-ink"
     >
-      {theme === "dark" ? <SunIcon className="h-4 w-4" /> : <MoonIcon className="h-4 w-4" />}
+      <AdminIcon name={theme === "light" ? "moon" : "sun"} className="h-4 w-4" />
     </button>
   );
 }

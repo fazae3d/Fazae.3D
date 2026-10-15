@@ -1,14 +1,19 @@
+import { PageHeader } from "@/components/admin/page-header";
+import { PrecificadorFrame } from "@/components/admin/precificador-frame";
+
+export const metadata = { title: "Precificação" };
+
 /**
- * O precificador é uma ferramenta de arquivo único (HTML + JS próprio, lê STL/3MF/gcode
- * no navegador). Fica isolado num iframe servido por ./app/route.ts, só para o admin;
- * os valores padrão dele ficam salvos no navegador, não no banco.
+ * Os valores padrão da ferramenta (taxas, custo da máquina, margem) ficam salvos no navegador, não no banco.
  */
 export default function AdminPricingPage() {
   return (
-    <iframe
-      src="/admin/precificacao/app"
-      title="Precificador 3D"
-      className="block h-[calc(100vh-7.5rem)] min-h-[560px] w-full border-0"
-    />
+    <div>
+      <PageHeader
+        title="Precificação"
+        description="Quanto cobrar por cada peça: custo real, preço sugerido e lucro por canal de venda, a partir do arquivo da peça."
+      />
+      <PrecificadorFrame />
+    </div>
   );
 }

@@ -499,3 +499,50 @@ model AuditLog {
 
   @@index([at])
 }
+
+enum QuoteStatus {
+  rascunho
+  enviado
+  aprovado
+  recusado
+}
+
+/**
+ * Orçamento montado no painel para enviar ao cliente (PDF + link público). "Vencido" não é um status gravado:
+ * é calculado a partir de `validUntil` enquanto o orçamento ainda está em rascunho/enviado.
+ */
+model Quote {
+  id               String      @id @default(cuid())
+  /** Número sequencial exibido como ORC-0001. */
+  number           Int         @unique @default(autoincrement())
+  /** Segredo do link público (/orcamento/<token>) — quem tem o link vê e baixa o PDF. */
+  token            String      @unique @default(cuid())
+  status           QuoteStatus @default(rascunho)
+  customerName     String
+  customerPhone    String?
+  customerEmail    String?
+  customerDocument String?
+  customerAddress  String?
+  /** Título do projeto/pedido (ex.: "Brindes personalizados para evento"). */
+  title            String?
+  /** [{ description, details?, quantity, unitPrice, imageUrl?, productSlug? }] */
+  items            Json
+  subtotal         Float
+  discount         Float       @default(0)
+  shipping         Float       @default(0)
+  total            Float
+  validUntil       DateTime
+  deliveryTime     String?
+  paymentTerms     String?
+  notes            String?
+  sentAt           DateTime?
+  decidedAt        DateTime?
+  /** Lead (CustomOrderRequest) que originou o orçamento, e o pedido gerado ao aprovar. */
+  linkedRequestId  String?
+  linkedOrderId    String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+}

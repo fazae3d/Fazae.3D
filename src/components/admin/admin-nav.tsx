@@ -2,152 +2,162 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { AdminIcon, type AdminIconName } from "./admin-icons";
 
 export type NavLink = { href: string; label: string };
-export type NavGroup = { label: string; href?: string; links: NavLink[] };
+export type NavGroup = {
+  key: string;
+  label: string;
+  icon: AdminIconName;
+  /** Para onde o item do menu leva. */
+  href: string;
+  /** Telas do mesmo assunto: aparecem como abas no topo da página (só quando há mais de uma). */
+  links: NavLink[];
+  /** Prefixos de rota que também pertencem ao grupo (telas sem aba própria, como o lançamento de venda). */
+  extraMatch?: string[];
+};
 
 /**
- * Grouped by area of the business rather than a flat alphabetical list —
- * Dashboard/Encomendas/Financeiro/Clientes/Configurações each hold a single
- * page today, so they render as direct links; E-commerce and Produção hold
- * several and expand/collapse like an accordion.
+ * Menu enxuto: 8 áreas do negócio. Telas relacionadas viram abas dentro da área (ver SectionTabs),
+ * em vez de 20 links soltos no menu.
  */
 export const NAV_GROUPS: NavGroup[] = [
-  { label: "Dashboard", href: "/admin", links: [] },
+  { key: "visao-geral", label: "Visão geral", icon: "dashboard", href: "/admin", links: [] },
   {
-    label: "E-commerce",
+    key: "pedidos",
+    label: "Pedidos",
+    icon: "orders",
+    href: "/admin/pedidos",
+    links: [
+      { href: "/admin/pedidos", label: "Pedidos" },
+      { href: "/admin/encomendas", label: "Encomendas" },
+      { href: "/admin/carrinhos", label: "Carrinhos abandonados" },
+      { href: "/admin/consignacao", label: "Consignação" },
+    ],
+    extraMatch: ["/admin/vendas"],
+  },
+  { key: "orcamentos", label: "Orçamentos", icon: "quotes", href: "/admin/orcamentos", links: [] },
+  {
+    key: "catalogo",
+    label: "Catálogo",
+    icon: "catalog",
+    href: "/admin/produtos",
     links: [
       { href: "/admin/produtos", label: "Produtos" },
       { href: "/admin/estoque", label: "Estoque" },
       { href: "/admin/categorias", label: "Categorias" },
       { href: "/admin/cupons", label: "Cupons" },
       { href: "/admin/avaliacoes", label: "Avaliações" },
-      { href: "/admin/consignacao", label: "Consignação" },
-      { href: "/admin/pedidos", label: "Pedidos" },
-      { href: "/admin/carrinhos", label: "Carrinhos abandonados" },
-      { href: "/admin/vendas/nova", label: "Lançar venda" },
     ],
   },
-  { label: "Encomendas", href: "/admin/encomendas", links: [] },
   {
+    key: "producao",
     label: "Produção",
+    icon: "production",
+    href: "/admin/producao",
     links: [
-      { href: "/admin/producao", label: "Produção" },
+      { href: "/admin/producao", label: "Fila de produção" },
+      { href: "/admin/precificacao", label: "Precificação" },
       { href: "/admin/materiais", label: "Materiais" },
       { href: "/admin/insumos", label: "Insumos" },
-      { href: "/admin/precificacao", label: "Precificação" },
     ],
   },
+  { key: "clientes", label: "Clientes", icon: "clients", href: "/admin/clientes", links: [] },
   {
-    label: "Financeiro",
+    key: "financas",
+    label: "Finanças",
+    icon: "finance",
+    href: "/admin/financas",
     links: [
-      { href: "/admin/financas", label: "Finanças" },
+      { href: "/admin/financas", label: "Resultado e gastos" },
       { href: "/admin/lucratividade", label: "Lucro por produto" },
     ],
   },
-  { label: "Clientes", href: "/admin/clientes", links: [] },
-  { label: "Configurações", href: "/admin/configuracoes", links: [] },
-  { label: "Atividade", href: "/admin/atividade", links: [] },
+  {
+    key: "configuracoes",
+    label: "Configurações",
+    icon: "settings",
+    href: "/admin/configuracoes",
+    links: [
+      { href: "/admin/configuracoes", label: "Loja" },
+      { href: "/admin/atividade", label: "Atividade" },
+    ],
+  },
 ];
 
-/** Flattened, in the same order — used by admin-mobile-nav and anywhere else that just needs every link. */
+/** Todos os destinos, na ordem do menu — usado pela busca (Ctrl+K). */
 export const NAV_LINKS: NavLink[] = NAV_GROUPS.flatMap((group) =>
-  group.links.length > 0 ? group.links : group.href ? [{ href: group.href, label: group.label }] : [],
+  group.links.length > 0 ? group.links : [{ href: group.href, label: group.label }],
 );
 
-function ChevronIcon({ open }: { open: boolean }) {
+export function isLinkActive(pathname: string, href: string) {
+  return href === "/admin" ? pathname === "/admin" : pathname === href || pathname.startsWith(`${href}/`);
+}
+
+export function activeGroupFor(pathname: string): NavGroup | undefined {
+  return NAV_GROUPS.find(
+    (g) =>
+      isLinkActive(pathname, g.href) ||
+      g.links.some((l) => isLinkActive(pathname, l.href)) ||
+      g.extraMatch?.some((prefix) => isLinkActive(pathname, prefix)),
+  );
+}
+
+function NavItem({ group, active, badge, onNavigate }: { group: NavGroup; active: boolean; badge?: number; onNavigate?: () => void }) {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={`h-3.5 w-3.5 shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+    <Link
+      href={group.href}
+      onClick={onNavigate}
+      aria-current={active ? "page" : undefined}
+      className={`group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+        active ? "admin-nav-active" : "text-graphite hover:bg-mist/60 hover:text-ink"
+      }`}
     >
-      <path d="m6 9 6 6 6-6" />
-    </svg>
+      <AdminIcon name={group.icon} />
+      <span className="flex-1">{group.label}</span>
+      {badge ? (
+        <span className="rounded-full bg-petrol px-1.5 py-px text-[11px] font-semibold leading-4 text-[#111]">{badge}</span>
+      ) : null}
+    </Link>
   );
 }
 
-function isLinkActive(pathname: string, href: string) {
-  return href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
-}
-
-export function AdminNav() {
+export function AdminNav({ badges = {}, onNavigate }: { badges?: Record<string, number>; onNavigate?: () => void }) {
   const pathname = usePathname();
-  const [openGroups, setOpenGroups] = useState<string[]>(() =>
-    NAV_GROUPS.filter((g) => g.links.some((l) => isLinkActive(pathname, l.href))).map((g) => g.label),
-  );
-
-  useEffect(() => {
-    setOpenGroups((prev) => {
-      const activeGroup = NAV_GROUPS.find((g) => g.links.some((l) => isLinkActive(pathname, l.href)));
-      if (!activeGroup || prev.includes(activeGroup.label)) return prev;
-      return [...prev, activeGroup.label];
-    });
-  }, [pathname]);
-
-  const toggleGroup = (label: string) => {
-    setOpenGroups((prev) => (prev.includes(label) ? prev.filter((g) => g !== label) : [...prev, label]));
-  };
-
+  const active = activeGroupFor(pathname);
   return (
-    <nav className="flex flex-col gap-1">
-      {NAV_GROUPS.map((group) => {
-        if (group.links.length === 0) {
-          const active = isLinkActive(pathname, group.href!);
-          return (
-            <Link
-              key={group.label}
-              href={group.href!}
-              className={`label-caps px-3 py-2.5 text-xs transition-colors ${
-                active ? "bg-ink text-paper" : "text-graphite hover:bg-mist/60 hover:text-ink"
-              }`}
-            >
-              {group.label}
-            </Link>
-          );
-        }
+    <nav className="flex flex-col gap-1" aria-label="Menu administrativo">
+      {NAV_GROUPS.map((group) => (
+        <NavItem key={group.key} group={group} active={active?.key === group.key} badge={badges[group.key]} onNavigate={onNavigate} />
+      ))}
+    </nav>
+  );
+}
 
-        const open = openGroups.includes(group.label);
-        const groupActive = group.links.some((l) => isLinkActive(pathname, l.href));
-
+/** Abas da área atual (ex.: Pedidos · Encomendas · Carrinhos). Some quando a área tem uma tela só. */
+export function SectionTabs() {
+  const pathname = usePathname();
+  const group = activeGroupFor(pathname);
+  if (!group || group.links.length < 2) return null;
+  // Em telas sem aba própria (ex.: /admin/vendas/nova) nenhuma aba fica marcada, e tudo bem.
+  return (
+    <div className="mb-6 flex gap-1 overflow-x-auto border-b border-mist" role="tablist" aria-label={group.label}>
+      {group.links.map((link) => {
+        const active = isLinkActive(pathname, link.href);
         return (
-          <div key={group.label}>
-            <button
-              type="button"
-              onClick={() => toggleGroup(group.label)}
-              className={`label-caps flex w-full items-center justify-between px-3 py-2.5 text-xs transition-colors ${
-                groupActive && !open ? "text-ink" : "text-graphite hover:text-ink"
-              }`}
-            >
-              {group.label}
-              <ChevronIcon open={open} />
-            </button>
-            {open && (
-              <div className="ml-3 flex flex-col gap-1 border-l border-mist pl-3">
-                {group.links.map((link) => {
-                  const active = isLinkActive(pathname, link.href);
-                  return (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      className={`label-caps px-3 py-2 text-xs transition-colors ${
-                        active ? "bg-ink text-paper" : "text-graphite hover:bg-mist/60 hover:text-ink"
-                      }`}
-                    >
-                      {link.label}
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          <Link
+            key={link.href}
+            href={link.href}
+            role="tab"
+            aria-selected={active}
+            className={`-mb-px whitespace-nowrap border-b-2 px-3.5 py-2.5 text-sm font-medium transition-colors ${
+              active ? "admin-tab-active" : "border-transparent text-graphite hover:text-ink"
+            }`}
+          >
+            {link.label}
+          </Link>
         );
       })}
-    </nav>
+    </div>
   );
 }

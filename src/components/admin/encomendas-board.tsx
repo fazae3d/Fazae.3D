@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import type { CustomOrderRequest, CustomRequestStatus } from "@/lib/types";
 import { updateCustomOrderRequestAction } from "@/app/admin/encomendas/actions";
@@ -84,14 +85,24 @@ export function EncomendasBoard({ requests: initialRequests }: { requests: Custo
                     {request.phone} · {formatDate(request.createdAt)}
                   </p>
                 </div>
-                <a
-                  href={getWhatsAppLink(request.phone)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="label-caps border border-ink px-4 py-2 text-[11px] transition-colors hover:bg-ink hover:text-paper"
-                >
-                  Abrir WhatsApp
-                </a>
+                <div className="flex flex-wrap gap-2">
+                  {!request.linkedOrderId && (
+                    <Link
+                      href={`/admin/orcamentos/novo?lead=${request.id}`}
+                      className="rounded-lg bg-petrol px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-90"
+                    >
+                      Montar orçamento
+                    </Link>
+                  )}
+                  <a
+                    href={getWhatsAppLink(request.phone)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-lg border border-mist px-4 py-2 text-sm transition-colors hover:border-petrol"
+                  >
+                    Abrir WhatsApp
+                  </a>
+                </div>
               </div>
 
               <div className="border-b border-mist py-4 text-sm text-graphite">
@@ -153,6 +164,11 @@ export function EncomendasBoard({ requests: initialRequests }: { requests: Custo
               <p className="text-graphite">{request.phone}</p>
               <p className="line-clamp-2 text-graphite">{request.description}</p>
               {request.desiredDeadline && <p className="text-graphite">Prazo: {request.desiredDeadline}</p>}
+              {!request.linkedOrderId && (
+                <Link href={`/admin/orcamentos/novo?lead=${request.id}`} className="mt-1 text-petrol hover:underline">
+                  Montar orçamento →
+                </Link>
+              )}
             </div>
           )}
         />

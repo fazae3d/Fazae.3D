@@ -1,23 +1,45 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { updateSettingsAction, type SettingsFormInput } from "@/app/admin/configuracoes/actions";
+import { useToast } from "@/components/admin/toast";
 import { DEFAULT_LOCAL_DELIVERY_FEE, DEFAULT_LOCAL_DELIVERY_THRESHOLD } from "@/lib/local-delivery";
 import { DEFAULT_PIX_DISCOUNT_PCT } from "@/lib/money";
 import type { StoreSettings } from "@/server/types";
 
-function labelClass() {
-  return "label-caps text-[11px] text-graphite";
-}
+const LABEL = "mb-1.5 block text-xs font-medium text-graphite";
 
 function inputClass(hasError?: boolean) {
-  return `border px-3 py-2 text-base outline-none focus:border-petrol sm:text-sm ${hasError ? "border-red-500" : "border-mist"}`;
+  return `w-full rounded-lg border bg-transparent px-3 py-2 text-base outline-none focus:border-petrol sm:text-sm ${hasError ? "border-red-500" : "border-mist"}`;
+}
+
+function Section({ title, description, children }: { title: string; description: string; children: ReactNode }) {
+  return (
+    <section className="admin-card rounded-xl border border-mist p-5 sm:p-6">
+      <h2 className="text-sm font-semibold">{title}</h2>
+      <p className="mb-5 mt-1 text-xs text-graphite">{description}</p>
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">{children}</div>
+    </section>
+  );
+}
+
+function Field({ label, hint, error, htmlFor, wide, children }: { label: string; hint?: string; error?: string; htmlFor: string; wide?: boolean; children: ReactNode }) {
+  return (
+    <div className={wide ? "sm:col-span-2" : ""}>
+      <label className={LABEL} htmlFor={htmlFor}>
+        {label}
+      </label>
+      {children}
+      {error ? <p className="mt-1 text-xs text-red-500">{error}</p> : null}
+      {hint ? <p className="mt-1 text-xs text-graphite">{hint}</p> : null}
+    </div>
+  );
 }
 
 export function SettingsForm({ settings }: { settings: StoreSettings }) {
+  const { toast } = useToast();
   const [serverError, setServerError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
 
   const {
     register,
@@ -30,17 +52,11 @@ export function SettingsForm({ settings }: { settings: StoreSettings }) {
       localDeliveryThreshold: settings.localDeliveryThreshold ?? DEFAULT_LOCAL_DELIVERY_THRESHOLD,
       localDeliveryFee: settings.localDeliveryFee ?? DEFAULT_LOCAL_DELIVERY_FEE,
       pixDiscountPct: settings.pixDiscountPct ?? DEFAULT_PIX_DISCOUNT_PCT,
-      defaultProfitMarginPct: settings.defaultProfitMarginPct ?? 30,
-      averageFailureRatePct: settings.averageFailureRatePct ?? 5,
-      printerCostPerHour: settings.printerCostPerHour ?? 0,
-      energyCostPerHour: settings.energyCostPerHour ?? 0,
-      defaultMaterialCostPerGram: settings.defaultMaterialCostPerGram ?? 0,
     },
   });
 
   const onSubmit = async (data: SettingsFormInput) => {
     setServerError(null);
-    setSaved(false);
     const result = await updateSettingsAction({
       freeShippingThreshold: Number(data.freeShippingThreshold),
       localDeliveryThreshold: Number(data.localDeliveryThreshold),
@@ -48,227 +64,91 @@ export function SettingsForm({ settings }: { settings: StoreSettings }) {
       pixDiscountPct: Number(data.pixDiscountPct),
       whatsappNumber: data.whatsappNumber.replace(/\D/g, ""),
       originCep: data.originCep?.replace(/\D/g, "") ?? "",
-      defaultProfitMarginPct: Number(data.defaultProfitMarginPct),
-      averageFailureRatePct: Number(data.averageFailureRatePct),
-      printerCostPerHour: Number(data.printerCostPerHour),
-      energyCostPerHour: Number(data.energyCostPerHour),
-      defaultMaterialCostPerGram: Number(data.defaultMaterialCostPerGram),
     });
     if (!result.success) {
       setServerError(result.error);
+      toast(result.error, "error");
       return;
     }
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    toast("Configurações salvas");
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex max-w-xl flex-col gap-6">
-      <div className="flex flex-col gap-1.5">
-        <label className={labelClass()} htmlFor="freeShippingThreshold">
-          Frete grátis a partir de (R$)
-        </label>
-        <input
-          id="freeShippingThreshold"
-          type="number"
-          step="0.01"
-          className={inputClass(Boolean(errors.freeShippingThreshold))}
-          {...register("freeShippingThreshold", { valueAsNumber: true })}
-        />
-        {errors.freeShippingThreshold && (
-          <p className="text-xs text-red-600">{errors.freeShippingThreshold.message}</p>
-        )}
-        <p className="text-xs text-graphite">
-          Usado na barra de anúncio, no carrinho e no cálculo real do frete no checkout.
-        </p>
-      </div>
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
+      <Section title="Frete" description="Regras de frete grátis exibidas na barra de anúncio, no carrinho e no checkout.">
+        <Field
+          label="Frete grátis para todo o Brasil a partir de (R$)"
+          htmlFor="freeShippingThreshold"
+          error={errors.freeShippingThreshold?.message}
+          hint="Também vale para o cálculo real do frete (Melhor Envio) no checkout."
+          wide
+        >
+          <input
+            id="freeShippingThreshold"
+            type="number"
+            step="0.01"
+            className={inputClass(Boolean(errors.freeShippingThreshold))}
+            {...register("freeShippingThreshold", { valueAsNumber: true })}
+          />
+        </Field>
+        <Field label="CEP de origem (de onde você envia)" htmlFor="originCep" error={errors.originCep?.message} hint="Sem isso o checkout usa a tabela de frete fixa." wide>
+          <input id="originCep" placeholder="00000000" maxLength={9} className={inputClass(Boolean(errors.originCep))} {...register("originCep")} />
+        </Field>
+      </Section>
 
-      <div className="flex flex-col gap-1.5">
-        <label className={labelClass()} htmlFor="pixDiscountPct">
-          Desconto no Pix (%)
-        </label>
-        <input
-          id="pixDiscountPct"
-          type="number"
-          step="0.1"
-          min="0"
-          max="90"
-          className={inputClass(Boolean(errors.pixDiscountPct))}
-          {...register("pixDiscountPct", { valueAsNumber: true })}
-        />
-        {errors.pixDiscountPct && <p className="text-xs text-red-600">{errors.pixDiscountPct.message}</p>}
-        <p className="text-xs text-graphite">
-          Percentual exibido como preço &ldquo;no Pix&rdquo; nos produtos, na busca, no carrinho e na barra de anúncio.
-        </p>
-      </div>
+      <Section
+        title="Entrega por motoboy (Natal e Parnamirim)"
+        description="Só aparece para CEPs de Natal/RN e Parnamirim/RN, sempre no topo das opções de frete."
+      >
+        <Field label="Frete grátis a partir de (R$)" htmlFor="localDeliveryThreshold" error={errors.localDeliveryThreshold?.message}>
+          <input
+            id="localDeliveryThreshold"
+            type="number"
+            step="0.01"
+            className={inputClass(Boolean(errors.localDeliveryThreshold))}
+            {...register("localDeliveryThreshold", { valueAsNumber: true })}
+          />
+        </Field>
+        <Field label="Valor abaixo desse mínimo (R$)" htmlFor="localDeliveryFee" error={errors.localDeliveryFee?.message}>
+          <input
+            id="localDeliveryFee"
+            type="number"
+            step="0.01"
+            className={inputClass(Boolean(errors.localDeliveryFee))}
+            {...register("localDeliveryFee", { valueAsNumber: true })}
+          />
+        </Field>
+      </Section>
 
-      <div className="flex flex-col gap-1.5">
-        <label className={labelClass()} htmlFor="localDeliveryThreshold">
-          Motoboy (Natal e Parnamirim): frete grátis a partir de (R$)
-        </label>
-        <input
-          id="localDeliveryThreshold"
-          type="number"
-          step="0.01"
-          className={inputClass(Boolean(errors.localDeliveryThreshold))}
-          {...register("localDeliveryThreshold", { valueAsNumber: true })}
-        />
-        {errors.localDeliveryThreshold && (
-          <p className="text-xs text-red-600">{errors.localDeliveryThreshold.message}</p>
-        )}
-      </div>
+      <Section title="Pagamento" description="Preço exibido como “no Pix” na loja inteira.">
+        <Field label="Desconto no Pix (%)" htmlFor="pixDiscountPct" error={errors.pixDiscountPct?.message} hint="Aparece nos produtos, na busca, no carrinho e na barra de anúncio.">
+          <input
+            id="pixDiscountPct"
+            type="number"
+            step="0.1"
+            min="0"
+            max="90"
+            className={inputClass(Boolean(errors.pixDiscountPct))}
+            {...register("pixDiscountPct", { valueAsNumber: true })}
+          />
+        </Field>
+      </Section>
 
-      <div className="flex flex-col gap-1.5">
-        <label className={labelClass()} htmlFor="localDeliveryFee">
-          Motoboy (Natal e Parnamirim): valor abaixo desse mínimo (R$)
-        </label>
-        <input
-          id="localDeliveryFee"
-          type="number"
-          step="0.01"
-          className={inputClass(Boolean(errors.localDeliveryFee))}
-          {...register("localDeliveryFee", { valueAsNumber: true })}
-        />
-        {errors.localDeliveryFee && <p className="text-xs text-red-600">{errors.localDeliveryFee.message}</p>}
-        <p className="text-xs text-graphite">
-          A entrega por motoboy só aparece para CEPs de Natal/RN e Parnamirim/RN, sempre no topo das opções de frete.
-          Usado na barra de anúncio, na página do produto e no checkout.
-        </p>
-      </div>
+      <Section title="Contato" description="Usado no rodapé, na página de contato, no botão flutuante e nos orçamentos em PDF.">
+        <Field label="Número de WhatsApp" htmlFor="whatsappNumber" error={errors.whatsappNumber?.message} hint="Só números, com DDI e DDD (ex.: 5584999999999)." wide>
+          <input id="whatsappNumber" placeholder="5584999999999" className={inputClass(Boolean(errors.whatsappNumber))} {...register("whatsappNumber")} />
+        </Field>
+      </Section>
 
-      <div className="flex flex-col gap-1.5">
-        <label className={labelClass()} htmlFor="whatsappNumber">
-          Número de WhatsApp
-        </label>
-        <input
-          id="whatsappNumber"
-          placeholder="5584999999999"
-          className={inputClass(Boolean(errors.whatsappNumber))}
-          {...register("whatsappNumber")}
-        />
-        {errors.whatsappNumber && <p className="text-xs text-red-600">{errors.whatsappNumber.message}</p>}
-        <p className="text-xs text-graphite">
-          Apenas números, com DDI e DDD (ex: 5584999999999). Usado no rodapé, na página de contato e no botão
-          flutuante.
-        </p>
-      </div>
+      {serverError ? <p className="text-sm text-red-500">{serverError}</p> : null}
 
-      <div className="flex flex-col gap-1.5">
-        <label className={labelClass()} htmlFor="originCep">
-          CEP de origem (envio)
-        </label>
-        <input
-          id="originCep"
-          placeholder="00000000"
-          maxLength={9}
-          className={inputClass(Boolean(errors.originCep))}
-          {...register("originCep")}
-        />
-        {errors.originCep && <p className="text-xs text-red-600">{errors.originCep.message}</p>}
-        <p className="text-xs text-graphite">
-          CEP de onde a loja despacha os pedidos — usado para cotar o frete real (Melhor Envio) no checkout. Sem
-          isso preenchido, o checkout usa a tabela de frete fixa.
-        </p>
-      </div>
-
-      <div className="border-t border-mist pt-6">
-        <p className="label-caps mb-1 text-xs text-graphite">Configurações de precificação</p>
-        <p className="mb-4 text-xs text-graphite">
-          Valores usados para pré-preencher a calculadora em Precificação. Nunca são gravados automaticamente no
-          produto.
-        </p>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
-            <label className={labelClass()} htmlFor="defaultProfitMarginPct">
-              Margem de lucro padrão (%)
-            </label>
-            <input
-              id="defaultProfitMarginPct"
-              type="number"
-              step="1"
-              className={inputClass(Boolean(errors.defaultProfitMarginPct))}
-              {...register("defaultProfitMarginPct", { valueAsNumber: true })}
-            />
-            {errors.defaultProfitMarginPct && (
-              <p className="text-xs text-red-600">{errors.defaultProfitMarginPct.message}</p>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label className={labelClass()} htmlFor="averageFailureRatePct">
-              Taxa média de falha (%)
-            </label>
-            <input
-              id="averageFailureRatePct"
-              type="number"
-              step="1"
-              className={inputClass(Boolean(errors.averageFailureRatePct))}
-              {...register("averageFailureRatePct", { valueAsNumber: true })}
-            />
-            {errors.averageFailureRatePct && (
-              <p className="text-xs text-red-600">{errors.averageFailureRatePct.message}</p>
-            )}
-            <p className="text-xs text-graphite">
-              Percentual de impressões que falham. O custo de material é ajustado para cobrir a perda.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label className={labelClass()} htmlFor="printerCostPerHour">
-              Custo da impressora por hora (R$)
-            </label>
-            <input
-              id="printerCostPerHour"
-              type="number"
-              step="0.01"
-              className={inputClass(Boolean(errors.printerCostPerHour))}
-              {...register("printerCostPerHour", { valueAsNumber: true })}
-            />
-            {errors.printerCostPerHour && <p className="text-xs text-red-600">{errors.printerCostPerHour.message}</p>}
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label className={labelClass()} htmlFor="energyCostPerHour">
-              Custo de energia por hora (R$)
-            </label>
-            <input
-              id="energyCostPerHour"
-              type="number"
-              step="0.01"
-              className={inputClass(Boolean(errors.energyCostPerHour))}
-              {...register("energyCostPerHour", { valueAsNumber: true })}
-            />
-            {errors.energyCostPerHour && <p className="text-xs text-red-600">{errors.energyCostPerHour.message}</p>}
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label className={labelClass()} htmlFor="defaultMaterialCostPerGram">
-              Custo padrão do material por grama (R$)
-            </label>
-            <input
-              id="defaultMaterialCostPerGram"
-              type="number"
-              step="0.001"
-              className={inputClass(Boolean(errors.defaultMaterialCostPerGram))}
-              {...register("defaultMaterialCostPerGram", { valueAsNumber: true })}
-            />
-            {errors.defaultMaterialCostPerGram && (
-              <p className="text-xs text-red-600">{errors.defaultMaterialCostPerGram.message}</p>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {serverError && <p className="text-sm text-red-600">{serverError}</p>}
-      {saved && <p className="text-sm text-petrol">Configurações salvas.</p>}
-
-      <div className="flex gap-3">
+      <div>
         <button
           type="submit"
           disabled={isSubmitting}
-          className="label-caps bg-ink px-8 py-4 text-xs text-paper transition-colors hover:bg-petrol hover:text-ink disabled:opacity-60"
+          className="rounded-lg bg-petrol px-6 py-3 text-sm font-semibold text-[#111] transition-opacity hover:opacity-90 disabled:opacity-60"
         >
-          {isSubmitting ? "Salvando..." : "Salvar configurações"}
+          {isSubmitting ? "Salvando…" : "Salvar configurações"}
         </button>
       </div>
     </form>

@@ -1,6 +1,5 @@
 import type { Category, CustomOrderRequest, Material, Product } from "@/lib/types";
 import type {
-  AdditionalCost,
   Coupon,
   Customer,
   CustomerWithStats,
@@ -31,7 +30,6 @@ export const fallbackMaterials: Material[] = seedMaterials();
 
 export const fallbackCoupons: Coupon[] = seedCoupons();
 
-export const fallbackAdditionalCosts: AdditionalCost[] = [];
 
 export const fallbackExpenses: Expense[] = [];
 
