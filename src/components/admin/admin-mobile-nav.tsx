@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AdminIcon } from "./admin-icons";
@@ -38,8 +39,8 @@ export function AdminMobileNav({ badges }: { badges?: Record<string, number> }) 
         aria-label="Menu administrativo"
       >
         <div className="flex items-center justify-between px-5 py-5">
-          <Link href="/admin" onClick={() => setOpen(false)} className="font-display text-lg tracking-tight">
-            Fazaê <span className="text-petrol">gestão</span>
+          <Link href="/admin" onClick={() => setOpen(false)} aria-label="Fazaê, início do painel" className="block rounded-xl bg-[#111111] px-4 py-2.5">
+            <Image src="/logo-header.webp" alt="Fazaê" width={640} height={194} className="h-auto w-[6.5rem]" />
           </Link>
           <button type="button" aria-label="Fechar menu" onClick={() => setOpen(false)} className="-m-2 p-2 text-graphite hover:text-ink">
             <AdminIcon name="close" className="h-5 w-5" />
