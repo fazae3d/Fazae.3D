@@ -167,8 +167,8 @@ body {
 
 /* Modo claro: o verde-limão não tem contraste sobre fundo claro, então texto/links usam o verde-oliva da marca. */
 [data-admin-theme="light"] .text-petrol,
-[data-admin-theme="light"] .hover:text-petrol:hover,
-[data-admin-theme="light"] .group:hover .group-hover:text-petrol {
+[data-admin-theme="light"] .hover\:text-petrol:hover,
+[data-admin-theme="light"] .group:hover .group-hover\:text-petrol {
   color: var(--color-sand);
 }
 [data-admin-theme="light"] .admin-nav-active {
