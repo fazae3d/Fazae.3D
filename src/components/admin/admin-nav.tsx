@@ -141,7 +141,7 @@ export function SectionTabs() {
   if (!group || group.links.length < 2) return null;
   // Em telas sem aba própria (ex.: /admin/vendas/nova) nenhuma aba fica marcada, e tudo bem.
   return (
-    <div className="mb-6 flex gap-1 overflow-x-auto border-b border-mist" role="tablist" aria-label={group.label}>
+    <div className="mb-6 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-mist [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label={group.label}>
       {group.links.map((link) => {
         const active = isLinkActive(pathname, link.href);
         return (
@@ -150,7 +150,7 @@ export function SectionTabs() {
             href={link.href}
             role="tab"
             aria-selected={active}
-            className={`-mb-px whitespace-nowrap border-b-2 px-3.5 py-2.5 text-sm font-medium transition-colors ${
+            className={`whitespace-nowrap border-b-2 px-3.5 py-2.5 text-sm font-medium transition-colors ${
               active ? "admin-tab-active" : "border-transparent text-graphite hover:text-ink"
             }`}
           >

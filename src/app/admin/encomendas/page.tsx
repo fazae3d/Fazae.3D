@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getAllCustomOrderRequests } from "@/server/repositories/custom-order-request-repository";
 import { EncomendasBoard } from "@/components/admin/encomendas-board";
+import { ManualEncomendaForm } from "@/components/admin/manual-encomenda-form";
 import { PageHeader } from "@/components/admin/page-header";
 import { withReadFallback } from "@/lib/db-fallback";
 import { fallbackCustomOrderRequests } from "@/server/demo-fallback";
@@ -21,6 +22,8 @@ export default async function AdminCustomOrderRequestsPage() {
           </Link>
         }
       />
+
+      <ManualEncomendaForm />
 
       <EncomendasBoard requests={requests} />
     </div>
