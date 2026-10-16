@@ -1,5 +1,6 @@
 import { db } from "../db";
 import type { StoreSettings } from "../types";
+import { parseChannelFees } from "@/lib/channels";
 
 const SETTINGS_ID = 1;
 
@@ -17,6 +18,8 @@ function toSettings(row: {
   localDeliveryThreshold: number;
   localDeliveryFee: number;
   pixDiscountPct: number;
+  channelFees: unknown;
+  monthlyGoal: number;
 }): StoreSettings {
   return {
     freeShippingThreshold: row.freeShippingThreshold,
@@ -32,6 +35,8 @@ function toSettings(row: {
     localDeliveryThreshold: row.localDeliveryThreshold,
     localDeliveryFee: row.localDeliveryFee,
     pixDiscountPct: row.pixDiscountPct,
+    channelFees: parseChannelFees(row.channelFees),
+    monthlyGoal: row.monthlyGoal,
   };
 }
 

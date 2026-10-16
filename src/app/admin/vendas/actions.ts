@@ -5,6 +5,8 @@ import { auth } from "@/auth";
 import { ADMIN_AUTH_DISABLED } from "@/lib/dev-flags";
 import { manualSaleFormSchema, type ManualSaleFormInput } from "@/lib/admin-validation";
 import { round2 } from "@/lib/money";
+import { computeChannelFee, isMarketplace } from "@/lib/channels";
+import { getSettings } from "@/server/repositories/settings-repository";
 import { addOrder, generateOrderId, OutOfStockError } from "@/server/repositories/order-repository";
 import { getProduct, updateProduct } from "@/server/repositories/product-repository";
 import type { Order } from "@/server/types";
@@ -27,7 +29,7 @@ export async function createManualSaleAction(input: ManualSaleFormInput): Promis
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
-  const { channel, customerName, customerPhone, paymentMethod, status, items, productionPending } = parsed.data;
+  const { channel, channelFee, customerName, customerPhone, paymentMethod, status, items, productionPending } = parsed.data;
 
   // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco — hoje a escrita real falharia sem Supabase configurado.
   const result = await withMutationFallback(async () => {
@@ -59,6 +61,18 @@ export async function createManualSaleAction(input: ManualSaleFormInput): Promis
 
     const subtotal = round2(resolvedItems.reduce((sum, item) => sum + item.price * item.quantity, 0));
 
+    // Marketplace: a taxa do canal entra como "taxa" do pedido (mesmo campo da taxa do Mercado Pago), para o lucro sair líquido.
+    let paymentFee: number | undefined;
+    if (isMarketplace(channel)) {
+      if (channelFee !== undefined) {
+        paymentFee = round2(channelFee);
+      } else {
+        const settings = await getSettings({ fresh: true }).catch(() => null);
+        const units = resolvedItems.reduce((sum, item) => sum + item.quantity, 0);
+        paymentFee = computeChannelFee(settings?.channelFees?.[channel], subtotal, units);
+      }
+    }
+
     const order: Order = {
       id: generateOrderId(),
       createdAt: new Date().toISOString(),
@@ -72,6 +86,7 @@ export async function createManualSaleAction(input: ManualSaleFormInput): Promis
       total: subtotal,
       paymentMethod,
       status,
+      paymentFee,
     };
 
     // O estoque é baixado dentro da mesma transação que grava a venda (atômico), e fica marcado como

@@ -27,6 +27,7 @@ function toQuote(row: Row): Quote {
     notes: row.notes ?? undefined,
     sentAt: row.sentAt?.toISOString(),
     decidedAt: row.decidedAt?.toISOString(),
+    lastFollowUpAt: row.lastFollowUpAt?.toISOString(),
     linkedRequestId: row.linkedRequestId ?? undefined,
     linkedOrderId: row.linkedOrderId ?? undefined,
     createdAt: row.createdAt.toISOString(),
@@ -105,4 +106,8 @@ export async function linkQuoteToOrder(id: string, orderId: string): Promise<voi
 
 export async function deleteQuote(id: string): Promise<void> {
   await db.quote.deleteMany({ where: { id } });
+}
+
+export async function markQuoteFollowedUp(id: string): Promise<void> {
+  await db.quote.update({ where: { id }, data: { lastFollowUpAt: new Date() } });
 }

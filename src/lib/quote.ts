@@ -37,6 +37,7 @@ export type Quote = {
   notes?: string;
   sentAt?: string;
   decidedAt?: string;
+  lastFollowUpAt?: string;
   linkedRequestId?: string;
   linkedOrderId?: string;
   createdAt: string;
@@ -86,6 +87,25 @@ export function isQuoteExpired(quote: Pick<Quote, "status" | "validUntil">, now 
 
 export function quoteDisplayStatus(quote: Pick<Quote, "status" | "validUntil">, now = new Date()): QuoteDisplayStatus {
   return isQuoteExpired(quote, now) ? "vencido" : quote.status;
+}
+
+/** Dias sem resposta depois dos quais vale chamar o cliente de novo. */
+export const QUOTE_FOLLOW_UP_DAYS = 3;
+
+/**
+ * Orçamento enviado e ainda dentro da validade que ficou sem resposta por 3 dias ou mais (contando do envio ou do último contato).
+ * Quando faltam 2 dias ou menos para vencer, entra na lista mesmo antes disso.
+ */
+export function needsFollowUp(
+  quote: Pick<Quote, "status" | "validUntil" | "sentAt" | "lastFollowUpAt">,
+  now = new Date(),
+) {
+  if (quote.status !== "enviado" || isQuoteExpired(quote, now)) return false;
+  const reference = quote.lastFollowUpAt ?? quote.sentAt;
+  if (!reference) return false;
+  const quietDays = Math.floor((now.getTime() - new Date(reference).getTime()) / 86_400_000);
+  const expiresSoon = daysUntil(quote.validUntil, now) <= 2;
+  return quietDays >= QUOTE_FOLLOW_UP_DAYS || (expiresSoon && quietDays >= 1);
 }
 
 /** "15/10/2026" no fuso da loja. */

@@ -126,7 +126,9 @@ export const manualSaleItemSchema = z.object({
 });
 
 export const manualSaleFormSchema = z.object({
-  channel: z.enum(["presencial", "whatsapp"]),
+  channel: z.enum(["presencial", "whatsapp", "mercado_livre", "shopee", "tiktok_shop"]),
+  /** Só para marketplaces: taxa cobrada pelo canal nesta venda (R$). Vazio = calcula pelas taxas das Configurações. */
+  channelFee: z.number("Informe uma taxa válida.").min(0, "A taxa não pode ser negativa.").optional(),
   customerName: z.string().min(1, "Informe o nome do cliente."),
   customerPhone: z.string().optional(),
   paymentMethod: z.enum(["pix", "cartao", "boleto"]),

@@ -1,6 +1,7 @@
 import { round2 } from "@/lib/money";
 import { storeDayKey, storeDayNumber } from "@/lib/store-time";
-import type { Order, OrderStatus, PaymentMethod } from "@/server/types";
+import { CHANNEL_LABELS } from "@/lib/channels";
+import type { Order, OrderStatus, PaymentMethod, SaleChannel } from "@/server/types";
 
 /** Pedido cancelado não é venda: fora de faturamento, ticket médio, gráficos e rankings. */
 export function isActiveOrder(order: Order) {
@@ -125,21 +126,21 @@ export function paymentBreakdown(orders: Order[]): PaymentBreakdown[] {
   }));
 }
 
-export type ChannelBreakdown = { channel: "site" | "manual"; label: string; count: number; revenue: number };
+export type ChannelBreakdown = { channel: SaleChannel; label: string; count: number; revenue: number };
 
-/** Site = checkout online; manual = presencial/whatsapp, lançado pelo admin em /admin/vendas/nova. */
+/** Vendas por canal (site, presencial, WhatsApp e marketplaces); só aparecem os canais que já tiveram venda, do maior para o menor. */
 export function channelBreakdown(orders: Order[]): ChannelBreakdown[] {
-  const groups = { site: { count: 0, revenue: 0 }, manual: { count: 0, revenue: 0 } };
+  const groups = new Map<SaleChannel, { count: number; revenue: number }>();
   for (const order of orders) {
     if (!isActiveOrder(order)) continue;
-    const key = order.channel === "online" ? "site" : "manual";
-    groups[key].count += 1;
-    groups[key].revenue = round2(groups[key].revenue + order.total);
+    const g = groups.get(order.channel) ?? { count: 0, revenue: 0 };
+    g.count += 1;
+    g.revenue = round2(g.revenue + order.total);
+    groups.set(order.channel, g);
   }
-  return [
-    { channel: "site", label: "Vendas no site", ...groups.site },
-    { channel: "manual", label: "Lançadas manualmente", ...groups.manual },
-  ];
+  return Array.from(groups.entries())
+    .map(([channel, g]) => ({ channel, label: CHANNEL_LABELS[channel], ...g }))
+    .sort((a, b) => b.revenue - a.revenue);
 }
 
 export type StatusBreakdown = { status: OrderStatus; count: number };

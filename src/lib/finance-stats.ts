@@ -17,7 +17,7 @@ function monthLabel(date: Date) {
 }
 
 /** Same "confirmado" rule as revenueSplit in admin-stats.ts: pagamento aprovado (ou etapa posterior), nunca cancelado/pendente. */
-function isConfirmed(order: Order) {
+export function isConfirmed(order: Order) {
   return order.status !== "Cancelado" && order.status !== "Pedido recebido";
 }
 
@@ -238,4 +238,64 @@ export function expenseCategoryBreakdown(expenses: Expense[]): ExpenseCategoryBr
     .map((category) => ({ category, label: CATEGORY_LABELS[category], total: round2(totals[category]) }))
     .filter((c) => c.total > 0)
     .sort((a, b) => b.total - a.total);
+}
+
+export type GoalProgress = {
+  goal: number;
+  revenue: number;
+  pct: number;
+  /** Quanto falta para a meta (0 se já bateu). */
+  remaining: number;
+  daysLeft: number;
+  /** Quanto precisa vender por dia nos dias que restam para fechar a meta. */
+  neededPerDay: number;
+  /** Faturamento no fim do mês se o ritmo até hoje continuar. */
+  projected: number;
+};
+
+/** Progresso do mês atual (fuso da loja) contra a meta mensal; só vendas confirmadas contam. */
+export function monthGoalProgress(orders: Order[], goal: number, now = new Date()): GoalProgress {
+  const local = toStoreTime(now);
+  const key = local.toISOString().slice(0, 7);
+  const dayOfMonth = local.getUTCDate();
+  const daysInMonth = new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth() + 1, 0)).getUTCDate();
+  const revenue = round2(
+    orders.filter((o) => isConfirmed(o) && monthKey(new Date(o.createdAt)) === key).reduce((sum, o) => sum + o.total, 0),
+  );
+  const daysLeft = daysInMonth - dayOfMonth;
+  const remaining = round2(Math.max(0, goal - revenue));
+  return {
+    goal,
+    revenue,
+    pct: goal > 0 ? Math.round((revenue / goal) * 100) : 0,
+    remaining,
+    daysLeft,
+    neededPerDay: daysLeft > 0 ? round2(remaining / daysLeft) : remaining,
+    projected: round2((revenue / Math.max(1, dayOfMonth)) * daysInMonth),
+  };
+}
+
+export type ChannelResult = { channel: Order["channel"]; count: number; revenue: number; fees: number; net: number; averageTicket: number };
+
+/** Resultado por canal de venda: faturamento, taxas (gateway ou marketplace) e o que sobra depois delas. */
+export function channelResults(orders: Order[]): ChannelResult[] {
+  const groups = new Map<Order["channel"], { count: number; revenue: number; fees: number }>();
+  for (const order of orders.filter(isConfirmed)) {
+    if (order.id.startsWith(CONSIGNMENT_ID_PREFIX)) continue;
+    const g = groups.get(order.channel) ?? { count: 0, revenue: 0, fees: 0 };
+    g.count += 1;
+    g.revenue += order.total;
+    g.fees += order.paymentFee ?? 0;
+    groups.set(order.channel, g);
+  }
+  return Array.from(groups.entries())
+    .map(([channel, g]) => ({
+      channel,
+      count: g.count,
+      revenue: round2(g.revenue),
+      fees: round2(g.fees),
+      net: round2(g.revenue - g.fees),
+      averageTicket: round2(g.revenue / g.count),
+    }))
+    .sort((a, b) => b.revenue - a.revenue);
 }

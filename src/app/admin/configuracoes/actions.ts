@@ -8,7 +8,14 @@ import { updateSettings } from "@/server/repositories/settings-repository";
 import type { StoreSettings } from "@/server/types";
 import { withMutationFallback } from "@/lib/db-fallback";
 
+const channelFeeSchema = z.object({
+  pct: z.number("Informe a comissão (%).").min(0, "A comissão não pode ser negativa.").max(60, "A comissão do canal não pode passar de 60%."),
+  fixed: z.number("Informe a taxa fixa (R$).").min(0, "A taxa fixa não pode ser negativa."),
+});
+
 const settingsFormSchema = z.object({
+  monthlyGoal: z.number("Informe uma meta válida.").min(0, "A meta não pode ser negativa."),
+  channelFees: z.object({ mercado_livre: channelFeeSchema, shopee: channelFeeSchema, tiktok_shop: channelFeeSchema }),
   freeShippingThreshold: z.number("Informe um valor válido.").min(0, "O valor não pode ser negativo."),
   localDeliveryThreshold: z.number("Informe um valor válido.").min(0, "O valor não pode ser negativo."),
   localDeliveryFee: z.number("Informe um valor válido.").min(0, "O valor não pode ser negativo."),

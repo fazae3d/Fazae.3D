@@ -9,18 +9,21 @@ import {
   validityFromNow,
 } from "@/lib/quote";
 import { getCustomOrderRequest } from "@/server/repositories/custom-order-request-repository";
+import { getCustomer } from "@/server/repositories/customer-repository";
 import { loadQuoteFormOptions } from "../form-data";
 
 export default async function NewQuotePage({ searchParams }: PageProps<"/admin/orcamentos/novo">) {
   const params = await searchParams;
   const leadId = typeof params.lead === "string" ? params.lead : "";
   const lead = leadId ? await withReadFallback(() => getCustomOrderRequest(leadId), undefined) : undefined;
+  const customerId = typeof params.cliente === "string" ? params.cliente : "";
+  const known = customerId ? await withReadFallback(() => getCustomer(customerId), undefined) : undefined;
   const { products, customers } = await loadQuoteFormOptions();
 
   const initial: QuoteFormInitial = {
-    customerName: lead?.name ?? "",
-    customerPhone: lead?.phone ?? "",
-    customerEmail: lead?.email ?? "",
+    customerName: lead?.name ?? known?.name ?? "",
+    customerPhone: lead?.phone ?? known?.phone ?? "",
+    customerEmail: lead?.email ?? known?.email ?? "",
     customerDocument: "",
     customerAddress: "",
     title: lead ? "Encomenda personalizada" : "",

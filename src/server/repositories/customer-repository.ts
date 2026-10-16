@@ -3,6 +3,7 @@ import type { Customer, CustomerWithStats, Order } from "../types";
 import type { CustomOrderRequest } from "@/lib/types";
 import type { Prisma } from "@/generated/prisma/client";
 import { round2 } from "@/lib/money";
+import { buildCustomerMetrics, type CustomerMetrics } from "@/lib/customer-insights";
 
 type CustomerRow = Prisma.CustomerGetPayload<object>;
 
@@ -12,6 +13,7 @@ function toCustomer(row: CustomerRow): Customer {
     email: row.email ?? undefined,
     notes: row.notes ?? undefined,
     createdAt: row.createdAt.toISOString(),
+    lastReminderAt: row.lastReminderAt?.toISOString(),
   };
 }
 
@@ -144,4 +146,24 @@ export async function getCustomerActivity(id: string): Promise<CustomerActivity 
     orders: orderRows.map(toOrder),
     requests: requestRows.map(toCustomOrderRequest),
   };
+}
+
+export async function markCustomerReminded(id: string): Promise<void> {
+  await db.customer.update({ where: { id }, data: { lastReminderAt: new Date() } });
+}
+
+export type CustomerWithMetrics = Customer & { metrics: CustomerMetrics };
+
+/** Todos os clientes com compras, última compra e ticket médio (uma consulta de clientes + uma de pedidos). */
+export async function getCustomersWithMetrics(): Promise<CustomerWithMetrics[]> {
+  const [rows, orderRows] = await Promise.all([
+    db.customer.findMany({ orderBy: { name: "asc" } }),
+    db.order.findMany({ select: { status: true, channel: true, total: true, createdAt: true, customerPhone: true, userEmail: true } }),
+  ]);
+  const customers = rows.map(toCustomer);
+  const metrics = buildCustomerMetrics(
+    customers,
+    orderRows.map((o) => ({ ...o, channel: o.channel as Order["channel"], status: o.status as Order["status"], createdAt: o.createdAt.toISOString(), customerPhone: o.customerPhone ?? undefined, userEmail: o.userEmail ?? undefined })),
+  );
+  return customers.map((c) => ({ ...c, metrics: metrics.get(c.id) ?? { orderCount: 0, totalSpent: 0, averageTicket: 0 } }));
 }

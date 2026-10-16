@@ -17,6 +17,7 @@ import {
   deleteQuote,
   getQuote,
   linkQuoteToOrder,
+  markQuoteFollowedUp,
   setQuoteStatus,
   updateQuote,
   type QuoteInput,
@@ -260,5 +261,18 @@ export async function convertQuoteToOrderAction(id: string, paymentMethod: Order
     revalidatePath("/admin/producao");
     revalidatePath("/admin/financas");
     return { success: true, orderId: created.id };
+  });
+}
+
+/** Registra que o cliente foi chamado para acompanhar o orçamento (ele sai da lista "Acompanhar" por 3 dias). */
+export async function markQuoteFollowUpAction(id: string): Promise<SimpleResult> {
+  if (!(await requireAdmin())) return DENIED;
+  return withMutationFallback(async (): Promise<SimpleResult> => {
+    const quote = await getQuote(id);
+    if (!quote) return { success: false, error: "Orçamento não encontrado." };
+    await markQuoteFollowedUp(id);
+    await logAdminAction("orcamento.acompanhar", "Quote", id, { number: quote.number });
+    revalidateQuotes(id);
+    return { success: true };
   });
 }

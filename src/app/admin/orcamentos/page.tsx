@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { PageHeader, StatusBadge } from "@/components/admin/page-header";
+import { QuoteFollowUpButton } from "@/components/admin/quote-follow-up-button";
+import { SITE_URL } from "@/lib/site-config";
 import { withReadFallback } from "@/lib/db-fallback";
 import { formatPrice } from "@/lib/format";
 import {
   QUOTE_STATUS_LABELS,
   daysUntil,
   formatStoreDate,
+  needsFollowUp,
   quoteDisplayStatus,
   quoteNumberLabel,
   type QuoteDisplayStatus,
@@ -43,6 +46,8 @@ export default async function QuotesPage({ searchParams }: PageProps<"/admin/orc
   const conversion = decided.length ? Math.round((approved.length / decided.length) * 100) : null;
   const expiringSoon = sent.filter((x) => daysUntil(x.quote.validUntil) >= 0 && daysUntil(x.quote.validUntil) <= 3).length;
 
+  const followUps = quotes.filter((q) => needsFollowUp(q)).sort((a, b) => daysUntil(a.validUntil) - daysUntil(b.validUntil));
+
   const filtered = withStatus
     .filter((x) => !statusFilter || x.status === statusFilter)
     .filter(
@@ -79,6 +84,45 @@ export default async function QuotesPage({ searchParams }: PageProps<"/admin/orc
           </div>
         ))}
       </div>
+
+      {followUps.length > 0 && (
+        <section className="admin-card mb-6 rounded-xl border border-amber-500/40 p-5">
+          <h2 className="text-sm font-semibold">Acompanhar ({followUps.length})</h2>
+          <p className="mb-3 mt-0.5 text-xs text-graphite">
+            Enviados há 3 dias ou mais sem resposta, ou perto de vencer. Um contato rápido costuma destravar a decisão.
+          </p>
+          <ul className="divide-y divide-mist">
+            {followUps.map((quote) => {
+              const left = daysUntil(quote.validUntil);
+              return (
+                <li key={quote.id} className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                  <div className="min-w-0">
+                    <Link href={`/admin/orcamentos/${quote.id}`} className="font-medium hover:text-petrol">
+                      {quoteNumberLabel(quote.number)} · {quote.customerName}
+                    </Link>
+                    <p className="text-xs text-graphite">
+                      {formatPrice(quote.total)} · {left <= 0 ? "vence hoje" : `vence em ${left} dia(s)`}
+                      {quote.lastFollowUpAt ? ` · último contato ${formatStoreDate(quote.lastFollowUpAt)}` : quote.sentAt ? ` · enviado em ${formatStoreDate(quote.sentAt)}` : ""}
+                    </p>
+                  </div>
+                  <QuoteFollowUpButton
+                    publicUrl={SITE_URL}
+                    quote={{
+                      id: quote.id,
+                      number: quote.number,
+                      token: quote.token,
+                      customerName: quote.customerName,
+                      customerPhone: quote.customerPhone,
+                      total: quote.total,
+                      validUntil: quote.validUntil,
+                    }}
+                  />
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-1.5">

@@ -6,6 +6,7 @@ import { updateSettingsAction, type SettingsFormInput } from "@/app/admin/config
 import { useToast } from "@/components/admin/toast";
 import { DEFAULT_LOCAL_DELIVERY_FEE, DEFAULT_LOCAL_DELIVERY_THRESHOLD } from "@/lib/local-delivery";
 import { DEFAULT_PIX_DISCOUNT_PCT } from "@/lib/money";
+import { CHANNEL_LABELS, MARKETPLACE_CHANNELS } from "@/lib/channels";
 import type { StoreSettings } from "@/server/types";
 
 const LABEL = "mb-1.5 block text-xs font-medium text-graphite";
@@ -52,6 +53,12 @@ export function SettingsForm({ settings }: { settings: StoreSettings }) {
       localDeliveryThreshold: settings.localDeliveryThreshold ?? DEFAULT_LOCAL_DELIVERY_THRESHOLD,
       localDeliveryFee: settings.localDeliveryFee ?? DEFAULT_LOCAL_DELIVERY_FEE,
       pixDiscountPct: settings.pixDiscountPct ?? DEFAULT_PIX_DISCOUNT_PCT,
+      monthlyGoal: settings.monthlyGoal ?? 0,
+      channelFees: {
+        mercado_livre: settings.channelFees?.mercado_livre ?? { pct: 0, fixed: 0 },
+        shopee: settings.channelFees?.shopee ?? { pct: 0, fixed: 0 },
+        tiktok_shop: settings.channelFees?.tiktok_shop ?? { pct: 0, fixed: 0 },
+      },
     },
   });
 
@@ -62,6 +69,10 @@ export function SettingsForm({ settings }: { settings: StoreSettings }) {
       localDeliveryThreshold: Number(data.localDeliveryThreshold),
       localDeliveryFee: Number(data.localDeliveryFee),
       pixDiscountPct: Number(data.pixDiscountPct),
+      monthlyGoal: Number(data.monthlyGoal) || 0,
+      channelFees: Object.fromEntries(
+        MARKETPLACE_CHANNELS.map((c) => [c, { pct: Number(data.channelFees[c].pct) || 0, fixed: Number(data.channelFees[c].fixed) || 0 }]),
+      ) as SettingsFormInput["channelFees"],
       whatsappNumber: data.whatsappNumber.replace(/\D/g, ""),
       originCep: data.originCep?.replace(/\D/g, "") ?? "",
     });
@@ -132,6 +143,29 @@ export function SettingsForm({ settings }: { settings: StoreSettings }) {
             {...register("pixDiscountPct", { valueAsNumber: true })}
           />
         </Field>
+      </Section>
+
+      <Section title="Meta de vendas" description="Aparece como barra de progresso na Visão geral, com a projeção do mês. Deixe 0 para não usar meta.">
+        <Field label="Meta de faturamento mensal (R$)" htmlFor="monthlyGoal" error={errors.monthlyGoal?.message} wide>
+          <input id="monthlyGoal" type="number" step="0.01" min="0" className={inputClass(Boolean(errors.monthlyGoal))} {...register("monthlyGoal", { valueAsNumber: true })} />
+        </Field>
+      </Section>
+
+      <Section
+        title="Taxas dos marketplaces"
+        description="Usadas para estimar a taxa ao lançar uma venda de marketplace (você ainda pode ajustar na hora). Comissão é o % cobrado sobre o valor vendido; a taxa fixa é cobrada por unidade."
+      >
+        {MARKETPLACE_CHANNELS.map((channel) => (
+          <div key={channel} className="grid grid-cols-2 gap-3 sm:col-span-2 sm:grid-cols-[1fr_1fr_1fr] sm:items-end">
+            <p className="col-span-2 text-sm font-medium sm:col-span-1 sm:pb-2">{CHANNEL_LABELS[channel]}</p>
+            <Field label="Comissão (%)" htmlFor={`fee-${channel}-pct`} error={errors.channelFees?.[channel]?.pct?.message}>
+              <input id={`fee-${channel}-pct`} type="number" step="0.01" min="0" className={inputClass(Boolean(errors.channelFees?.[channel]?.pct))} {...register(`channelFees.${channel}.pct` as const, { valueAsNumber: true })} />
+            </Field>
+            <Field label="Taxa fixa por unidade (R$)" htmlFor={`fee-${channel}-fixed`} error={errors.channelFees?.[channel]?.fixed?.message}>
+              <input id={`fee-${channel}-fixed`} type="number" step="0.01" min="0" className={inputClass(Boolean(errors.channelFees?.[channel]?.fixed))} {...register(`channelFees.${channel}.fixed` as const, { valueAsNumber: true })} />
+            </Field>
+          </div>
+        ))}
       </Section>
 
       <Section title="Contato" description="Usado no rodapé, na página de contato, no botão flutuante e nos orçamentos em PDF.">

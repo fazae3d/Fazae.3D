@@ -3,6 +3,7 @@ import { getAllOrders } from "@/server/repositories/order-repository";
 import { OrderStatusForm } from "@/components/admin/order-status-form";
 import { DeleteOrderButton } from "@/components/admin/delete-order-button";
 import { formatPrice } from "@/lib/format";
+import { CHANNEL_LABELS } from "@/lib/channels";
 import type { Order, OrderStatus } from "@/server/types";
 import { withReadFallback } from "@/lib/db-fallback";
 import { fallbackOrders } from "@/server/demo-fallback";
@@ -36,11 +37,6 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-const CHANNEL_LABELS: Record<Order["channel"], string> = {
-  online: "Online",
-  presencial: "Presencial",
-  whatsapp: "WhatsApp",
-};
 
 function matchesQuery(order: Order, query: string) {
   const term = query.toLowerCase();

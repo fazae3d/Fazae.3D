@@ -15,7 +15,12 @@ import {
   isActiveOrder,
   orderBalanceDue,
 } from "@/lib/admin-stats";
-import { daysUntil, quoteDisplayStatus } from "@/lib/quote";
+import { daysUntil, needsFollowUp, quoteDisplayStatus } from "@/lib/quote";
+import { monthGoalProgress } from "@/lib/finance-stats";
+import { isInactive, wasRecentlyReminded } from "@/lib/customer-insights";
+import { getCustomersWithMetrics } from "@/server/repositories/customer-repository";
+import { getSettings } from "@/server/repositories/settings-repository";
+import { withReadFallback } from "@/lib/db-fallback";
 import { RevenueChart } from "@/components/admin/revenue-chart";
 import { PageHeader } from "@/components/admin/page-header";
 import { getAllOrders } from "@/server/repositories/order-repository";
@@ -96,6 +101,10 @@ function Panel({ title, children, footer }: { title: string; children: ReactNode
 }
 
 export default async function AdminDashboardPage() {
+  const [settings, customersWithMetrics] = await Promise.all([
+    withReadFallback(() => getSettings(), null),
+    withReadFallback(() => getCustomersWithMetrics(), []),
+  ]);
   const [productsResult, categoriesResult, ordersResult, rawMaterialsResult, quotesResult] = await Promise.all([
     readWithStatus(() => getAllProducts(), fallbackProducts),
     readWithStatus(() => getAllCategories(), fallbackCategories),
@@ -141,6 +150,14 @@ export default async function AdminDashboardPage() {
   const quotesOpen = quotesWithStatus.filter((x) => x.status === "enviado" || x.status === "rascunho");
   const quotesOpenValue = round2(quotesOpen.reduce((sum, x) => sum + x.quote.total, 0));
 
+  const quotesToFollowUp = quotes.filter((q) => needsFollowUp(q));
+  const nowDate = new Date();
+  const customersToReactivate = customersWithMetrics.filter(
+    (c) => c.phone && isInactive(c.metrics, nowDate) && !wasRecentlyReminded(c.lastReminderAt, nowDate),
+  );
+  const goal = settings?.monthlyGoal ?? 0;
+  const goalProgress = goal > 0 ? monthGoalProgress(orders, goal) : null;
+
   const attention: AttentionItem[] = [
     {
       key: "enviar",
@@ -165,6 +182,22 @@ export default async function AdminDashboardPage() {
       hint: quotesExpiring.length ? `${quotesExpiring.length} vence(m) em até 3 dias` : "Resposta do cliente pendente",
       href: "/admin/orcamentos?status=enviado",
       tone: quotesExpiring.length ? ("warn" as const) : ("info" as const),
+    },
+    {
+      key: "acompanhar",
+      count: quotesToFollowUp.length,
+      label: "Orçamentos para acompanhar",
+      hint: "Sem resposta há 3 dias ou perto de vencer",
+      href: "/admin/orcamentos",
+      tone: "info" as const,
+    },
+    {
+      key: "reativar",
+      count: customersToReactivate.length,
+      label: "Clientes para reativar",
+      hint: "Compraram antes e não voltam há 120+ dias",
+      href: "/admin/clientes/reativar",
+      tone: "info" as const,
     },
     {
       key: "estoque",
@@ -232,6 +265,37 @@ export default async function AdminDashboardPage() {
               <AttentionCard key={item.key} item={item} />
             ))}
           </div>
+        )}
+      </section>
+
+      <section className="admin-card mb-6 rounded-xl border border-mist p-5">
+        {goalProgress ? (
+          <>
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <div>
+                <p className="text-sm font-semibold">Meta do mês</p>
+                <p className="text-xs text-graphite">
+                  {formatPrice(goalProgress.revenue)} de {formatPrice(goalProgress.goal)} · faltam {goalProgress.daysLeft} dia(s)
+                </p>
+              </div>
+              <p className={`font-display text-2xl ${goalProgress.pct >= 100 ? "text-petrol" : ""}`}>{goalProgress.pct}%</p>
+            </div>
+            <div className="mt-3 h-2.5 w-full rounded-full bg-mist">
+              <div className="h-2.5 rounded-full bg-petrol" style={{ width: `${Math.min(100, goalProgress.pct)}%` }} />
+            </div>
+            <p className="mt-3 text-xs text-graphite">
+              {goalProgress.remaining === 0
+                ? "Meta batida! Tudo daqui para frente é lucro extra do mês."
+                : `Para fechar a meta: ${formatPrice(goalProgress.remaining)} a vender (${formatPrice(goalProgress.neededPerDay)} por dia). No ritmo atual o mês fecha em ${formatPrice(goalProgress.projected)}${goalProgress.projected >= goalProgress.goal ? ", acima da meta." : "."}`}
+            </p>
+          </>
+        ) : (
+          <p className="text-sm text-graphite">
+            Defina uma meta de faturamento mensal para acompanhar o progresso aqui.{" "}
+            <Link href="/admin/configuracoes" className="text-petrol hover:underline">
+              Definir meta
+            </Link>
+          </p>
         )}
       </section>
 

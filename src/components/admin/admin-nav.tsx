@@ -62,7 +62,17 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/insumos", label: "Insumos" },
     ],
   },
-  { key: "clientes", label: "Clientes", icon: "clients", href: "/admin/clientes", links: [] },
+  {
+    key: "clientes",
+    label: "Clientes",
+    icon: "clients",
+    href: "/admin/clientes",
+    links: [
+      { href: "/admin/clientes", label: "Todos os clientes" },
+      { href: "/admin/clientes/melhores", label: "Melhores clientes" },
+      { href: "/admin/clientes/reativar", label: "Para reativar" },
+    ],
+  },
   {
     key: "financas",
     label: "Finanças",
@@ -140,10 +150,14 @@ export function SectionTabs() {
   const group = activeGroupFor(pathname);
   if (!group || group.links.length < 2) return null;
   // Em telas sem aba própria (ex.: /admin/vendas/nova) nenhuma aba fica marcada, e tudo bem.
+  // Quando uma rota é prefixo de outra (/admin/clientes e /admin/clientes/melhores), vale a aba mais específica.
+  const activeHref = group.links
+    .filter((l) => isLinkActive(pathname, l.href))
+    .sort((a, b) => b.href.length - a.href.length)[0]?.href;
   return (
     <div className="mb-6 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-mist [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label={group.label}>
       {group.links.map((link) => {
-        const active = isLinkActive(pathname, link.href);
+        const active = link.href === activeHref;
         return (
           <Link
             key={link.href}

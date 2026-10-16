@@ -5,10 +5,14 @@ import { useState } from "react";
 import { createManualSaleAction } from "@/app/admin/vendas/actions";
 import { Select } from "@/components/select";
 import { formatPrice } from "@/lib/format";
+import { CHANNEL_LABELS, computeChannelFee, isMarketplace, type ChannelFees } from "@/lib/channels";
+import { round2 } from "@/lib/money";
 import type { Product } from "@/lib/types";
 import type { OrderStatus, PaymentMethod } from "@/server/types";
 
-type ManualSaleChannel = "presencial" | "whatsapp";
+type ManualSaleChannel = "presencial" | "whatsapp" | "mercado_livre" | "shopee" | "tiktok_shop";
+
+const SALE_CHANNELS: ManualSaleChannel[] = ["presencial", "whatsapp", "mercado_livre", "shopee", "tiktok_shop"];
 
 type SaleItem = {
   productSlug: string;
@@ -54,7 +58,7 @@ function emptyItem(products: Product[]): SaleItem {
   };
 }
 
-export function ManualSaleForm({ products }: { products: Product[] }) {
+export function ManualSaleForm({ products, channelFees = {} }: { products: Product[]; channelFees?: ChannelFees }) {
   const router = useRouter();
   const [channel, setChannel] = useState<ManualSaleChannel>("presencial");
   const [customerName, setCustomerName] = useState("");
@@ -63,6 +67,8 @@ export function ManualSaleForm({ products }: { products: Product[] }) {
   const [status, setStatus] = useState<OrderStatus>("Entregue");
   const [productionPending, setProductionPending] = useState(false);
   const [items, setItems] = useState<SaleItem[]>([emptyItem(products)]);
+  // Taxa do marketplace: sugerida pelas Configurações, mas pode ser ajustada (a real muda por anúncio).
+  const [feeOverride, setFeeOverride] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -93,6 +99,11 @@ export function ManualSaleForm({ products }: { products: Product[] }) {
   const removeItem = (index: number) => setItems((prev) => prev.filter((_, i) => i !== index));
 
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const units = items.reduce((sum, item) => sum + item.quantity, 0);
+  const marketplace = isMarketplace(channel);
+  const suggestedFee = marketplace ? computeChannelFee(channelFees[channel], subtotal, units) : 0;
+  const parsedOverride = feeOverride === null ? null : Number(feeOverride.replace(",", "."));
+  const channelFee = marketplace ? (parsedOverride !== null && Number.isFinite(parsedOverride) ? Math.max(0, parsedOverride) : suggestedFee) : 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,6 +121,7 @@ export function ManualSaleForm({ products }: { products: Product[] }) {
     setSubmitting(true);
     const result = await createManualSaleAction({
       channel,
+      channelFee: marketplace ? round2(channelFee) : undefined,
       customerName: customerName.trim(),
       customerPhone: customerPhone.trim() || undefined,
       paymentMethod,
@@ -131,20 +143,28 @@ export function ManualSaleForm({ products }: { products: Product[] }) {
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       <div>
         <p className={labelClass() + " mb-2"}>Canal da venda</p>
-        <div className="flex gap-2">
-          {(["presencial", "whatsapp"] as const).map((c) => (
+        <div className="flex flex-wrap gap-2">
+          {SALE_CHANNELS.map((c) => (
             <button
               key={c}
               type="button"
-              onClick={() => setChannel(c)}
+              onClick={() => {
+                setChannel(c);
+                setFeeOverride(null);
+              }}
               className={`label-caps border px-4 py-2.5 text-[11px] transition-colors ${
                 channel === c ? "border-ink bg-ink text-paper" : "border-mist text-graphite hover:border-ink"
               }`}
             >
-              {c === "presencial" ? "Presencial" : "WhatsApp"}
+              {CHANNEL_LABELS[c]}
             </button>
           ))}
         </div>
+        {marketplace && (
+          <p className="mt-2 text-xs text-graphite">
+            Venda de marketplace: o valor da taxa do canal é descontado do lucro. Configure comissão e taxa fixa em Configurações.
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -293,6 +313,24 @@ export function ManualSaleForm({ products }: { products: Product[] }) {
           })}
         </div>
       </div>
+
+      {marketplace && (
+        <div className="flex flex-wrap items-end gap-4 border border-mist p-4">
+          <div className="flex flex-col gap-1.5">
+            <label className={labelClass()} htmlFor="channelFee">
+              Taxa do {CHANNEL_LABELS[channel]} (R$)
+            </label>
+            <input
+              id="channelFee"
+              inputMode="decimal"
+              value={feeOverride ?? String(suggestedFee).replace(".", ",")}
+              onChange={(e) => setFeeOverride(e.target.value)}
+              className={`w-36 ${inputClass()}`}
+            />
+          </div>
+          <p className="pb-2 text-sm text-graphite">Você recebe {formatPrice(Math.max(0, round2(subtotal - channelFee)))}</p>
+        </div>
+      )}
 
       <div className="flex items-center justify-between border-t border-mist pt-4">
         <p className="label-caps text-[11px] text-graphite">Total</p>

@@ -24,6 +24,9 @@ enum SaleChannel {
   online
   presencial
   whatsapp
+  mercado_livre
+  shopee
+  tiktok_shop
 }
 
 enum CustomRequestStatus {
@@ -184,6 +187,8 @@ model Customer {
   notes     String?
   tags      String[] @default([])
   createdAt DateTime @default(now())
+  /** Último lembrete de reativação (cliente que não compra há muito tempo) enviado pelo painel. */
+  lastReminderAt DateTime?
 }
 
 /**
@@ -315,6 +320,13 @@ model Settings {
    * Desconto (%) exibido como preço "no Pix" em toda a loja.
    */
   pixDiscountPct             Float @default(5)
+  /**
+   * Taxas de cada canal de marketplace: { mercado_livre: { pct, fixed }, shopee: {...}, tiktok_shop: {...} }.
+   * `pct` = comissão (% do valor vendido); `fixed` = taxa fixa por unidade vendida (R$).
+   */
+  channelFees                Json  @default("{}")
+  /** Meta de faturamento mensal (R$). 0 = sem meta. */
+  monthlyGoal               Float @default(0)
 }
 
 /** Custo extra nomeado e reutilizável (argola, ímã, embalagem...) — somado ad-hoc na calculadora de precificação. */
@@ -540,6 +552,8 @@ model Quote {
   /** Lead (CustomOrderRequest) que originou o orçamento, e o pedido gerado ao aprovar. */
   linkedRequestId  String?
   linkedOrderId    String?
+  /** Último contato de acompanhamento ("viu o orçamento?") feito pelo painel. */
+  lastFollowUpAt   DateTime?
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
 

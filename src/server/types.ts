@@ -55,7 +55,7 @@ export type PaymentStatus =
   | "refunded"
   | "charged_back";
 
-export type SaleChannel = "online" | "presencial" | "whatsapp";
+export type SaleChannel = "online" | "presencial" | "whatsapp" | "mercado_livre" | "shopee" | "tiktok_shop";
 
 export type ProductionStage = "nao_aplicavel" | "inicio" | "em_producao" | "finalizado";
 
@@ -139,6 +139,10 @@ export type StoreSettings = {
   localDeliveryFee?: number;
   /** Desconto (%) exibido como preço "no Pix". Ausente = DEFAULT_PIX_DISCOUNT_PCT de lib/money. */
   pixDiscountPct?: number;
+  /** Taxas dos marketplaces (comissão % e taxa fixa por unidade), usadas para estimar a taxa ao lançar uma venda de marketplace. */
+  channelFees?: import("@/lib/channels").ChannelFees;
+  /** Meta de faturamento mensal (R$); 0 ou ausente = sem meta. */
+  monthlyGoal?: number;
 };
 
 /** Custo extra nomeado e reutilizável (argola, ímã, embalagem...) — somado ad-hoc na calculadora de precificação. */
@@ -201,6 +205,8 @@ export type Customer = {
   notes?: string;
   tags: string[];
   createdAt: string;
+  /** Último lembrete de reativação enviado pelo painel. */
+  lastReminderAt?: string;
 };
 
 /** Customer plus aggregates computed in one pass over Order — avoids N+1 queries on the list page. */

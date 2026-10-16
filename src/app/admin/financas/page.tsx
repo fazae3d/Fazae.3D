@@ -4,6 +4,7 @@ import { withReadFallback } from "@/lib/db-fallback";
 import { fallbackExpenses, fallbackOrders } from "@/server/demo-fallback";
 import {
   cashFlowByMonth,
+  channelResults,
   consignmentVisitsAsOrders,
   expenseCategoryBreakdown,
   growthGoal,
@@ -11,6 +12,7 @@ import {
   simplifiedDRE,
 } from "@/lib/finance-stats";
 import { formatPrice } from "@/lib/format";
+import { CHANNEL_LABELS } from "@/lib/channels";
 import { round2 } from "@/lib/money";
 import { storeMonthKey } from "@/lib/store-time";
 import { MonthFilter } from "@/components/admin/month-filter";
@@ -74,6 +76,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
   const totalSpent = round2(expenses.reduce((sum, e) => sum + e.totalValue, 0));
 
   const dre = simplifiedDRE(orders, expenses);
+  const channelRows = channelResults(orders);
   // Payback, meta e fluxo de caixa olham o período todo (o fluxo já separa mês a mês).
   const payback = investmentPayback(allOrders, allExpenses);
   const goal = growthGoal(allOrders, 5, 12);
@@ -113,11 +116,11 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
             .join(" · ") || undefined}
         />
         <KpiCard
-          label="Taxas do Mercado Pago"
+          label="Taxas (pagamento e canais)"
           value={formatPrice(dre.paymentFees)}
           sublabel={
             dre.ordersWithFee > 0
-              ? `em ${dre.ordersWithFee} pedido(s); pedidos antigos não têm a taxa registrada`
+              ? `em ${dre.ordersWithFee} pedido(s): Mercado Pago e marketplaces. Pedidos antigos não têm a taxa registrada`
               : "Aparece a partir dos próximos pedidos aprovados"
           }
         />
@@ -135,6 +138,38 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
           tone={dre.operatingProfit >= 0 ? "positive" : "negative"}
         />
       </div>
+
+      {channelRows.length > 0 && (
+        <>
+          <p className="label-caps mb-3 text-[11px] text-graphite">Resultado por canal de venda</p>
+          <div className="admin-card mb-8 overflow-x-auto border border-mist">
+            <table className="w-full min-w-[560px] text-left text-sm">
+              <thead>
+                <tr className="border-b border-mist text-xs text-graphite">
+                  <th className="px-4 py-3 font-medium">Canal</th>
+                  <th className="px-4 py-3 text-right font-medium">Vendas</th>
+                  <th className="px-4 py-3 text-right font-medium">Faturamento</th>
+                  <th className="px-4 py-3 text-right font-medium">Taxas</th>
+                  <th className="px-4 py-3 text-right font-medium">Você recebe</th>
+                  <th className="px-4 py-3 text-right font-medium">Ticket médio</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-mist">
+                {channelRows.map((row) => (
+                  <tr key={row.channel}>
+                    <td className="px-4 py-3 font-medium">{CHANNEL_LABELS[row.channel]}</td>
+                    <td className="px-4 py-3 text-right">{row.count}</td>
+                    <td className="px-4 py-3 text-right">{formatPrice(row.revenue)}</td>
+                    <td className="px-4 py-3 text-right text-graphite">{row.fees > 0 ? formatPrice(row.fees) : "—"}</td>
+                    <td className="px-4 py-3 text-right font-medium">{formatPrice(row.net)}</td>
+                    <td className="px-4 py-3 text-right text-graphite">{formatPrice(row.averageTicket)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
 
       <p className="label-caps mb-3 text-[11px] text-graphite">Investimento e crescimento</p>
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2">

@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { ADMIN_AUTH_DISABLED } from "@/lib/dev-flags";
 import { customerCreateSchema, customerCrmSchema, type CustomerCreateInput, type CustomerCrmInput } from "@/lib/admin-validation";
+import { logAdminAction } from "@/server/audit";
 import {
+  markCustomerReminded,
   updateCustomerCrmInfo,
   upsertCustomerFromContact,
 } from "@/server/repositories/customer-repository";
@@ -77,5 +79,17 @@ export async function createCustomerAction(input: CustomerCreateInput): Promise<
     });
     revalidateCustomerPaths(created.id);
     return { success: true, customer: customer ?? created };
+  });
+}
+
+/** Registra que o cliente foi chamado para voltar a comprar: ele sai da lista "Para reativar" por 30 dias. */
+export async function markCustomerRemindedAction(id: string): Promise<{ success: true } | { success: false; error: string }> {
+  if (!(await requireAdmin())) return { success: false, error: "Acesso restrito ao administrador." };
+  return withMutationFallback(async () => {
+    await markCustomerReminded(id);
+    await logAdminAction("cliente.lembrete", "Customer", id);
+    revalidatePath("/admin/clientes/reativar");
+    revalidatePath("/admin");
+    return { success: true } as const;
   });
 }
