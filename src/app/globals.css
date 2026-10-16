@@ -244,3 +244,32 @@ a,
   line-height: 2.1rem;
   letter-spacing: -0.01em;
 }
+
+/* Logo do painel: uma versão por tema (letras brancas no escuro, letras escuras no claro). */
+#admin-shell .admin-logo-light {
+  display: none;
+}
+[data-admin-theme="light"] .admin-logo-dark {
+  display: none;
+}
+[data-admin-theme="light"] .admin-logo-light {
+  display: block;
+}
+
+/* Celular: campos com 16px evitam o zoom automático do iPhone ao tocar num campo. */
+@media (max-width: 639px) {
+  #admin-shell :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="hidden"]), textarea, select) {
+    font-size: 16px;
+  }
+}
+
+/* Modo claro: bordas em verde-limão somem sobre fundo claro, então usam o verde-oliva da marca. */
+[data-admin-theme="light"] .border-petrol,
+[data-admin-theme="light"] .focus\:border-petrol:focus,
+[data-admin-theme="light"] .hover\:border-petrol:hover,
+[data-admin-theme="light"] .group:hover .group-hover\:border-petrol {
+  border-color: var(--color-sand);
+}
+[data-admin-theme="light"] [class*="border-petrol/"] {
+  border-color: rgba(77, 107, 50, 0.45);
+}

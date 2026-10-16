@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/server/db";
 import { AdminIcon } from "@/components/admin/admin-icons";
+import { AdminLogo } from "@/components/admin/admin-logo";
 import { AdminNav, SectionTabs } from "@/components/admin/admin-nav";
 import { AdminMobileNav } from "@/components/admin/admin-mobile-nav";
 import { AdminSearch } from "@/components/admin/admin-search";
@@ -69,11 +69,10 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       <script dangerouslySetInnerHTML={{ __html: INIT_THEME_SCRIPT }} />
       <aside className="admin-sidebar hidden w-64 shrink-0 flex-col border-r border-mist lg:sticky lg:top-0 lg:flex lg:h-screen">
         <div className="px-6 pb-4 pt-6">
-          {/* A logo tem letras brancas: fica numa placa preta para aparecer também no modo claro. */}
-          <Link href="/admin" aria-label="Fazaê, início do painel" className="block rounded-xl bg-[#111111] px-4 py-3">
-            <Image src="/logo-header.webp" alt="Fazaê" width={640} height={194} priority className="h-auto w-[7.5rem]" />
+          <Link href="/admin" aria-label="Fazaê, início do painel" className="block">
+            <AdminLogo className="w-[8.5rem]" priority />
           </Link>
-          <span className="mt-2 block px-1 text-[11px] font-medium tracking-wide text-graphite">Sistema de gestão</span>
+          <span className="mt-2 block text-[11px] font-medium tracking-wide text-graphite">Sistema de gestão</span>
         </div>
         <div className="flex-1 overflow-y-auto px-3 py-2">
           <AdminNav badges={badges} />
@@ -92,7 +91,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-mist bg-paper/90 px-4 py-3 backdrop-blur sm:px-6">
+        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-mist bg-paper px-4 py-3 sm:px-6">
           <AdminMobileNav badges={badges} />
           <AdminSearch />
           <div className="ml-auto flex items-center gap-2">
