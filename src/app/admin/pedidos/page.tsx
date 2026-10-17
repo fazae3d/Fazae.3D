@@ -2,6 +2,9 @@ import { EmptyState } from "@/components/admin/empty-state";
 import Link from "next/link";
 import { getAllOrders } from "@/server/repositories/order-repository";
 import { OrderStatusForm } from "@/components/admin/order-status-form";
+import { StatusBadge, type BadgeTone } from "@/components/admin/page-header";
+import { ProductPhoto } from "@/components/product-photo";
+import { getAllProducts } from "@/server/repositories/product-repository";
 import { DeleteOrderButton } from "@/components/admin/delete-order-button";
 import { formatPrice } from "@/lib/format";
 import { CHANNEL_LABELS } from "@/lib/channels";
@@ -9,7 +12,7 @@ import { createReviewUrl } from "@/server/review-link";
 import { firstName } from "@/lib/format";
 import type { Order, OrderStatus } from "@/server/types";
 import { withReadFallback } from "@/lib/db-fallback";
-import { fallbackOrders } from "@/server/demo-fallback";
+import { fallbackOrders, fallbackProducts } from "@/server/demo-fallback";
 
 const ALL_STATUSES: OrderStatus[] = [
   "Pedido recebido",
@@ -34,6 +37,18 @@ const PAYMENT_STATUS_LABELS: Record<string, string> = {
   refunded: "Reembolsado",
   charged_back: "Chargeback",
   in_mediation: "Em disputa",
+};
+
+const PAYMENT_TONES: Record<string, BadgeTone> = {
+  approved: "success",
+  authorized: "success",
+  pending: "warning",
+  in_process: "warning",
+  rejected: "danger",
+  cancelled: "danger",
+  charged_back: "danger",
+  in_mediation: "danger",
+  refunded: "neutral",
 };
 
 function formatDate(iso: string) {
@@ -75,7 +90,12 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
   const to = typeof params.to === "string" ? params.to : "";
   const page = Math.max(1, Number(typeof params.page === "string" ? params.page : "1") || 1);
 
-  const orders = await withReadFallback(() => getAllOrders(), fallbackOrders);
+  const [orders, catalog] = await Promise.all([
+    withReadFallback(() => getAllOrders(), fallbackOrders),
+    withReadFallback(() => getAllProducts(), fallbackProducts),
+  ]);
+  // Miniatura só para quem existe na loja: itens avulsos/personalizados não têm foto e ficam sem.
+  const photoBySlug = new Map(catalog.filter((p) => p.images && p.images.length > 0).map((p) => [p.slug, p.images![0]]));
   // "A enviar" = já pago, ainda sem código de rastreio e sem ter saído: a fila de trabalho do dia.
   const toShip = (o: Order) => (o.status === "Pagamento aprovado" || o.status === "Em preparação") && !o.tracking;
   const filtered = orders
@@ -198,43 +218,66 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
         <ul className="flex flex-col gap-4">
           {paginated.map((order) => (
             <li key={order.id} className="border border-mist p-5">
-              <div className="flex flex-wrap items-start justify-between gap-3 border-b border-mist pb-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm text-ink">Pedido {order.id}</p>
-                    {order.channel !== "online" && (
-                      <span className="label-caps border border-mist px-2 py-0.5 text-[10px] text-graphite">
-                        {CHANNEL_LABELS[order.channel]}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-graphite">
-                    {order.customerName ?? order.userEmail ?? "Cliente não identificado"}
-                    {order.customerPhone ? ` · ${order.customerPhone}` : ""} · {formatDate(order.createdAt)}
-                  </p>
+              <div className="grid grid-cols-2 gap-4 border-b border-mist pb-4 lg:grid-cols-[1fr_1.5fr_1.1fr_auto] lg:items-start">
+                <div className="order-1">
+                  <p className="mb-1 text-[11px] text-graphite">Pedido</p>
+                  <p className="text-base font-semibold tracking-tight">{order.id}</p>
+                  {order.channel !== "online" && (
+                    <p className="mt-1.5">
+                      <StatusBadge>{CHANNEL_LABELS[order.channel]}</StatusBadge>
+                    </p>
+                  )}
+                </div>
+                <div className="order-3 col-span-2 lg:order-2 lg:col-span-1">
+                  <p className="mb-1 text-[11px] text-graphite">Cliente</p>
+                  <p className="text-base font-medium">{order.customerName ?? order.userEmail ?? "Cliente não identificado"}</p>
                   <p className="mt-0.5 text-xs text-graphite">
-                    {order.paymentMethod.toUpperCase()} · {PAYMENT_STATUS_LABELS[order.paymentStatus ?? "pending"] ?? order.paymentStatus}
-                    {order.tracking ? ` · Rastreio ${order.tracking}` : ""}
+                    {formatDate(order.createdAt)}
+                    {order.customerPhone ? ` · ${order.customerPhone}` : ""}
                   </p>
                 </div>
-                <div className="flex items-center gap-3">
-                  <p className="text-sm font-medium">{formatPrice(order.total)}</p>
+                <div className="order-4 col-span-2 lg:order-3 lg:col-span-1">
+                  <p className="mb-1 text-[11px] text-graphite">Pagamento</p>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <StatusBadge>{order.paymentMethod.toUpperCase()}</StatusBadge>
+                    <StatusBadge tone={PAYMENT_TONES[order.paymentStatus ?? "pending"] ?? "neutral"}>
+                      {PAYMENT_STATUS_LABELS[order.paymentStatus ?? "pending"] ?? order.paymentStatus}
+                    </StatusBadge>
+                  </div>
+                  {order.tracking ? <p className="mt-1.5 text-xs text-graphite">Rastreio {order.tracking}</p> : null}
+                </div>
+                <div className="order-2 flex flex-col items-end gap-1 text-right lg:order-4">
+                  <div>
+                    <p className="mb-1 text-[11px] text-graphite">Total</p>
+                    <p className="text-lg font-semibold tracking-tight">{formatPrice(order.total)}</p>
+                  </div>
                   <DeleteOrderButton id={order.id} />
                 </div>
               </div>
 
               <ul className="divide-y divide-mist py-3">
-                {order.items.map((item) => (
-                  <li
-                    key={`${item.productSlug}-${item.material}-${item.color}`}
-                    className="flex items-center justify-between py-2 text-xs text-graphite"
-                  >
-                    <span>
-                      {item.name} · {item.categoryName} · {item.material} · {item.color}{item.scale ? ` · ${item.scale}` : ""} · Qtd {item.quantity}
-                    </span>
-                    <span>{formatPrice(item.price * item.quantity)}</span>
-                  </li>
-                ))}
+                {order.items.map((item) => {
+                  const photo = photoBySlug.get(item.productSlug);
+                  return (
+                    <li key={`${item.productSlug}-${item.material}-${item.color}`} className="flex items-center justify-between gap-4 py-2.5">
+                      <div className="flex min-w-0 items-center gap-3">
+                        {photo ? (
+                          <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-mist">
+                            <ProductPhoto src={photo} alt={item.name} sizes="44px" />
+                          </div>
+                        ) : null}
+                        <div className="min-w-0">
+                          <p className="truncate text-sm text-ink">{item.name}</p>
+                          <p className="text-xs text-graphite">
+                            {item.categoryName} · {item.material} · {item.color}
+                            {item.scale ? ` · ${item.scale}` : ""} · Qtd {item.quantity}
+                          </p>
+                        </div>
+                      </div>
+                      <span className="shrink-0 text-sm text-graphite">{formatPrice(item.price * item.quantity)}</span>
+                    </li>
+                  );
+                })}
               </ul>
 
               {order.address && (
