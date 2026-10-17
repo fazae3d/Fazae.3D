@@ -91,7 +91,7 @@ export default async function Home() {
   const local = getLocalDeliveryRules(settings ?? {});
   const pixPct = settings?.pixDiscountPct ?? DEFAULT_PIX_DISCOUNT_PCT;
   const benefits = [
-    { title: "Moto em Natal e Parnamirim", text: `Grátis acima de ${formatPrice(local.threshold)}` },
+    { title: "Frete grátis em Natal e Parnamirim", text: `Acima de ${formatPrice(local.threshold)}` },
     { title: "Frete grátis para o Brasil", text: `Acima de ${formatPrice(settings?.freeShippingThreshold ?? 199.9)}` },
     { title: `${formatPct(pixPct)}% de desconto no Pix`, text: "Pagamento aprovado na hora" },
     { title: "Peça do seu jeito", text: "Orçamento sob encomenda" },
