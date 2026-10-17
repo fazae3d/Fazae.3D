@@ -6,6 +6,7 @@ import { getPrimaryBadge, isSoldOut } from "@/lib/badges";
 import type { Product } from "@/lib/types";
 import { Badge } from "./badge";
 import { ProductArt } from "./illustrations/product-art";
+import { ProductPhoto } from "./product-photo";
 import { PriceBlock } from "./price-block";
 import { WishlistButton } from "./wishlist-button";
 import { useCart } from "@/contexts/cart-context";
@@ -39,19 +40,13 @@ export function ProductCard({ product }: { product: Product }) {
     <Link href={`/produto/${product.slug}`} className="group block">
       <div className="relative aspect-square overflow-hidden bg-mist p-1.5">
         <div
-          className={`h-full w-full transition-transform duration-500 group-hover:scale-105 ${
+          className={`relative h-full w-full transition-transform duration-500 group-hover:scale-105 ${
             soldOut ? "opacity-50" : ""
           }`}
         >
           {product.images && product.images.length > 0 ? (
             // A foto preenche todo o quadro (sem sobras), dentro de uma bordinha discreta.
-            <img
-              loading="lazy"
-              decoding="async"
-              src={product.images[0]}
-              alt={product.name}
-              className="h-full w-full object-cover"
-            />
+            <ProductPhoto src={product.images[0]} alt={product.name} sizes="(min-width: 1024px) 25vw, 50vw" />
           ) : (
             <ProductArt slug={product.slug} tone={product.imageTone} className="h-full w-full" />
           )}

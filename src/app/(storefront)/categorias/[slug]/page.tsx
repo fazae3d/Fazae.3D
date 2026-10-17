@@ -5,7 +5,7 @@ import { SectionHeading } from "@/components/section-heading";
 import { CatalogView } from "@/components/catalog-view";
 import { ButtonLink } from "@/components/button";
 import { Breadcrumb } from "@/components/breadcrumb";
-import { getCategory as getStaticCategory } from "@/lib/categories";
+import { CATEGORIES, getCategory as getStaticCategory } from "@/lib/categories";
 import { getCategoryPhoto } from "@/lib/category-photos";
 import { getAllCategories, getAllProducts } from "@/lib/demo-data";
 import { withReadFallback } from "@/lib/db-fallback";
@@ -18,6 +18,14 @@ async function findCategory(slug: string) {
   const fromDb = await withReadFallback(async () => (await getAllCategories()).find((c) => c.slug === slug), undefined);
   if (fromDb) return { slug: fromDb.slug, label: fromDb.name, description: fromDb.description ?? "" };
   return getStaticCategory(slug);
+}
+
+/** Pré-gera as categorias existentes (página estática na CDN); categorias criadas depois são geradas na primeira visita. */
+export async function generateStaticParams() {
+  const fromDb = await withReadFallback(async () => (await getAllCategories()).map((c) => c.slug), [] as string[]);
+  const slugs = new Set([...fromDb, ...CATEGORIES.map((c) => c.slug)]);
+  slugs.delete(UNCATEGORIZED_SLUG);
+  return [...slugs].map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({

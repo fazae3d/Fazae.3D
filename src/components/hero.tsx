@@ -21,20 +21,20 @@ export function Hero() {
       <div className="absolute inset-0 bg-gradient-to-r from-ink via-ink/20 to-transparent sm:via-transparent" />
 
       <div className="relative mx-auto w-full max-w-7xl px-4 pb-10 pt-24 sm:px-6 sm:pb-14 sm:pt-28 lg:px-8">
-        <p className="label-caps animate-fade-up text-xs text-petrol opacity-0">
+        <p className="label-caps animate-slide-up text-xs text-petrol">
           Impressão 3D &amp; Criatividade
         </p>
-        <h1 className="font-display animate-fade-up mt-3 max-w-2xl text-4xl font-extrabold leading-[1.05] tracking-tight opacity-0 sm:text-6xl [animation-delay:0.1s]">
+        <h1 className="font-display animate-slide-up mt-3 max-w-2xl text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-6xl [animation-delay:0.1s]">
           COISAS QUE VOCÊ
           <br />
           <span className="text-petrol">VAI QUERER TER.</span>
         </h1>
-        <p className="animate-fade-up mt-4 max-w-lg text-base text-paper/80 opacity-0 [animation-delay:0.2s]">
+        <p className="animate-slide-up mt-4 max-w-lg text-base text-paper/80 [animation-delay:0.2s]">
           Peças funcionais, decorativas e criativas produzidas em 3D, com design, personalidade e
           acabamento premium. Descubra produtos feitos para transformar espaços, facilitar sua
           rotina e dar um toque diferente ao seu dia.
         </p>
-        <div className="animate-fade-up mt-6 flex flex-wrap gap-4 opacity-0 [animation-delay:0.3s]">
+        <div className="animate-slide-up mt-6 flex flex-wrap gap-4 [animation-delay:0.3s]">
           <ButtonLink href="/loja" variant="primary" className="w-56">
             Ver produtos
           </ButtonLink>
@@ -42,7 +42,7 @@ export function Hero() {
             Personalizar
           </ButtonLink>
         </div>
-        <ul className="animate-fade-up mt-8 flex flex-wrap gap-x-8 gap-y-3 opacity-0 [animation-delay:0.4s]">
+        <ul className="animate-slide-up mt-8 flex flex-wrap gap-x-8 gap-y-3 [animation-delay:0.4s]">
           {FEATURES.map((feature) => (
             <li key={feature} className="label-caps text-[10px] text-paper/60">
               {feature}

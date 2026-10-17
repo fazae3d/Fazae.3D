@@ -293,8 +293,11 @@ function CatalogViewInner({ products, categories = [], fixedCategory, initialFil
 }
 
 export function CatalogView(props: CatalogViewProps) {
+  // Primeira página (sem filtros) já no HTML da página estática: o Google e quem abre a loja veem os produtos na hora, sem esperar o JavaScript.
+  const scope = props.fixedCategory ? props.products.filter((p) => p.categorySlug === props.fixedCategory) : props.products;
+  const firstPage = [...scope].sort((a, b) => Number(isSoldOut(a)) - Number(isSoldOut(b))).slice(0, PAGE_SIZE);
   return (
-    <Suspense fallback={<div className="py-20 text-center text-sm text-graphite">Carregando filtros...</div>}>
+    <Suspense fallback={<ProductGrid products={firstPage} />}>
       <CatalogViewInner {...props} />
     </Suspense>
   );

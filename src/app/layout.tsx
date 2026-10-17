@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Exo_2, Inter } from "next/font/google";
 import { SessionProvider } from "next-auth/react";
 import "./globals.css";
-import { auth } from "@/auth";
 import { SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/site-config";
 
 const exo2 = Exo_2({
@@ -50,13 +49,15 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const session = await auth();
-
+/**
+ * Sem `await auth()` aqui: ler a sessão no layout raiz obrigava TODA página (inclusive a vitrine pública) a ser gerada de novo a
+ * cada visita, sem cache. O SessionProvider busca a sessão no navegador; as páginas da conta já conferem o login por conta própria.
+ */
+export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="pt-BR" className={`${exo2.variable} ${inter.variable} h-full antialiased`}>
       <body className="min-h-full">
-        <SessionProvider session={session}>{children}</SessionProvider>
+        <SessionProvider>{children}</SessionProvider>
       </body>
     </html>
   );

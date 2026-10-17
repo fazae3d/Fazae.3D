@@ -17,6 +17,12 @@ import { WishlistProvider } from "@/contexts/wishlist-context";
 import { COMPANY, INSTAGRAM_URL, SITE_NAME, SITE_URL } from "@/lib/site-config";
 import { JsonLd } from "@/components/json-ld";
 
+/**
+ * Vitrine servida da CDN e regenerada em segundo plano a cada 60 s: preço, estoque e novidades aparecem em até 1 minuto,
+ * e as ações do painel (editar produto/estoque) ainda forçam a atualização na hora.
+ */
+export const revalidate = 60;
+
 /** Loja física/online com endereço e área de atendimento: ajuda o Google a mostrar a Fazaê em buscas locais ("impressão 3D Natal"). */
 const ORGANIZATION_JSON_LD = {
   "@context": "https://schema.org",
