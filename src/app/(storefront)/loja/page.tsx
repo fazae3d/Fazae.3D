@@ -1,3 +1,4 @@
+import { pageMeta } from "@/lib/seo";
 import type { Metadata } from "next";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { CatalogView } from "@/components/catalog-view";
@@ -6,13 +7,12 @@ import { withReadFallback } from "@/lib/db-fallback";
 import { publicCategories, publicProducts } from "@/lib/visibility";
 import { fallbackCategories, fallbackProducts } from "@/server/demo-fallback";
 
-export const metadata: Metadata = {
+// Filtros e ordenação (?categoria=, ?ordenar=...) geram a mesma página: o Google deve indexar só a principal.
+export const metadata: Metadata = pageMeta({
   title: "Loja de peças impressas em 3D",
-  description:
-    "Chaveiros, decoração, itens geek e utilidades impressos em 3D. Compre online na Fazaê, com entrega por motoboy em Natal e Parnamirim e envio para todo o Brasil.",
-  // Filtros e ordenação (?categoria=, ?ordenar=...) geram a mesma página: o Google deve indexar só a principal.
-  alternates: { canonical: "/loja" },
-};
+  description: "Chaveiros, decoração, itens geek e utilidades impressos em 3D. Compre online na Fazaê, com entrega por motoboy em Natal e Parnamirim e envio para todo o Brasil.",
+  path: "/loja",
+});
 
 export default async function LojaPage({ searchParams }: PageProps<"/loja">) {
   const params = await searchParams;

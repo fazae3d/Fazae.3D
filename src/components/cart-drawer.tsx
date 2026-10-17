@@ -13,7 +13,7 @@ import { ButtonLink } from "./button";
 import { ProductThumb } from "./product-thumb";
 
 export function CartDrawer() {
-  const { lines, isOpen, closeCart, removeLine, updateQuantity, subtotal, getCartProduct } = useCart();
+  const { lines, isOpen, closeCart, removeLine, updateQuantity, subtotal, getCartProduct, ready } = useCart();
   const { toggle } = useWishlist();
   const { settings } = useStoreSettings();
   const pixPct = usePixDiscountPct();
@@ -50,7 +50,9 @@ export function CartDrawer() {
         </div>
 
         <div className="border-b border-paper/15 px-5 py-4">
-          {remainingForFreeShipping > 0 ? (
+          {!ready ? (
+            <div className="skeleton h-3 w-56" aria-hidden="true" />
+          ) : remainingForFreeShipping > 0 ? (
             <p className="text-xs text-graphite">
               Você está a <strong className="text-paper">{formatPrice(remainingForFreeShipping)}</strong> do frete grátis.
             </p>
@@ -154,7 +156,7 @@ export function CartDrawer() {
         <div className="border-t border-paper/15 p-5">
           <div className="flex items-center justify-between text-sm">
             <span className="text-graphite">Subtotal</span>
-            <span className="font-medium text-paper">{formatPrice(subtotal)}</span>
+            {ready ? <span className="font-medium text-paper">{formatPrice(subtotal)}</span> : <span className="skeleton inline-block h-4 w-20" aria-hidden="true" />}
           </div>
           <p className="mt-1 text-xs text-graphite">Frete e descontos calculados no checkout.</p>
           <ButtonLink href="/checkout" onClick={closeCart} className="mt-4 w-full" variant="primary">

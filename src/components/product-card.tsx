@@ -16,8 +16,11 @@ export function ProductCard({ product }: { product: Product }) {
   const badge = getPrimaryBadge(product);
   const soldOut = isSoldOut(product);
   const canQuickAdd = product.price !== undefined && product.materials.length > 0;
+  // Com mais de um material ou cor, adicionar o primeiro "no escuro" pode gerar pedido na cor errada: leva para a página do produto.
+  const needsChoice = product.materials.length > 1 || product.materials.some((m) => m.colors.length > 1);
 
   const handleQuickAdd = (e: React.MouseEvent) => {
+    if (needsChoice) return; // o clique segue para o link do card (página do produto)
     e.preventDefault();
     e.stopPropagation();
     if (!canQuickAdd || adding) return;
@@ -75,7 +78,7 @@ export function ProductCard({ product }: { product: Product }) {
                   <path d="M4 12l5 5L20 6" />
                 </svg>
               )}
-              {adding ? "Adicionado" : "Adicionar rápido"}
+              {adding ? "Adicionado" : needsChoice ? "Escolher opções" : "Adicionar rápido"}
             </button>
           </div>
         )}

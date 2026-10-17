@@ -4,6 +4,8 @@ import { SearchView } from "@/components/search-view";
 
 export const metadata: Metadata = {
   title: "Busca",
+  // Páginas de busca interna não devem aparecer no Google (conteúdo duplicado e infinito); os links continuam sendo seguidos.
+  robots: { index: false, follow: true },
 };
 
 export default async function BuscaPage({ searchParams }: PageProps<"/busca">) {

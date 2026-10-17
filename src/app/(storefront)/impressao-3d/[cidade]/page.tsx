@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Breadcrumb } from "@/components/breadcrumb";
@@ -35,11 +36,11 @@ export async function generateMetadata({ params }: CityParams): Promise<Metadata
   const { cidade } = await params;
   const city = CITIES.find((c) => c.slug === cidade);
   if (!city) return {};
-  return {
+  return pageMeta({
     title: `Impressão 3D em ${city.name}/RN: peças prontas e sob encomenda`,
-    description: `Impressão 3D em ${city.name}: chaveiros, decoração e peças personalizadas. Entrega por motoboy em até 48h, orçamento sob encomenda e pagamento por Pix, cartão ou boleto.`,
-    alternates: { canonical: `/impressao-3d/${city.slug}` },
-  };
+    description: `Impressão 3D em ${city.name}/RN: chaveiros, decoração e peças personalizadas. Entrega por motoboy em até 48h, orçamento sob encomenda e Pix, cartão ou boleto.`,
+    path: `/impressao-3d/${city.slug}`,
+  });
 }
 
 export default async function LocalLandingPage({ params }: CityParams) {

@@ -36,7 +36,13 @@ export async function generateMetadata({
   );
   if (!product || product.hidden) return {};
   const flat = product.description.replace(/\s+/g, " ").trim();
-  const description = flat.length > 155 ? `${flat.slice(0, 152).trimEnd()}...` : flat;
+  // Corta na última frase completa que cabe em ~155 caracteres (sem reticências); se não houver, no fim de uma palavra.
+  let description = flat;
+  if (flat.length > 155) {
+    const cut = flat.slice(0, 155);
+    const sentenceEnd = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("! "), cut.lastIndexOf("? "));
+    description = sentenceEnd > 70 ? cut.slice(0, sentenceEnd + 1) : `${cut.slice(0, cut.lastIndexOf(" ")).replace(/[,;:\-–]$/, "")}.`;
+  }
   const image = product.images?.[0];
   return {
     title: `${product.name} | Impressão 3D`,
@@ -44,11 +50,14 @@ export async function generateMetadata({
     alternates: { canonical: `/produto/${product.slug}` },
     openGraph: {
       type: "website",
+      locale: "pt_BR",
+      siteName: "Fazaê",
       title: product.name,
       description,
       url: `/produto/${product.slug}`,
       ...(image ? { images: [{ url: image }] } : {}),
     },
+    twitter: { card: "summary_large_image", title: product.name, description, ...(image ? { images: [image] } : {}) },
   };
 }
 

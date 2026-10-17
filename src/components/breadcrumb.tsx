@@ -11,7 +11,8 @@ export function Breadcrumb({ items }: { items: BreadcrumbItem[] }) {
       "@type": "ListItem",
       position: i + 1,
       name: item.label,
-      item: `${SITE_URL}${item.href ?? ""}`,
+      // O último nível (página atual) não leva "item": antes ele apontava para a home por engano.
+      ...(item.href ? { item: `${SITE_URL}${item.href}` } : {}),
     })),
   };
 

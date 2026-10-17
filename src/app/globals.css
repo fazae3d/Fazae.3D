@@ -361,3 +361,28 @@ a,
       radial-gradient(farthest-side at 100% 50%, rgba(0, 0, 0, 0.18), transparent);
   }
 }
+
+/* Acessibilidade: quem navega pelo teclado precisa ver onde está o foco (links e botões da vitrine; o painel tem o seu). */
+a:focus-visible,
+button:focus-visible,
+summary:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--color-petrol);
+  outline-offset: 3px;
+}
+
+/* Esqueleto de carregamento da vitrine (carrinho, busca): evita mostrar valores falsos como "R$ 0,00" ou "0 resultados". */
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+.skeleton {
+  background: color-mix(in srgb, var(--color-paper) 14%, transparent);
+  border-radius: 2px;
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}

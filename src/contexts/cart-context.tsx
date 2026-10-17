@@ -36,6 +36,8 @@ type CartContextValue = {
   removeCoupon: () => void;
   discount: number;
   freeShippingFromCoupon: boolean;
+  /** false enquanto o catálogo ainda carrega: os valores (subtotal, frete) ainda não são confiáveis e não devem ser exibidos. */
+  ready: boolean;
   /** Resolves a cart line's product against the live catalog snapshot — never a frozen client-bundled copy. */
   getCartProduct: (slug: string) => Product | undefined;
 };
@@ -152,9 +154,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
       removeCoupon: () => couponStore.setValue(null),
       discount,
       freeShippingFromCoupon,
+      ready: rawLines.length === 0 || loaded,
       getCartProduct: getProduct,
     }),
-    [lines, isOpen, itemCount, subtotal, coupon, discount, freeShippingFromCoupon, getProduct, refresh],
+    [lines, isOpen, itemCount, subtotal, coupon, discount, freeShippingFromCoupon, getProduct, refresh, rawLines.length, loaded],
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

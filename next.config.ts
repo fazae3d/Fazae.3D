@@ -18,7 +18,17 @@ const nextConfig: NextConfig = {
     }));
   },
   async headers() {
+    // Imagens da pasta public saíam com "max-age=0": o navegador revalidava tudo a cada visita. 30 dias + revalidação em segundo plano.
+    const STATIC_IMAGE_CACHE = "public, max-age=2592000, stale-while-revalidate=86400";
     return [
+      ...["categories", "products", "teaser", "how-it-works", "trust-badges"].map((dir) => ({
+        source: `/${dir}/:path*`,
+        headers: [{ key: "Cache-Control", value: STATIC_IMAGE_CACHE }],
+      })),
+      {
+        source: "/:file(.+\\.(?:webp|png|jpg|jpeg|svg|avif|ico))",
+        headers: [{ key: "Cache-Control", value: STATIC_IMAGE_CACHE }],
+      },
       {
         source: "/:path*",
         headers: [

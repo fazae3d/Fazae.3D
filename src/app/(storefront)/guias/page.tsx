@@ -1,13 +1,14 @@
+import { pageMeta } from "@/lib/seo";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { GUIDES } from "@/lib/guides";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMeta({
   title: "Guias e dicas de impressão 3D",
   description: "Guias da Fazaê 3D: como escolher o material, ideias de presentes personalizados e como cuidar de peças impressas em 3D.",
-  alternates: { canonical: "/guias" },
-};
+  path: "/guias",
+});
 
 export default function GuidesIndexPage() {
   return (

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import { notFound } from "next/navigation";
 import { SectionHeading } from "@/components/section-heading";
 import { CatalogView } from "@/components/catalog-view";
@@ -24,13 +25,15 @@ export async function generateMetadata({
 }: PageProps<"/categorias/[slug]">): Promise<Metadata> {
   const { slug } = await params;
   const category = await findCategory(slug);
-  return {
-    title: category ? `${category.label} em 3D` : "Categoria",
-    description: category
-      ? `${category.label}. ${category.description || "Peças impressas em 3D."} Compre online com entrega por motoboy em Natal e Parnamirim e envio para todo o Brasil.`.slice(0, 200)
-      : undefined,
-    alternates: { canonical: `/categorias/${slug}` },
-  };
+  if (!category) return { title: "Categoria" };
+  const base = `${category.label}. ${category.description || "Peças impressas em 3D."}`;
+  const description = `${base} Compre online com entrega por motoboy em Natal e Parnamirim e envio para todo o Brasil.`;
+  return pageMeta({
+    title: `${category.label} em 3D`,
+    // O Google corta perto de 160 caracteres: se passar, usa a versão curta sem a frase de frete.
+    description: description.length <= 160 ? description : `${base} Entrega em Natal e Parnamirim e envio para todo o Brasil.`.slice(0, 160),
+    path: `/categorias/${slug}`,
+  });
 }
 
 export default async function CategoryPage({ params }: PageProps<"/categorias/[slug]">) {

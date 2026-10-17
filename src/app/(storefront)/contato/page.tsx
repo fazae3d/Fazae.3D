@@ -1,3 +1,4 @@
+import { pageMeta } from "@/lib/seo";
 import type { Metadata } from "next";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { ContactForm } from "@/components/contact-form";
@@ -5,11 +6,11 @@ import { DEFAULT_WHATSAPP_NUMBER, getWhatsAppLink } from "@/lib/site-config";
 import { getSettings } from "@/server/repositories/settings-repository";
 import { withReadFallback } from "@/lib/db-fallback";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMeta({
   title: "Contato e atendimento",
   description: "Fale com a Fazaê 3D pelo WhatsApp ou pelo formulário. Tire dúvidas sobre pedidos, prazos, frete e peças sob encomenda.",
-  alternates: { canonical: "/contato" },
-};
+  path: "/contato",
+});
 
 export default async function ContatoPage() {
   // TODO(fase DB): remove o fallback quando a Fazaê tiver o próprio banco — hoje a leitura real falharia sem Supabase configurado.

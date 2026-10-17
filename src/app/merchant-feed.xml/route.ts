@@ -15,6 +15,13 @@ const EXCLUDED_NAME_PATTERN = /muni[cç][aã]o|arma|armas|pistola|revolver|rev
 const xml = (value: string) =>
   value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 
+/** Categoria do Google só onde a correspondência é certa (uma categoria errada é pior que nenhuma: o Google classifica sozinho). */
+function googleCategory(categoryName: string) {
+  if (/chaveiro/i.test(categoryName)) return "Apparel & Accessories > Handbag & Wallet Accessories > Keychains";
+  if (/decora/i.test(categoryName)) return "Home & Garden > Decor";
+  return undefined;
+}
+
 const absolute = (url: string) => (url.startsWith("http") ? url : `${SITE_URL}${url.startsWith("/") ? "" : "/"}${url}`);
 
 /**
@@ -47,14 +54,17 @@ export async function GET() {
 <g:link>${xml(`${SITE_URL}/produto/${p.slug}`)}</g:link>
 <g:image_link>${xml(absolute(p.images![0]))}</g:image_link>${extra}
 <g:availability>${isSoldOut(p) ? "out_of_stock" : "in_stock"}</g:availability>
-<g:price>${p.price!.toFixed(2)} BRL</g:price>${
+<g:price>${(p.compareAtPrice && p.compareAtPrice > p.price! ? p.compareAtPrice : p.price!).toFixed(2)} BRL</g:price>${
         p.compareAtPrice && p.compareAtPrice > p.price! ? `
 <g:sale_price>${p.price!.toFixed(2)} BRL</g:sale_price>` : ""
       }
 <g:brand>Fazaê</g:brand>
 <g:condition>new</g:condition>
 <g:identifier_exists>no</g:identifier_exists>
-<g:product_type>${xml(p.categoryName)}</g:product_type>${p.weightGrams ? `
+<g:product_type>${xml(p.categoryName)}</g:product_type>${googleCategory(p.categoryName) ? `
+<g:google_product_category>${xml(googleCategory(p.categoryName)!)}</g:google_product_category>` : ""}${p.materials?.[0] ? `
+<g:material>${xml(p.materials[0].material)}</g:material>${p.materials[0].colors.length ? `
+<g:color>${xml(p.materials[0].colors.slice(0, 3).join("/"))}</g:color>` : ""}` : ""}${p.weightGrams ? `
 <g:shipping_weight>${p.weightGrams} g</g:shipping_weight>` : ""}
 </item>`;
     });

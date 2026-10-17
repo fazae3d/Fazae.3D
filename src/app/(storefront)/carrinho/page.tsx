@@ -26,7 +26,7 @@ export default function CarrinhoPage() {
 }
 
 function CarrinhoPageInner() {
-  const { lines, addLine, removeLine, updateQuantity, subtotal, discount, freeShippingFromCoupon, getCartProduct } =
+  const { lines, addLine, removeLine, updateQuantity, subtotal, discount, freeShippingFromCoupon, getCartProduct, ready } =
     useCart();
   const { toggle } = useWishlist();
   const { settings } = useStoreSettings();
@@ -68,7 +68,18 @@ function CarrinhoPageInner() {
       ) : (
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-3">
           <ul className="divide-y divide-paper/15 lg:col-span-2">
-            {lines.map((line) => {
+            {!ready &&
+              lines.map((line) => (
+                <li key={`sk-${line.productSlug}-${line.material}-${line.color}`} className="flex gap-5 py-6" aria-hidden="true">
+                  <div className="skeleton h-32 w-28 shrink-0" />
+                  <div className="flex flex-1 flex-col gap-3">
+                    <div className="skeleton h-3 w-20" />
+                    <div className="skeleton h-4 w-48 max-w-full" />
+                    <div className="skeleton h-3 w-32" />
+                  </div>
+                </li>
+              ))}
+            {ready && lines.map((line) => {
               const product = getCartProduct(line.productSlug);
               if (!product || product.price === undefined) return null;
               return (
@@ -117,7 +128,15 @@ function CarrinhoPageInner() {
 
             <div className="border border-paper/15 p-6">
               <p className="label-caps mb-4 text-xs text-graphite">Resumo do pedido</p>
-              {freeShippingFromCoupon ? (
+              {!ready ? (
+                <div className="space-y-3 pb-2" aria-hidden="true">
+                  <div className="skeleton h-3 w-48" />
+                  <div className="skeleton h-4 w-full" />
+                  <div className="skeleton h-4 w-full" />
+                  <div className="skeleton h-5 w-full" />
+                </div>
+              ) : null}
+              {!ready ? null : freeShippingFromCoupon ? (
                 <p className="mb-4 text-xs text-petrol">Frete grátis aplicado pelo cupom 🎉</p>
               ) : remaining > 0 ? (
                 <p className="mb-4 text-xs text-graphite">
@@ -126,13 +145,13 @@ function CarrinhoPageInner() {
               ) : (
                 <p className="mb-4 text-xs text-petrol">Você garantiu frete grátis 🎉</p>
               )}
-              <div className="space-y-2 border-b border-paper/15 pb-4 text-sm">
+              <div className={`space-y-2 border-b border-paper/15 pb-4 text-sm ${ready ? "" : "hidden"}`}>
                 <div className="flex justify-between">
                   <span className="text-graphite">Subtotal</span>
                   <span>{formatPrice(subtotal)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-graphite">Frete</span>
+                  <span className="text-graphite">{shipping === 0 ? "Frete" : "Frete estimado"}</span>
                   <span>{shipping === 0 ? "Grátis" : formatPrice(shipping)}</span>
                 </div>
                 <div className="flex justify-between">
@@ -140,7 +159,7 @@ function CarrinhoPageInner() {
                   <span>{discount > 0 ? `-${formatPrice(discount)}` : formatPrice(0)}</span>
                 </div>
               </div>
-              <div className="flex justify-between py-4 text-base font-medium">
+              <div className={`flex justify-between py-4 text-base font-medium ${ready ? "" : "hidden"}`}>
                 <span>Total</span>
                 <span>{formatPrice(total)}</span>
               </div>

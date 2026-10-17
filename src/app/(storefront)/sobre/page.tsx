@@ -1,14 +1,14 @@
+import { pageMeta } from "@/lib/seo";
 import type { Metadata } from "next";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { ButtonLink } from "@/components/button";
 import { SectionHeading } from "@/components/section-heading";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMeta({
   title: "Sobre a Fazaê: impressão 3D feita em Parnamirim/RN",
-  description:
-    "Conheça a Fazaê 3D: produzimos cada peça com impressoras próprias em Parnamirim/RN. Tecnologia, design e criatividade em chaveiros, decoração e peças personalizadas.",
-  alternates: { canonical: "/sobre" },
-};
+  description: "Conheça a Fazaê 3D: produzimos cada peça com impressoras próprias em Parnamirim/RN. Tecnologia, design e criatividade em chaveiros, decoração e peças personalizadas.",
+  path: "/sobre",
+});
 
 function BoltIcon() {
   return (
