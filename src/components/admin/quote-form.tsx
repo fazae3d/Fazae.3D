@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Select } from "@/components/select";
 import { AdminIcon } from "@/components/admin/admin-icons";
@@ -109,6 +109,65 @@ export function QuoteForm({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // Rascunho automático (só para orçamento novo): se a aba fechar ou a internet cair, o que foi digitado não se perde.
+  const draftKey = quoteId || initial.linkedRequestId || initial.customerName ? null : "fazae-quote-draft";
+  const [pendingDraft, setPendingDraft] = useState<string | null>(null);
+  const draftReady = useRef(false);
+  const draftState = {
+    customerName, customerPhone, customerEmail, customerDocument, customerAddress, title, items,
+    discountMode, discountInput, shippingInput, validUntil, deliveryTime, paymentTerms, notes,
+  };
+  const draftJson = JSON.stringify(draftState);
+
+  useEffect(() => {
+    if (!draftKey) return;
+    try {
+      const saved = localStorage.getItem(draftKey);
+      if (saved) setPendingDraft(saved);
+    } catch {
+      // armazenamento bloqueado: segue sem rascunho
+    }
+    draftReady.current = true;
+  }, [draftKey]);
+
+  useEffect(() => {
+    if (!draftKey || !draftReady.current || pendingDraft) return;
+    const empty = !customerName && !title && items.every((i) => !i.description && !i.unitPrice);
+    const timer = setTimeout(() => {
+      try {
+        if (empty) localStorage.removeItem(draftKey);
+        else localStorage.setItem(draftKey, draftJson);
+      } catch {
+        // ignora
+      }
+    }, 600);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftJson, draftKey, pendingDraft]);
+
+  const restoreDraft = () => {
+    try {
+      const d = JSON.parse(pendingDraft ?? "{}") as typeof draftState;
+      setCustomerName(d.customerName ?? ""); setCustomerPhone(d.customerPhone ?? ""); setCustomerEmail(d.customerEmail ?? "");
+      setCustomerDocument(d.customerDocument ?? ""); setCustomerAddress(d.customerAddress ?? ""); setTitle(d.title ?? "");
+      if (Array.isArray(d.items) && d.items.length) setItems(d.items);
+      setDiscountMode(d.discountMode ?? "valor"); setDiscountInput(d.discountInput ?? ""); setShippingInput(d.shippingInput ?? "");
+      if (d.validUntil) setValidUntil(d.validUntil);
+      setDeliveryTime(d.deliveryTime ?? ""); setPaymentTerms(d.paymentTerms ?? ""); setNotes(d.notes ?? "");
+    } catch {
+      // rascunho corrompido: descarta
+    }
+    setPendingDraft(null);
+  };
+  const discardDraft = () => {
+    try {
+      if (draftKey) localStorage.removeItem(draftKey);
+    } catch {
+      // ignora
+    }
+    setPendingDraft(null);
+  };
+
   const parsedItems = useMemo(
     () => items.map((i) => ({ quantity: Math.max(0, Math.floor(Number(i.quantity)) || 0), unitPrice: parseMoney(i.unitPrice) })),
     [items],
@@ -172,6 +231,11 @@ export function QuoteForm({
       toast(result.error, "error");
       return;
     }
+    try {
+      if (draftKey) localStorage.removeItem(draftKey);
+    } catch {
+      // ignora
+    }
     toast(quoteId ? "Orçamento atualizado" : "Orçamento criado");
     router.push(`/admin/orcamentos/${result.id}`);
     router.refresh();
@@ -180,6 +244,19 @@ export function QuoteForm({
   return (
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
       <div className="flex flex-col gap-6">
+        {pendingDraft ? (
+          <div className="admin-card flex flex-wrap items-center justify-between gap-3 rounded-xl border border-petrol/50 p-4 text-sm">
+            <span>Você tem um orçamento em andamento que não foi salvo. Quer continuar de onde parou?</span>
+            <span className="flex gap-2">
+              <button type="button" onClick={restoreDraft} className="rounded-lg bg-petrol px-3.5 py-1.5 font-semibold">
+                Recuperar
+              </button>
+              <button type="button" onClick={discardDraft} className="rounded-lg border border-mist px-3.5 py-1.5 text-graphite hover:text-ink">
+                Descartar
+              </button>
+            </span>
+          </div>
+        ) : null}
         <Card
           title="Cliente"
           aside={

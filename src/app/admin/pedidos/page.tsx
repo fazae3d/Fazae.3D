@@ -1,3 +1,4 @@
+import { EmptyState } from "@/components/admin/empty-state";
 import Link from "next/link";
 import { getAllOrders } from "@/server/repositories/order-repository";
 import { OrderStatusForm } from "@/components/admin/order-status-form";
@@ -181,9 +182,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
       </div>
 
       {paginated.length === 0 ? (
-        <div className="border border-mist px-6 py-16 text-center text-graphite">
-          Nenhum pedido encontrado para esse filtro.
-        </div>
+        <EmptyState icon="orders" title="Nenhum pedido encontrado" description="Troque o filtro, o período ou a busca para ver mais resultados." action={{ href: "/admin/vendas/nova", label: "Lançar venda" }} />
       ) : (
         <ul className="flex flex-col gap-4">
           {paginated.map((order) => (

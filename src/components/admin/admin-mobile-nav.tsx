@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AdminIcon } from "./admin-icons";
 import { AdminLogo } from "./admin-logo";
+import { SignOutButton } from "@/components/sign-out-button";
 import { AdminNav } from "./admin-nav";
 
-export function AdminMobileNav({ badges }: { badges?: Record<string, number> }) {
+export function AdminMobileNav({ badges, user }: { badges?: Record<string, number>; user?: string }) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -46,8 +47,17 @@ export function AdminMobileNav({ badges }: { badges?: Record<string, number> }) 
             <AdminIcon name="close" className="h-5 w-5" />
           </button>
         </div>
-        <div className="px-3 pb-6">
+        <div className="flex-1 px-3 pb-6">
           <AdminNav badges={badges} onNavigate={() => setOpen(false)} />
+        </div>
+        <div className="border-t border-mist p-4">
+          {user ? <p className="mb-3 truncate text-sm font-medium">{user}</p> : null}
+          <div className="flex items-center justify-between gap-3">
+            <Link href="/" target="_blank" className="text-sm text-graphite hover:text-ink">
+              Ver loja
+            </Link>
+            <SignOutButton className="!text-sm" />
+          </div>
         </div>
       </div>
     </>

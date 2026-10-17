@@ -1,3 +1,4 @@
+import { EmptyState } from "@/components/admin/empty-state";
 import { db } from "@/server/db";
 
 const ACTION_LABELS: Record<string, string> = {
@@ -15,7 +16,7 @@ export default async function AdminActivityPage() {
       <p className="mt-1 mb-8 text-sm text-graphite">Registro das ações sensíveis feitas no painel (quem, o quê e quando). Últimas 200.</p>
 
       {logs.length === 0 ? (
-        <div className="border border-mist px-6 py-16 text-center text-graphite">Nenhuma ação registrada ainda.</div>
+        <EmptyState icon="settings" title="Nenhuma ação registrada ainda" description="Criações, edições e exclusões feitas no painel aparecem aqui, com quem fez e quando." />
       ) : (
         <ul className="divide-y divide-mist border border-mist">
           {logs.map((log) => (

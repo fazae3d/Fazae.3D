@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState } from "@/components/admin/empty-state";
 import Link from "next/link";
 import { useState } from "react";
 import type { CustomOrderRequest, CustomRequestStatus } from "@/lib/types";
@@ -66,9 +67,7 @@ export function EncomendasBoard({ requests: initialRequests }: { requests: Custo
       {error && <p className="mb-4 text-[11px] text-red-500">{error}</p>}
 
       {requests.length === 0 ? (
-        <div className="border border-mist px-6 py-16 text-center text-graphite">
-          Nenhuma solicitação recebida ainda.
-        </div>
+        <EmptyState icon="quotes" title="Nenhuma solicitação recebida ainda" description="Pedidos de peça personalizada feitos no site aparecem aqui. Você também pode cadastrar uma encomenda manual." />
       ) : view === "lista" ? (
         <ul className="flex flex-col gap-4">
           {requests.map((request) => (

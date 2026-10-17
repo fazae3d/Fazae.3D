@@ -1,3 +1,4 @@
+import { EmptyState } from "@/components/admin/empty-state";
 import Link from "next/link";
 import { getAllCategories, getAllProducts } from "@/lib/demo-data";
 import { isSoldOut } from "@/lib/badges";
@@ -87,9 +88,7 @@ export default async function AdminProductsPage({
       <p className="mb-4 text-sm text-graphite">{products.length} produto(s) encontrado(s)</p>
 
       {products.length === 0 ? (
-        <div className="border border-mist px-6 py-16 text-center text-graphite">
-          Nenhum produto encontrado para esses filtros.
-        </div>
+        <EmptyState icon="search" title="Nenhum produto encontrado" description="Tente outros filtros ou cadastre um produto novo." action={{ href: "/admin/produtos/novo", label: "Novo produto" }} />
       ) : (
         <div className="overflow-x-auto border border-mist">
           <table className="w-full min-w-[820px] text-left text-sm">

@@ -5,13 +5,13 @@ import { AdminIcon } from "./admin-icons";
 
 type AdminTheme = "light" | "dark";
 
-const STORAGE_KEY = "admin-theme";
+const COOKIE_KEY = "admin-theme";
 
 function applyTheme(theme: AdminTheme) {
   document.getElementById("admin-shell")?.setAttribute("data-admin-theme", theme);
 }
 
-/** Lê/grava o localStorage direto — o script inline do admin/layout.tsx define o atributo inicial antes da pintura (padrão: escuro). */
+/** Grava a escolha num cookie; o admin/layout.tsx lê o cookie e já renderiza no tema certo (padrão: escuro). */
 export function AdminThemeToggle() {
   const [theme, setTheme] = useState<AdminTheme | null>(null);
 
@@ -24,11 +24,8 @@ export function AdminThemeToggle() {
     const next: AdminTheme = theme === "dark" ? "light" : "dark";
     setTheme(next);
     applyTheme(next);
-    try {
-      localStorage.setItem(STORAGE_KEY, next);
-    } catch {
-      // Navegação privada / armazenamento bloqueado: o tema só não persiste entre visitas.
-    }
+    // Cookie (1 ano) para o servidor já renderizar o painel no tema escolhido, sem piscar.
+    document.cookie = `${COOKIE_KEY}=${next}; path=/admin; max-age=31536000; samesite=lax`;
   };
 
   return (

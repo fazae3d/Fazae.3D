@@ -1,3 +1,4 @@
+import { EmptyState } from "@/components/admin/empty-state";
 import { formatPrice } from "@/lib/format";
 import { db } from "@/server/db";
 
@@ -18,7 +19,7 @@ export default async function AdminAbandonedCartsPage() {
       </p>
 
       {carts.length === 0 ? (
-        <div className="border border-mist px-6 py-16 text-center text-graphite">Nenhum carrinho abandonado no momento.</div>
+        <EmptyState icon="orders" title="Nenhum carrinho abandonado" description="Quando alguém colocar itens no carrinho e não finalizar, o lembrete automático aparece aqui." />
       ) : (
         <ul className="flex flex-col gap-3">
           {carts.map((cart) => {

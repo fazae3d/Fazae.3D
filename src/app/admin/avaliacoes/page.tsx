@@ -1,3 +1,4 @@
+import { EmptyState } from "@/components/admin/empty-state";
 import Link from "next/link";
 import { getAllReviewsForAdmin } from "@/server/repositories/review-repository";
 import { getAllProducts } from "@/lib/demo-data";
@@ -27,7 +28,7 @@ export default async function AdminReviewsPage() {
       </div>
 
       {reviews.length === 0 ? (
-        <div className="border border-mist px-6 py-16 text-center text-graphite">Nenhuma avaliação ainda.</div>
+        <EmptyState icon="catalog" title="Nenhuma avaliação ainda" description="As avaliações dos clientes aparecem aqui para você aprovar antes de irem para a loja." />
       ) : (
         <div className="overflow-x-auto border border-mist">
           <table className="w-full min-w-[820px] text-left text-sm">

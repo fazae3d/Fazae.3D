@@ -249,10 +249,10 @@ a,
 #admin-shell .admin-logo-light {
   display: none;
 }
-[data-admin-theme="light"] .admin-logo-dark {
+#admin-shell[data-admin-theme="light"] .admin-logo-dark {
   display: none;
 }
-[data-admin-theme="light"] .admin-logo-light {
+#admin-shell[data-admin-theme="light"] .admin-logo-light {
   display: block;
 }
 
@@ -272,4 +272,92 @@ a,
 }
 [data-admin-theme="light"] [class*="border-petrol/"] {
   border-color: rgba(77, 107, 50, 0.45);
+}
+
+/* ---------- Refinamentos do painel (usabilidade e design) ---------- */
+
+/* Números com largura fixa: colunas de valores ficam alinhadas e não "dançam" ao mudar. */
+#admin-shell {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tabelas ordenáveis (ver enhancers.tsx): título clicável com seta. */
+#admin-shell th[data-sortable="true"] {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+#admin-shell th[data-sortable="true"]:hover {
+  color: var(--color-ink);
+}
+#admin-shell th[aria-sort="ascending"]::after {
+  content: " ▲";
+  font-size: 0.65em;
+  color: var(--admin-focus);
+}
+#admin-shell th[aria-sort="descending"]::after {
+  content: " ▼";
+  font-size: 0.65em;
+  color: var(--admin-focus);
+}
+
+/* Botões do visual antigo (preto sobre branco, grandes) passam a seguir o padrão novo: verde-limão, texto escuro, tamanho normal. */
+#admin-shell .bg-ink.label-caps,
+#admin-shell button.bg-ink {
+  background: var(--color-petrol);
+  border-color: var(--color-petrol);
+  color: #111111;
+  font-weight: 600;
+}
+#admin-shell button.bg-ink.px-8,
+#admin-shell button.bg-ink.px-6 {
+  padding: 0.7rem 1.5rem;
+  font-size: 0.875rem;
+}
+/* Botões de contorno do visual antigo: borda discreta, e a cor da marca ao passar o mouse. */
+#admin-shell .border-ink:not(.bg-ink) {
+  border-color: color-mix(in srgb, var(--color-ink) 28%, transparent);
+}
+#admin-shell a.border-ink:hover,
+#admin-shell button.border-ink:hover {
+  border-color: var(--admin-focus);
+}
+
+/* Esqueleto de carregamento. */
+@keyframes admin-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+#admin-shell .admin-skeleton {
+  background: var(--color-mist);
+  border-radius: 0.5rem;
+  animation: admin-pulse 1.4s ease-in-out infinite;
+}
+
+/* Celular/tablet: tabelas largas rolam de lado; as sombras nas bordas avisam que há mais conteúdo para o lado. */
+@media (max-width: 1023px) {
+  #admin-shell main .overflow-x-auto:not([role="tablist"]) {
+    background-color: var(--admin-surface);
+    background-image:
+      linear-gradient(to right, var(--admin-surface) 30%, transparent),
+      linear-gradient(to left, var(--admin-surface) 30%, transparent),
+      radial-gradient(farthest-side at 0 50%, rgba(0, 0, 0, 0.4), transparent),
+      radial-gradient(farthest-side at 100% 50%, rgba(0, 0, 0, 0.4), transparent);
+    background-position: left center, right center, left center, right center;
+    background-size: 28px 100%, 28px 100%, 12px 100%, 12px 100%;
+    background-repeat: no-repeat;
+    background-attachment: local, local, scroll, scroll;
+  }
+  #admin-shell[data-admin-theme="light"] main .overflow-x-auto:not([role="tablist"]) {
+    background-image:
+      linear-gradient(to right, var(--admin-surface) 30%, transparent),
+      linear-gradient(to left, var(--admin-surface) 30%, transparent),
+      radial-gradient(farthest-side at 0 50%, rgba(0, 0, 0, 0.18), transparent),
+      radial-gradient(farthest-side at 100% 50%, rgba(0, 0, 0, 0.18), transparent);
+  }
 }

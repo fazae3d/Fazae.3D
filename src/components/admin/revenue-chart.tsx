@@ -4,13 +4,29 @@ import { formatPrice } from "@/lib/format";
 const CHART_HEIGHT = 100;
 const BAR_UNIT = 24;
 
-export function RevenueChart({ data }: { data: DayRevenue[] }) {
+/** `previous` = o mesmo número de dias imediatamente antes, para comparar ("▲ 20% sobre o período anterior"). */
+export function RevenueChart({ data, previous }: { data: DayRevenue[]; previous?: DayRevenue[] }) {
   const max = Math.max(1, ...data.map((d) => d.revenue));
   const hasRevenue = data.some((d) => d.revenue > 0);
+  const total = data.reduce((sum, d) => sum + d.revenue, 0);
+  const previousTotal = previous?.reduce((sum, d) => sum + d.revenue, 0) ?? 0;
+  const change = previous && previousTotal > 0 ? Math.round(((total - previousTotal) / previousTotal) * 100) : null;
 
   return (
     <div className="border border-mist p-5">
-      <p className="label-caps mb-4 text-[11px] text-graphite">Faturamento nos últimos {data.length} dias</p>
+      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+        <p className="text-sm font-semibold">Faturamento nos últimos {data.length} dias</p>
+        <p className="text-xs text-graphite">
+          <span className="text-base font-semibold text-ink">{formatPrice(total)}</span>
+          {change !== null ? (
+            <span className={`ml-2 font-medium ${change >= 0 ? "text-petrol" : "text-red-500"}`}>
+              {change >= 0 ? "▲" : "▼"} {Math.abs(change)}% sobre os {data.length} dias anteriores
+            </span>
+          ) : previous && previousTotal === 0 && total > 0 ? (
+            <span className="ml-2 font-medium text-petrol">sem vendas nos {data.length} dias anteriores</span>
+          ) : null}
+        </p>
+      </div>
       {hasRevenue ? (
         <>
           <svg

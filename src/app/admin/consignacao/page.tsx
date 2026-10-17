@@ -1,3 +1,4 @@
+import { EmptyState } from "@/components/admin/empty-state";
 import Link from "next/link";
 import { getAllConsigneesWithSummary } from "@/server/repositories/consignment-repository";
 import { formatPrice } from "@/lib/format";
@@ -49,9 +50,7 @@ export default async function AdminConsignmentPage() {
       </div>
 
       {consignees.length === 0 ? (
-        <div className="border border-mist px-6 py-16 text-center text-graphite">
-          Nenhum lojista cadastrado ainda.
-        </div>
+        <EmptyState icon="clients" title="Nenhum lojista cadastrado ainda" description="Cadastre quem vende suas peças em consignação para controlar o que está com cada um." action={{ href: "/admin/consignacao/novo", label: "Cadastrar lojista" }} />
       ) : (
         <div className="overflow-x-auto border border-mist">
           <table className="w-full min-w-[900px] text-left text-sm">

@@ -1,3 +1,4 @@
+import { EmptyState } from "@/components/admin/empty-state";
 import Link from "next/link";
 import { getAllProducts } from "@/lib/demo-data";
 import { LOW_STOCK_THRESHOLD, isSoldOut } from "@/lib/badges";
@@ -84,9 +85,7 @@ export default async function AdminStockPage({
       </form>
 
       {products.length === 0 ? (
-        <div className="border border-mist px-6 py-16 text-center text-graphite">
-          Nenhum produto encontrado para essa busca.
-        </div>
+        <EmptyState icon="search" title="Nenhum produto encontrado" description="Tente outra busca ou limpe os filtros." />
       ) : (
         <div className="overflow-x-auto border border-mist">
           <table className="w-full min-w-[720px] text-left text-sm">

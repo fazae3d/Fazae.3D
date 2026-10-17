@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/server/db";
@@ -10,21 +11,9 @@ import { AdminNav, SectionTabs } from "@/components/admin/admin-nav";
 import { AdminMobileNav } from "@/components/admin/admin-mobile-nav";
 import { AdminSearch } from "@/components/admin/admin-search";
 import { AdminThemeToggle } from "@/components/admin/theme-toggle";
+import { TableEnhancer, TitleBadge } from "@/components/admin/enhancers";
 import { ToastProvider } from "@/components/admin/toast";
 import { SignOutButton } from "@/components/sign-out-button";
-
-/**
- * Runs synchronously as the parser reaches it — before the subtree paints —
- * so the panel never flashes light before switching to a saved preference.
- * O padrão é o escuro (identidade da marca); quem escolher claro fica salvo no navegador.
- * Targets #admin-shell by id (not document.currentScript —
- * Next.js can relocate inline <script> tags out of their JSX position,
- * which left this pointed at <html> instead of the intended wrapper) and
- * scoped to that element (not html/body) so the override never leaks into
- * the storefront, which shares the same document via the App Router root
- * layout and stays dark-first/brand-only regardless of this.
- */
-const INIT_THEME_SCRIPT = `(function(){try{var t=localStorage.getItem('admin-theme')||'dark';document.getElementById('admin-shell').setAttribute('data-admin-theme',t);}catch(e){}})();`;
 
 export const metadata: Metadata = {
   title: { default: "Gestão", template: "%s · Gestão Fazaê" },
@@ -61,12 +50,13 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     }
   }
 
+  // O tema vem de um cookie (gravado pelo botão de sol/lua): a página já sai do servidor no tema certo, sem piscar e sem script.
+  const theme = (await cookies()).get("admin-theme")?.value === "light" ? "light" : "dark";
   const badges = await loadNavBadges();
   const userName = session?.user?.name ?? "Administrador";
 
   return (
-    <div id="admin-shell" data-admin-theme="dark" suppressHydrationWarning className="flex min-h-full bg-paper text-ink">
-      <script dangerouslySetInnerHTML={{ __html: INIT_THEME_SCRIPT }} />
+    <div id="admin-shell" data-admin-theme={theme} className="flex min-h-full bg-paper text-ink">
       <aside className="admin-sidebar hidden w-64 shrink-0 flex-col border-r border-mist lg:sticky lg:top-0 lg:flex lg:h-screen">
         <div className="px-6 pb-4 pt-6">
           <Link href="/admin" aria-label="Fazaê, início do painel" className="block">
@@ -92,9 +82,12 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-mist bg-paper px-4 py-3 sm:px-6">
-          <AdminMobileNav badges={badges} />
+          <AdminMobileNav badges={badges} user={userName} />
+          <Link href="/admin" aria-label="Fazaê, início do painel" className="lg:hidden">
+            <AdminLogo className="w-[5.5rem]" />
+          </Link>
           <AdminSearch />
-          <div className="ml-auto flex items-center gap-2">
+          <div className="flex items-center gap-2 sm:ml-auto">
             <Link
               href="/"
               target="_blank"
@@ -108,6 +101,8 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
         <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
           <ToastProvider>
+            <TitleBadge count={(badges.pedidos ?? 0) + (badges.orcamentos ?? 0)} />
+            <TableEnhancer />
             <SectionTabs />
             {children}
           </ToastProvider>

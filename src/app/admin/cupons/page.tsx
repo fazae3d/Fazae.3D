@@ -1,3 +1,4 @@
+import { EmptyState } from "@/components/admin/empty-state";
 import Link from "next/link";
 import { getAllCoupons } from "@/server/repositories/coupon-repository";
 import { DeleteCouponButton } from "@/components/admin/delete-coupon-button";
@@ -34,7 +35,7 @@ export default async function AdminCouponsPage() {
       </div>
 
       {coupons.length === 0 ? (
-        <div className="border border-mist px-6 py-16 text-center text-graphite">Nenhum cupom criado ainda.</div>
+        <EmptyState icon="catalog" title="Nenhum cupom criado ainda" description="Cupons de desconto ajudam em campanhas e no retorno de clientes." action={{ href: "/admin/cupons/novo", label: "Criar cupom" }} />
       ) : (
         <div className="overflow-x-auto border border-mist">
           <table className="w-full min-w-[720px] text-left text-sm">

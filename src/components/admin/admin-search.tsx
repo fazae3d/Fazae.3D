@@ -106,11 +106,11 @@ export function AdminSearch() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-mist px-3 py-2 text-left text-sm text-graphite transition-colors hover:border-petrol sm:max-w-md"
+        className="flex shrink-0 items-center gap-2 rounded-lg border border-mist px-2.5 py-2 text-left text-sm text-graphite transition-colors hover:border-petrol max-sm:ml-auto sm:min-w-0 sm:max-w-md sm:flex-1 sm:px-3"
         aria-label="Buscar no painel"
       >
         <AdminIcon name="search" className="h-4 w-4" />
-        <span className="flex-1 truncate">Buscar pedido, cliente, produto…</span>
+        <span className="hidden flex-1 truncate sm:inline">Buscar pedido, cliente, produto…</span>
         <kbd className="hidden rounded border border-mist px-1.5 py-0.5 text-[11px] sm:block">Ctrl K</kbd>
       </button>
 

@@ -23,6 +23,8 @@ import { getSettings } from "@/server/repositories/settings-repository";
 import { withReadFallback } from "@/lib/db-fallback";
 import { RevenueChart } from "@/components/admin/revenue-chart";
 import { PageHeader } from "@/components/admin/page-header";
+import { SetupChecklist, type SetupItem } from "@/components/admin/setup-checklist";
+import { COMPANY, DEFAULT_WHATSAPP_NUMBER } from "@/lib/site-config";
 import { getAllOrders } from "@/server/repositories/order-repository";
 import { getAllQuotes } from "@/server/repositories/quote-repository";
 import { getAllRawMaterials } from "@/server/repositories/raw-material-repository";
@@ -50,7 +52,7 @@ function StatTile({
   return (
     <div className="admin-card rounded-xl border border-mist p-5">
       <p className="text-xs text-graphite">{label}</p>
-      <div className="mt-1.5 flex items-baseline gap-2">
+      <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2">
         <p className="font-display text-2xl tracking-tight">{value}</p>
         {trend && trend.pct !== null && (
           <span className={`text-xs font-medium ${trend.pct >= 0 ? "text-petrol" : "text-red-500"}`}>
@@ -217,8 +219,52 @@ export default async function AdminDashboardPage() {
     },
   ].filter((item) => item.count > 0);
 
+  const setupItems: SetupItem[] = [
+    {
+      key: "whatsapp",
+      label: "Número de WhatsApp real da loja",
+      hint: "Ainda está o número de exemplo: o botão de WhatsApp da loja e os orçamentos usam esse número.",
+      done: Boolean(settings?.whatsappNumber) && settings?.whatsappNumber !== DEFAULT_WHATSAPP_NUMBER,
+      href: "/admin/configuracoes",
+    },
+    {
+      key: "cnpj",
+      label: "CNPJ da empresa",
+      hint: "Aparece no rodapé da loja, nos termos e no PDF do orçamento. Cadastre em NEXT_PUBLIC_COMPANY_CNPJ na Vercel.",
+      done: Boolean(COMPANY.cnpj),
+    },
+    {
+      key: "cep",
+      label: "CEP de origem do envio",
+      hint: "Sem ele o frete real (Melhor Envio) não é calculado no checkout.",
+      done: Boolean(settings?.originCep),
+      href: "/admin/configuracoes",
+    },
+    {
+      key: "meta",
+      label: "Meta de faturamento mensal",
+      hint: "Liga a barra de progresso da meta aqui na Visão geral.",
+      done: (settings?.monthlyGoal ?? 0) > 0,
+      href: "/admin/configuracoes",
+    },
+    {
+      key: "email-dono",
+      label: "E-mail para avisos de pedido novo",
+      hint: "Configure STORE_CONTACT_EMAIL na Vercel para receber aviso a cada pedido e pagamento.",
+      done: Boolean(process.env.STORE_CONTACT_EMAIL),
+    },
+    {
+      key: "email-envio",
+      label: "Envio de e-mails da loja",
+      hint: "Configure RESEND_API_KEY e RESEND_FROM_EMAIL na Vercel (confirmação de pedido, orçamento por e-mail).",
+      done: Boolean(process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL),
+    },
+  ];
+
   const revenueTrend = periodComparison(orders, 7);
-  const chartData = revenueByDay(orders, REVENUE_WINDOW_DAYS);
+  const chartAll = revenueByDay(orders, REVENUE_WINDOW_DAYS * 2);
+  const chartData = chartAll.slice(REVENUE_WINDOW_DAYS);
+  const chartPrevious = chartAll.slice(0, REVENUE_WINDOW_DAYS);
   const bestSellers = topProducts(orders, 5);
   const payments = paymentBreakdown(orders);
   const channels = channelBreakdown(orders);
@@ -252,6 +298,8 @@ export default async function AdminDashboardPage() {
           Não foi possível conectar ao banco de dados agora. Os números abaixo são dados de exemplo, não reais.
         </div>
       )}
+
+      <SetupChecklist items={setupItems} />
 
       <section className="mb-8">
         <h2 className="mb-3 text-sm font-semibold">Precisa de atenção</h2>
@@ -322,7 +370,7 @@ export default async function AdminDashboardPage() {
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <RevenueChart data={chartData} />
+          <RevenueChart data={chartData} previous={chartPrevious} />
         </div>
 
         <Panel title="Pedidos por status">

@@ -34,7 +34,7 @@ function KpiCard({
   return (
     <div className="border border-mist p-5">
       <p className="label-caps text-[11px] text-graphite">{label}</p>
-      <p className={`font-display mt-2 text-2xl ${valueColor}`}>{value}</p>
+      <p className={`font-display mt-2 whitespace-nowrap text-xl sm:text-2xl ${valueColor}`}>{value}</p>
       {sublabel && <p className="mt-1 text-xs text-graphite">{sublabel}</p>}
     </div>
   );
@@ -104,7 +104,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
       <p className="label-caps mb-3 text-[11px] text-graphite">
         DRE simplificado (regime de caixa){selectedMonth ? `: ${monthLabel(selectedMonth)}` : ""}
       </p>
-      <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-3 2xl:grid-cols-6">
         <KpiCard
           label="Receita bruta"
           value={formatPrice(dre.grossRevenue)}
