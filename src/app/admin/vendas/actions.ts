@@ -29,7 +29,7 @@ export async function createManualSaleAction(input: ManualSaleFormInput): Promis
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
-  const { channel, channelFee, customerName, customerPhone, paymentMethod, status, items, productionPending } = parsed.data;
+  const { channel, channelFee, customerName, customerPhone, paymentMethod, status, items, productionPending, shipping } = parsed.data;
 
   // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco — hoje a escrita real falharia sem Supabase configurado.
   const result = await withMutationFallback(async () => {
@@ -38,6 +38,20 @@ export async function createManualSaleAction(input: ManualSaleFormInput): Promis
     // admin to edit, never trusted as-is.
     const resolvedItems = [];
     for (const line of items) {
+      // Produto manual (peça personalizada fora da loja): não mexe em estoque e entra como "avulso", igual aos itens de produção.
+      if (!line.productSlug) {
+        const name = line.customName!.trim();
+        resolvedItems.push({
+          productSlug: `avulso-${slugify(name).slice(0, 60) || "item"}`,
+          name,
+          categoryName: "Avulso",
+          material: line.material || "—",
+          color: line.color || "—",
+          quantity: line.quantity,
+          price: line.price,
+        });
+        continue;
+      }
       const product = await getProduct(line.productSlug);
       if (!product) {
         return { success: false, error: `Produto "${line.productSlug}" não encontrado.` };
@@ -52,8 +66,8 @@ export async function createManualSaleAction(input: ManualSaleFormInput): Promis
         productSlug: product.slug,
         name: product.name,
         categoryName: product.categoryName,
-        material: line.material,
-        color: line.color,
+        material: line.material ?? "—",
+        color: line.color ?? "—",
         quantity: line.quantity,
         price: line.price,
       });
@@ -73,6 +87,8 @@ export async function createManualSaleAction(input: ManualSaleFormInput): Promis
       }
     }
 
+    const shippingCost = round2(shipping ?? 0);
+
     const order: Order = {
       id: generateOrderId(),
       createdAt: new Date().toISOString(),
@@ -81,9 +97,9 @@ export async function createManualSaleAction(input: ManualSaleFormInput): Promis
       customerPhone: customerPhone || undefined,
       items: resolvedItems,
       subtotal,
-      shipping: 0,
+      shipping: shippingCost,
       discount: 0,
-      total: subtotal,
+      total: round2(subtotal + shippingCost),
       paymentMethod,
       status,
       paymentFee,
@@ -108,4 +124,13 @@ export async function createManualSaleAction(input: ManualSaleFormInput): Promis
   }
 
   return result;
+}
+
+function slugify(text: string) {
+  return text
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }

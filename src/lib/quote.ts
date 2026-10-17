@@ -30,6 +30,9 @@ export type Quote = {
   subtotal: number;
   discount: number;
   shipping: number;
+  /** Frete grátis para o cliente (shipping = 0) com o valor normal em shippingOriginal, mostrado riscado. */
+  freeShipping: boolean;
+  shippingOriginal: number;
   total: number;
   validUntil: string;
   deliveryTime?: string;
@@ -69,6 +72,33 @@ export function computeQuoteTotals(items: Pick<QuoteItem, "quantity" | "unitPric
   const safeDiscount = Math.min(Math.max(round2(discount), 0), subtotal);
   const safeShipping = Math.max(round2(shipping), 0);
   return { subtotal, discount: safeDiscount, shipping: safeShipping, total: round2(subtotal - safeDiscount + safeShipping) };
+}
+
+export type QuoteSavings = {
+  discount: number;
+  /** Desconto em % sobre os itens (arredondado). */
+  discountPct: number;
+  freeShipping: boolean;
+  /** Quanto o frete grátis economiza (valor normal do frete); 0 se não foi informado. */
+  shippingSaved: number;
+  /** Soma de tudo que o cliente deixa de pagar. */
+  total: number;
+  /** Quanto custaria sem nenhum benefício: itens + frete normal. */
+  fullPrice: number;
+};
+
+/** O que o cliente ganha neste orçamento (desconto e frete grátis): usado para evidenciar a economia. */
+export function quoteSavings(quote: Pick<Quote, "subtotal" | "discount" | "freeShipping" | "shippingOriginal" | "shipping">): QuoteSavings {
+  const shippingSaved = quote.freeShipping ? Math.max(0, quote.shippingOriginal) : 0;
+  const discountPct = quote.subtotal > 0 ? Math.round((quote.discount / quote.subtotal) * 100) : 0;
+  return {
+    discount: quote.discount,
+    discountPct,
+    freeShipping: quote.freeShipping,
+    shippingSaved,
+    total: round2(quote.discount + shippingSaved),
+    fullPrice: round2(quote.subtotal + (quote.freeShipping ? shippingSaved : quote.shipping)),
+  };
 }
 
 /** Fim do dia (fuso da loja) de "YYYY-MM-DD" — o orçamento vale até as 23h59 desse dia. */

@@ -40,6 +40,9 @@ export function QuoteActions({
     customerPhone?: string;
     customerEmail?: string;
     total: number;
+    /** Quanto o cliente economiza (desconto + frete grátis): vira argumento na mensagem. */
+    savings?: number;
+    freeShipping?: boolean;
     validUntil: string;
     linkedOrderId?: string;
   };
@@ -69,7 +72,8 @@ export function QuoteActions({
   };
 
   const sendWhatsApp = () => {
-    const message = `Olá, ${first}! Segue o orçamento ${label} da Fazaê 3D, no valor de ${formatPrice(quote.total)} e válido até ${formatStoreDate(quote.validUntil)}:\n${link}`;
+    const win = quote.savings && quote.savings > 0 ? ` Você está economizando ${formatPrice(quote.savings)}${quote.freeShipping ? " e ainda ganha frete grátis" : ""}!` : quote.freeShipping ? " E o frete é grátis!" : "";
+    const message = `Olá, ${first}! Segue o orçamento ${label} da Fazaê 3D, no valor de ${formatPrice(quote.total)}.${win} A condição vale até ${formatStoreDate(quote.validUntil)}:\n${link}`;
     const digits = whatsappDigits(quote.customerPhone);
     window.open(`https://wa.me/${digits}?text=${encodeURIComponent(message)}`, "_blank", "noopener");
     void markQuoteSentAction(quote.id).then(() => router.refresh());

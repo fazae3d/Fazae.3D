@@ -7,7 +7,7 @@ import { Select } from "@/components/select";
 import { formatPrice } from "@/lib/format";
 import { CHANNEL_LABELS, computeChannelFee, isMarketplace, type ChannelFees } from "@/lib/channels";
 import { round2 } from "@/lib/money";
-import type { Product } from "@/lib/types";
+import type { Material, Product } from "@/lib/types";
 import type { OrderStatus, PaymentMethod } from "@/server/types";
 
 type ManualSaleChannel = "presencial" | "whatsapp" | "mercado_livre" | "shopee" | "tiktok_shop";
@@ -15,6 +15,9 @@ type ManualSaleChannel = "presencial" | "whatsapp" | "mercado_livre" | "shopee" 
 const SALE_CHANNELS: ManualSaleChannel[] = ["presencial", "whatsapp", "mercado_livre", "shopee", "tiktok_shop"];
 
 type SaleItem = {
+  /** true = produto manual (fora da loja): usa customName e os materiais/cores cadastrados em Materiais. */
+  manual: boolean;
+  customName: string;
   productSlug: string;
   material: string;
   color: string;
@@ -46,10 +49,15 @@ function inputClass(hasError?: boolean) {
   return `border px-3 py-2 text-base outline-none focus:border-petrol sm:text-sm ${hasError ? "border-red-500" : "border-mist"}`;
 }
 
-function emptyItem(products: Product[]): SaleItem {
+function emptyItem(products: Product[], manual = false): SaleItem {
+  if (manual || products.length === 0) {
+    return { manual: true, customName: "", productSlug: "", material: "", color: "", quantity: 1, price: 0 };
+  }
   const first = products[0];
   const firstMaterial = first?.materials[0];
   return {
+    manual: false,
+    customName: "",
     productSlug: first?.slug ?? "",
     material: firstMaterial?.material ?? "",
     color: firstMaterial?.colors[0] ?? "",
@@ -58,7 +66,16 @@ function emptyItem(products: Product[]): SaleItem {
   };
 }
 
-export function ManualSaleForm({ products, channelFees = {} }: { products: Product[]; channelFees?: ChannelFees }) {
+export function ManualSaleForm({
+  products,
+  materials = [],
+  channelFees = {},
+}: {
+  products: Product[];
+  /** Materiais cadastrados (com cores): alimentam os campos do produto manual. */
+  materials?: Material[];
+  channelFees?: ChannelFees;
+}) {
   const router = useRouter();
   const [channel, setChannel] = useState<ManualSaleChannel>("presencial");
   const [customerName, setCustomerName] = useState("");
@@ -69,6 +86,7 @@ export function ManualSaleForm({ products, channelFees = {} }: { products: Produ
   const [items, setItems] = useState<SaleItem[]>([emptyItem(products)]);
   // Taxa do marketplace: sugerida pelas Configurações, mas pode ser ajustada (a real muda por anúncio).
   const [feeOverride, setFeeOverride] = useState<string | null>(null);
+  const [shippingInput, setShippingInput] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -95,10 +113,25 @@ export function ManualSaleForm({ products, channelFees = {} }: { products: Produ
     updateItem(index, { material: materialName, color: option?.colors[0] ?? "" });
   };
 
-  const addItem = () => setItems((prev) => [...prev, emptyItem(products)]);
+  const addItem = (manual = false) => setItems((prev) => [...prev, emptyItem(products, manual)]);
+
+  // Troca o item entre "da loja" e "manual"; no manual a lista de cores segue o material escolhido.
+  const setItemKind = (index: number, manual: boolean) => {
+    const fresh = emptyItem(products, manual);
+    updateItem(index, { ...fresh, quantity: items[index].quantity });
+    if (manual) setProductionPending(true);
+  };
+  const colorsOfMaterial = (name: string) => materials.find((m) => m.name === name)?.colors.map((c) => c.name) ?? [];
+  const parseMoney = (value: string) => {
+    const text = value.trim();
+    if (!text) return 0;
+    const n = Number(text.includes(",") ? text.replace(/\./g, "").replace(",", ".") : text);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  };
   const removeItem = (index: number) => setItems((prev) => prev.filter((_, i) => i !== index));
 
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const shippingCost = parseMoney(shippingInput);
   const units = items.reduce((sum, item) => sum + item.quantity, 0);
   const marketplace = isMarketplace(channel);
   const suggestedFee = marketplace ? computeChannelFee(channelFees[channel], subtotal, units) : 0;
@@ -113,8 +146,12 @@ export function ManualSaleForm({ products, channelFees = {} }: { products: Produ
       setError("Informe o nome do cliente.");
       return;
     }
-    if (items.some((item) => !item.productSlug || !item.material || !item.color)) {
-      setError("Selecione produto, material e cor em todos os itens.");
+    if (items.some((item) => !item.manual && (!item.productSlug || !item.material || !item.color))) {
+      setError("Selecione produto, material e cor em todos os itens da loja.");
+      return;
+    }
+    if (items.some((item) => item.manual && !item.customName.trim())) {
+      setError("Digite o nome de cada produto manual.");
       return;
     }
 
@@ -127,7 +164,15 @@ export function ManualSaleForm({ products, channelFees = {} }: { products: Produ
       paymentMethod,
       status,
       productionPending,
-      items,
+      shipping: shippingCost > 0 ? shippingCost : undefined,
+      items: items.map((item) => ({
+        productSlug: item.manual ? undefined : item.productSlug,
+        customName: item.manual ? item.customName.trim() : undefined,
+        material: item.material || undefined,
+        color: item.color || undefined,
+        quantity: item.quantity,
+        price: item.price,
+      })),
     });
     setSubmitting(false);
 
@@ -240,15 +285,59 @@ export function ManualSaleForm({ products, channelFees = {} }: { products: Produ
       <div>
         <div className="mb-2 flex items-center justify-between">
           <p className={labelClass()}>Produtos vendidos</p>
-          <button type="button" onClick={addItem} className="label-caps text-[11px] text-petrol hover:underline">
-            + adicionar produto
-          </button>
+          <div className="flex gap-4">
+            <button type="button" onClick={() => addItem(false)} disabled={products.length === 0} className="label-caps text-[11px] text-petrol hover:underline disabled:opacity-40">
+              + produto da loja
+            </button>
+            <button type="button" onClick={() => addItem(true)} className="label-caps text-[11px] text-petrol hover:underline">
+              + produto manual
+            </button>
+          </div>
         </div>
         <div className="flex flex-col gap-3">
           {items.map((item, index) => {
             const product = productBySlug(item.productSlug);
             return (
               <div key={index} className="border border-mist p-3">
+                <div className="mb-2 flex gap-2 text-xs">
+                  {([false, true] as const).map((manual) => (
+                    <button
+                      key={String(manual)}
+                      type="button"
+                      onClick={() => item.manual !== manual && setItemKind(index, manual)}
+                      disabled={!manual && products.length === 0}
+                      className={`rounded-full border px-3 py-1 transition-colors ${
+                        item.manual === manual ? "admin-chip-active" : "border-mist text-graphite hover:border-petrol hover:text-ink"
+                      }`}
+                    >
+                      {manual ? "Produto manual" : "Da loja"}
+                    </button>
+                  ))}
+                </div>
+                {item.manual ? (
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-[2fr_1fr_1fr]">
+                    <input
+                      value={item.customName}
+                      onChange={(e) => updateItem(index, { customName: e.target.value })}
+                      placeholder="Nome do produto (ex.: Chaveiro com nome)"
+                      className={inputClass()}
+                    />
+                    <Select
+                      value={item.material}
+                      onChange={(v) => updateItem(index, { material: v, color: "" })}
+                      className={inputClass()}
+                      placeholder="Material (opcional)"
+                      options={materials.map((m) => ({ value: m.name, label: m.name }))}
+                    />
+                    <Select
+                      value={item.color}
+                      onChange={(v) => updateItem(index, { color: v })}
+                      className={inputClass()}
+                      placeholder="Cor (opcional)"
+                      options={colorsOfMaterial(item.material).map((c) => ({ value: c, label: c }))}
+                    />
+                  </div>
+                ) : (
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-[2fr_1fr_1fr]">
                   <Select
                     value={item.productSlug}
@@ -274,6 +363,7 @@ export function ManualSaleForm({ products, channelFees = {} }: { products: Produ
                     ).map((c) => ({ value: c, label: c }))}
                   />
                 </div>
+                )}
                 <div className="mt-2 flex flex-wrap items-end gap-2">
                   <div className="flex flex-col gap-1">
                     <span className="label-caps text-[10px] text-graphite">Qtd</span>
@@ -332,9 +422,29 @@ export function ManualSaleForm({ products, channelFees = {} }: { products: Produ
         </div>
       )}
 
-      <div className="flex items-center justify-between border-t border-mist pt-4">
-        <p className="label-caps text-[11px] text-graphite">Total</p>
-        <p className="font-display text-xl">{formatPrice(subtotal)}</p>
+      <div className="flex flex-wrap items-end gap-4 border-t border-mist pt-4">
+        <div className="flex flex-col gap-1.5">
+          <label className={labelClass()} htmlFor="shipping">
+            Frete cobrado (R$)
+          </label>
+          <input
+            id="shipping"
+            inputMode="decimal"
+            value={shippingInput}
+            onChange={(e) => setShippingInput(e.target.value)}
+            placeholder="em branco = sem frete"
+            className={`w-48 ${inputClass()}`}
+          />
+        </div>
+        <div className="ml-auto text-right">
+          {shippingCost > 0 ? (
+            <p className="text-xs text-graphite">
+              Produtos {formatPrice(subtotal)} + frete {formatPrice(shippingCost)}
+            </p>
+          ) : null}
+          <p className="label-caps text-[11px] text-graphite">Total</p>
+          <p className="font-display text-xl">{formatPrice(subtotal + shippingCost)}</p>
+        </div>
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}

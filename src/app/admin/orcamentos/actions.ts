@@ -9,7 +9,7 @@ import { escapeHtml, sendEmail } from "@/lib/email";
 import { getEmailContactUrl, renderEmailLayout } from "@/lib/email-template";
 import { formatPrice } from "@/lib/format";
 import { round2 } from "@/lib/money";
-import { computeQuoteTotals, formatStoreDate, quoteNumberLabel, validityEndOfDay, type Quote, type QuoteStatus } from "@/lib/quote";
+import { computeQuoteTotals, formatStoreDate, quoteNumberLabel, quoteSavings, validityEndOfDay, type Quote, type QuoteStatus } from "@/lib/quote";
 import { SITE_URL } from "@/lib/site-config";
 import { logAdminAction } from "@/server/audit";
 import {
@@ -51,7 +51,8 @@ function buildInput(data: QuoteFormInput): QuoteInput {
     unitPrice: round2(item.unitPrice),
     productSlug: clean(item.productSlug),
   }));
-  const totals = computeQuoteTotals(items, data.discount, data.shipping);
+  const free = data.freeShipping === true;
+  const totals = computeQuoteTotals(items, data.discount, free ? 0 : data.shipping);
   return {
     customerName: data.customerName.trim(),
     customerPhone: clean(data.customerPhone),
@@ -61,6 +62,8 @@ function buildInput(data: QuoteFormInput): QuoteInput {
     title: clean(data.title),
     items,
     ...totals,
+    freeShipping: free,
+    shippingOriginal: free ? round2(Math.max(0, data.shippingOriginal ?? 0)) : 0,
     validUntil: validityEndOfDay(data.validUntil),
     deliveryTime: clean(data.deliveryTime),
     paymentTerms: clean(data.paymentTerms),
@@ -140,6 +143,8 @@ export async function duplicateQuoteAction(id: string, validUntil: string): Prom
       subtotal: original.subtotal,
       discount: original.discount,
       shipping: original.shipping,
+      freeShipping: original.freeShipping,
+      shippingOriginal: original.shippingOriginal,
       total: original.total,
       validUntil: validityEndOfDay(validUntil),
       deliveryTime: original.deliveryTime,
@@ -175,12 +180,15 @@ export async function emailQuoteAction(id: string): Promise<SimpleResult> {
 
   const label = quoteNumberLabel(quote.number);
   const first = quote.customerName.trim().split(/\s+/)[0] ?? quote.customerName;
+  const savings = quoteSavings(quote);
+  const benefits = [savings.discount > 0 ? `desconto de ${formatPrice(savings.discount)}` : "", savings.freeShipping ? "frete grátis" : ""].filter(Boolean).join(" e ");
   const html = renderEmailLayout({
     preheader: `Orçamento ${label} no valor de ${formatPrice(quote.total)}, válido até ${formatStoreDate(quote.validUntil)}.`,
     eyebrow: `Orçamento ${label}`,
     greeting: `Oi, ${first}!`,
     heading: quote.title ? `Seu orçamento: ${quote.title}` : "Seu orçamento está pronto",
     bodyHtml: `<p style="margin:0 0 12px;">Preparamos o orçamento que você pediu. Ele soma <strong>${escapeHtml(formatPrice(quote.total))}</strong> e vale até <strong>${escapeHtml(formatStoreDate(quote.validUntil))}</strong>.</p>
+${benefits ? `<p style="margin:0 0 12px;padding:12px 14px;background:#f1ffd0;border-left:4px solid #b6ff00;"><strong>Você está ganhando:</strong> ${escapeHtml(benefits)}${savings.total > 0 ? ` (economia de <strong>${escapeHtml(formatPrice(savings.total))}</strong>)` : ""}. Condição válida até ${escapeHtml(formatStoreDate(quote.validUntil))}.</p>` : ""}
 <p style="margin:0;">Pelo botão abaixo você vê todos os itens e baixa o PDF. Para aprovar ou ajustar algo, é só responder este e-mail ou chamar a gente no WhatsApp.</p>`,
     action: { label: "Ver orçamento", url: `${SITE_URL}/orcamento/${quote.token}` },
     contactUrl: await getEmailContactUrl(),
@@ -244,6 +252,7 @@ export async function convertQuoteToOrderAction(id: string, paymentMethod: Order
       items,
       subtotal: quote.subtotal,
       shipping: quote.shipping,
+      shippingMethod: quote.freeShipping ? "Frete grátis" : undefined,
       discount: quote.discount,
       total: quote.total,
       paymentMethod,

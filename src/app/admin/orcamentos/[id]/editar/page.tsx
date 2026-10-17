@@ -22,6 +22,8 @@ export default async function EditQuotePage({ params }: { params: Promise<{ id: 
     items: quote.items,
     discount: quote.discount,
     shipping: quote.shipping,
+    freeShipping: quote.freeShipping,
+    shippingOriginal: quote.shippingOriginal,
     validUntil: storeDayKey(new Date(quote.validUntil)),
     deliveryTime: quote.deliveryTime ?? "",
     paymentTerms: quote.paymentTerms ?? "",

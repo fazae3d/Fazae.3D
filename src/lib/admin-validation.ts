@@ -117,13 +117,24 @@ export const couponFormSchema = z
 
 export type CouponFormInput = z.infer<typeof couponFormSchema>;
 
-export const manualSaleItemSchema = z.object({
-  productSlug: z.string().min(1, "Selecione um produto."),
-  material: z.string().min(1, "Selecione o material."),
-  color: z.string().min(1, "Selecione a cor."),
-  quantity: z.number("Informe uma quantidade válida.").int().min(1, "Quantidade mínima é 1."),
-  price: z.number("Informe um preço válido.").min(0, "O preço não pode ser negativo."),
-});
+export const manualSaleItemSchema = z
+  .object({
+    /** Produto do catálogo. Vazio = produto manual (peça personalizada que não está na loja), identificado por `customName`. */
+    productSlug: z.string().optional(),
+    customName: z.string().trim().optional(),
+    material: z.string().optional(),
+    color: z.string().optional(),
+    quantity: z.number("Informe uma quantidade válida.").int().min(1, "Quantidade mínima é 1."),
+    price: z.number("Informe um preço válido.").min(0, "O preço não pode ser negativo."),
+  })
+  .superRefine((item, ctx) => {
+    if (!item.productSlug && !item.customName) {
+      ctx.addIssue({ code: "custom", message: "Selecione um produto ou digite o nome do produto manual." });
+    }
+    if (item.productSlug && (!item.material || !item.color)) {
+      ctx.addIssue({ code: "custom", message: "Selecione o material e a cor do produto." });
+    }
+  });
 
 export const manualSaleFormSchema = z.object({
   channel: z.enum(["presencial", "whatsapp", "mercado_livre", "shopee", "tiktok_shop"]),
@@ -142,6 +153,8 @@ export const manualSaleFormSchema = z.object({
     "Cancelado",
   ]),
   productionPending: z.boolean().optional(),
+  /** Frete cobrado do cliente (R$). Vazio ou 0 = sem frete. */
+  shipping: z.number("Informe um frete válido.").min(0, "O frete não pode ser negativo.").optional(),
   items: z.array(manualSaleItemSchema).min(1, "Adicione ao menos um produto."),
 });
 
@@ -241,6 +254,9 @@ export const quoteFormSchema = z.object({
   items: z.array(quoteItemSchema).min(1, "Adicione ao menos um item."),
   discount: z.number("Informe um desconto válido.").min(0, "O desconto não pode ser negativo."),
   shipping: z.number("Informe um frete válido.").min(0, "O frete não pode ser negativo."),
+  freeShipping: z.boolean().optional(),
+  /** Valor normal do frete quando é grátis (aparece riscado no orçamento). */
+  shippingOriginal: z.number("Informe um valor válido.").min(0, "O valor não pode ser negativo.").optional(),
   validUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Informe até quando o orçamento vale."),
   deliveryTime: z.string().optional(),
   paymentTerms: z.string().optional(),

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { formatPrice } from "@/lib/format";
-import { QUOTE_STATUS_LABELS, formatStoreDate, quoteDisplayStatus, quoteNumberLabel } from "@/lib/quote";
+import { QUOTE_STATUS_LABELS, daysUntil, formatStoreDate, quoteDisplayStatus, quoteNumberLabel, quoteSavings } from "@/lib/quote";
 import { DEFAULT_WHATSAPP_NUMBER, getWhatsAppLink } from "@/lib/site-config";
 import { getQuoteByToken } from "@/server/repositories/quote-repository";
 import { getSettings } from "@/server/repositories/settings-repository";
@@ -21,9 +21,12 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
   const settings = await getSettings().catch(() => null);
   const label = quoteNumberLabel(quote.number);
   const status = quoteDisplayStatus(quote);
+  const savings = quoteSavings(quote);
+  const daysLeft = daysUntil(quote.validUntil);
+  const open = status !== "vencido" && status !== "recusado" && status !== "aprovado";
   const whatsapp = getWhatsAppLink(
     settings?.whatsappNumber ?? DEFAULT_WHATSAPP_NUMBER,
-    `Olá! Quero aprovar o orçamento ${label} (${formatPrice(quote.total)}).`,
+    `Olá! Quero aprovar o orçamento ${label} (${formatPrice(quote.total)}${savings.total > 0 ? `, com economia de ${formatPrice(savings.total)}` : ""}).`,
   );
   const pdfHref = `/orcamento/${quote.token}/pdf`;
 
@@ -35,6 +38,34 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
         Para {quote.customerName} · emitido em {formatStoreDate(quote.createdAt)} · válido até {formatStoreDate(quote.validUntil)}
         {status === "vencido" ? " (vencido)" : status === "aprovado" ? " (aprovado)" : ""}
       </p>
+
+      {savings.total > 0 || savings.freeShipping ? (
+        <div className="mt-8 rounded-2xl bg-petrol p-5 text-[#111] sm:p-6">
+          <p className="text-xs font-bold uppercase tracking-widest">Você está ganhando</p>
+          {savings.total > 0 ? (
+            <p className="font-display mt-1 text-3xl sm:text-4xl">Economia de {formatPrice(savings.total)}</p>
+          ) : (
+            <p className="font-display mt-1 text-3xl sm:text-4xl">Frete grátis</p>
+          )}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {savings.discount > 0 ? (
+              <span className="rounded-full bg-[#111] px-3 py-1 text-xs font-semibold text-petrol">
+                {savings.discountPct > 0 ? `${savings.discountPct}% de desconto` : "Desconto"} · -{formatPrice(savings.discount)}
+              </span>
+            ) : null}
+            {savings.freeShipping ? (
+              <span className="rounded-full bg-[#111] px-3 py-1 text-xs font-semibold text-petrol">
+                Frete grátis{savings.shippingSaved > 0 ? ` · economiza ${formatPrice(savings.shippingSaved)}` : ""}
+              </span>
+            ) : null}
+          </div>
+          {open ? (
+            <p className="mt-3 text-sm font-medium">
+              {daysLeft <= 0 ? "Condição válida só até hoje." : daysLeft <= 3 ? `Condição válida por mais ${daysLeft} dia(s), até ${formatStoreDate(quote.validUntil)}.` : `Condição válida até ${formatStoreDate(quote.validUntil)}.`}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="mt-8 divide-y divide-mist border border-mist">
         {quote.items.map((item, index) => (
@@ -55,18 +86,28 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
             <span>{formatPrice(quote.subtotal)}</span>
           </div>
           {quote.discount > 0 ? (
-            <div className="flex justify-between text-graphite">
-              <span>Desconto</span>
+            <div className="flex justify-between font-medium text-petrol">
+              <span>Desconto{savings.discountPct > 0 ? ` (${savings.discountPct}%)` : ""}</span>
               <span>- {formatPrice(quote.discount)}</span>
             </div>
           ) : null}
-          <div className="flex justify-between text-graphite">
+          <div className={`flex justify-between ${savings.freeShipping ? "font-medium text-petrol" : "text-graphite"}`}>
             <span>Frete</span>
-            <span>{quote.shipping > 0 ? formatPrice(quote.shipping) : "A combinar / retirada"}</span>
+            {savings.freeShipping ? (
+              <span>
+                {savings.shippingSaved > 0 ? <span className="mr-2 text-graphite line-through">{formatPrice(savings.shippingSaved)}</span> : null}
+                GRÁTIS
+              </span>
+            ) : (
+              <span>{quote.shipping > 0 ? formatPrice(quote.shipping) : "A combinar / retirada"}</span>
+            )}
           </div>
-          <div className="flex justify-between pt-2 text-lg font-semibold">
-            <span>Total</span>
-            <span className="text-petrol">{formatPrice(quote.total)}</span>
+          <div className="flex items-end justify-between pt-2">
+            <span className="text-lg font-semibold">Total</span>
+            <span className="text-right">
+              {savings.total > 0 ? <span className="block text-sm text-graphite line-through">{formatPrice(savings.fullPrice)}</span> : null}
+              <span className="text-2xl font-semibold text-petrol">{formatPrice(quote.total)}</span>
+            </span>
           </div>
         </div>
       </div>
@@ -101,12 +142,12 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
         >
           Baixar PDF
         </a>
-        {status !== "vencido" && status !== "recusado" && status !== "aprovado" ? (
+        {open ? (
           <a
             href={whatsapp}
             className="label-caps rounded-full border border-petrol px-7 py-3.5 text-xs text-petrol transition-colors hover:bg-petrol hover:text-[#111]"
           >
-            Aprovar pelo WhatsApp
+            {savings.total > 0 ? "Aprovar e garantir minha economia" : "Aprovar pelo WhatsApp"}
           </a>
         ) : (
           <p className="self-center text-sm text-graphite">

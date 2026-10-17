@@ -12,7 +12,7 @@ import { toCsv } from "./csv";
 import { computeChannelFee, isMarketplace, parseChannelFees } from "./channels";
 import { buildCustomerMetrics, isInactive, phoneKey, rankCustomers, reactivationMessage, wasRecentlyReminded } from "./customer-insights";
 import { monthGoalProgress, channelResults } from "./finance-stats";
-import { needsFollowUp } from "./quote";
+import { needsFollowUp, quoteSavings } from "./quote";
 import { computeQuoteTotals, daysUntil, isQuoteExpired, quoteDisplayStatus, quoteNumberLabel, validityEndOfDay, validityFromNow } from "./quote";
 import type { Product } from "./types";
 import type { Order } from "@/server/types";
@@ -232,5 +232,21 @@ describe("canais, meta e clientes", () => {
     expect(needsFollowUp(q("2026-10-15T12:00:00-03:00", "2026-10-17"), now)).toBe(true);
     expect(needsFollowUp(q("2026-10-12T12:00:00-03:00", "2026-10-30", "2026-10-15T12:00:00-03:00"), now)).toBe(false);
     expect(needsFollowUp(q("2026-10-01T12:00:00-03:00", "2026-10-10"), now)).toBe(false);
+  });
+});
+
+describe("orçamento: sentimento de ganho", () => {
+  it("soma desconto e frete grátis na economia", () => {
+    const s = quoteSavings({ subtotal: 575.7, discount: 57.57, freeShipping: true, shippingOriginal: 32.5, shipping: 0 });
+    expect(s).toMatchObject({ discountPct: 10, shippingSaved: 32.5, total: 90.07, fullPrice: 608.2 });
+  });
+  it("frete grátis sem valor normal não inventa economia", () => {
+    const s = quoteSavings({ subtotal: 100, discount: 0, freeShipping: true, shippingOriginal: 0, shipping: 0 });
+    expect(s.total).toBe(0);
+    expect(s.freeShipping).toBe(true);
+  });
+  it("frete cobrado entra no preço cheio e não conta como ganho", () => {
+    const s = quoteSavings({ subtotal: 200, discount: 20, freeShipping: false, shippingOriginal: 0, shipping: 25 });
+    expect(s).toMatchObject({ total: 20, shippingSaved: 0, fullPrice: 225 });
   });
 });

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { PageHeader, StatusBadge } from "@/components/admin/page-header";
 import { QuoteActions } from "@/components/admin/quote-actions";
 import { formatPrice } from "@/lib/format";
-import { QUOTE_STATUS_LABELS, formatStoreDate, quoteDisplayStatus, quoteNumberLabel } from "@/lib/quote";
+import { QUOTE_STATUS_LABELS, formatStoreDate, quoteDisplayStatus, quoteNumberLabel, quoteSavings } from "@/lib/quote";
 import { SITE_URL } from "@/lib/site-config";
 import { QUOTE_TONES } from "../quote-tones";
 import { getQuote } from "@/server/repositories/quote-repository";
@@ -15,6 +15,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
 
   const status = quoteDisplayStatus(quote);
   const label = quoteNumberLabel(quote.number);
+  const savings = quoteSavings(quote);
 
   return (
     <div>
@@ -70,15 +71,26 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
                 <span>{formatPrice(quote.subtotal)}</span>
               </div>
               {quote.discount > 0 ? (
-                <div className="flex justify-between text-graphite">
-                  <span>Desconto</span>
+                <div className="flex justify-between text-petrol">
+                  <span>Desconto{savings.discountPct > 0 ? ` (${savings.discountPct}%)` : ""}</span>
                   <span>- {formatPrice(quote.discount)}</span>
                 </div>
               ) : null}
-              <div className="flex justify-between text-graphite">
+              <div className={`flex justify-between ${savings.freeShipping ? "text-petrol" : "text-graphite"}`}>
                 <span>Frete</span>
-                <span>{quote.shipping > 0 ? formatPrice(quote.shipping) : "A combinar / retirada"}</span>
+                <span>
+                  {savings.freeShipping
+                    ? `${savings.shippingSaved > 0 ? `${formatPrice(savings.shippingSaved)} ` : ""}GRÁTIS`
+                    : quote.shipping > 0
+                      ? formatPrice(quote.shipping)
+                      : "A combinar / retirada"}
+                </span>
               </div>
+              {savings.total > 0 ? (
+                <p className="rounded-lg bg-petrol/15 px-3 py-2 text-xs text-ink">
+                  O cliente vê <strong>economia de {formatPrice(savings.total)}</strong> em destaque.
+                </p>
+              ) : null}
               <div className="flex justify-between pt-2 text-lg font-semibold">
                 <span>Total</span>
                 <span className="text-petrol">{formatPrice(quote.total)}</span>
@@ -129,6 +141,8 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
             customerPhone: quote.customerPhone,
             customerEmail: quote.customerEmail,
             total: quote.total,
+            savings: savings.total,
+            freeShipping: savings.freeShipping,
             validUntil: quote.validUntil,
             linkedOrderId: quote.linkedOrderId,
           }}

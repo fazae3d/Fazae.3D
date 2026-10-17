@@ -2,7 +2,7 @@ import { Document, Image, Page, StyleSheet, Text, View, renderToBuffer } from "@
 import { COMPANY, INSTAGRAM_URL, SITE_URL } from "@/lib/site-config";
 import { formatPrice } from "@/lib/format";
 import { formatPhone } from "@/lib/br-format";
-import { formatStoreDate, quoteNumberLabel, type Quote } from "@/lib/quote";
+import { daysUntil, formatStoreDate, quoteNumberLabel, quoteSavings, type Quote } from "@/lib/quote";
 import { QUOTE_PDF_LOGO } from "@/lib/quote-pdf-logo";
 
 const INK = "#111111";
@@ -44,6 +44,11 @@ const s = StyleSheet.create({
   grand: { marginTop: 8, backgroundColor: INK, borderRadius: 4, paddingVertical: 11, paddingHorizontal: 14, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   grandLabel: { color: "#FFFFFF", fontSize: 8.5, letterSpacing: 1.6, fontFamily: "Helvetica-Bold" },
   grandValue: { color: LIME, fontSize: 17, fontFamily: "Helvetica-Bold" },
+  winBand: { backgroundColor: LIME, borderRadius: 4, paddingVertical: 10, paddingHorizontal: 14, marginBottom: 18, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  winLabel: { fontSize: 7.5, letterSpacing: 1.6, fontFamily: "Helvetica-Bold", color: INK },
+  winValue: { fontSize: 18, fontFamily: "Helvetica-Bold", color: INK },
+  winText: { fontSize: 9, color: INK, marginTop: 2 },
+  strike: { textDecoration: "line-through", color: MUTED },
   block: { marginTop: 18 },
   blockText: { fontSize: 9.5, lineHeight: 1.5 },
   accept: { marginTop: 22, borderWidth: 1, borderColor: LINE, borderRadius: 4, padding: 12, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
@@ -61,6 +66,12 @@ export type QuotePdfContext = {
 
 export function QuotePdf({ quote, context }: { quote: Quote; context: QuotePdfContext }) {
   const label = quoteNumberLabel(quote.number);
+  const savings = quoteSavings(quote);
+  const winParts = [
+    savings.discount > 0 ? `desconto de ${savings.discountPct > 0 ? `${savings.discountPct}% (${formatPrice(savings.discount)})` : formatPrice(savings.discount)}` : "",
+    savings.freeShipping ? "frete grátis" : "",
+  ].filter(Boolean);
+  const daysLeft = daysUntil(quote.validUntil);
   const whatsapp = context.whatsappNumber.replace(/\D/g, "");
   const localWhats = whatsapp.startsWith("55") ? whatsapp.slice(2) : whatsapp;
   const identification = [COMPANY.legalName, COMPANY.cnpj ? `CNPJ ${COMPANY.cnpj}` : null, `${COMPANY.address}, CEP ${COMPANY.zip}`]
@@ -85,6 +96,23 @@ export function QuotePdf({ quote, context }: { quote: Quote; context: QuotePdfCo
           <Text style={s.subtitle}>
             Emitido em {formatStoreDate(quote.createdAt)} · Válido até {formatStoreDate(quote.validUntil)}
           </Text>
+
+          {winParts.length > 0 ? (
+            <View style={s.winBand}>
+              <View style={{ flex: 1, paddingRight: 10 }}>
+                <Text style={s.winLabel}>VOCÊ ESTÁ GANHANDO</Text>
+                <Text style={s.winText}>
+                  Neste orçamento: {winParts.join(" e ")}.{daysLeft >= 0 ? ` Condição válida até ${formatStoreDate(quote.validUntil)}.` : ""}
+                </Text>
+              </View>
+              {savings.total > 0 ? (
+                <View style={{ alignItems: "flex-end" }}>
+                  <Text style={s.winLabel}>ECONOMIA DE</Text>
+                  <Text style={s.winValue}>{formatPrice(savings.total)}</Text>
+                </View>
+              ) : null}
+            </View>
+          ) : null}
 
           <View style={s.metaRow}>
             <View style={s.metaBox}>
@@ -137,16 +165,30 @@ export function QuotePdf({ quote, context }: { quote: Quote; context: QuotePdfCo
               </View>
               {quote.discount > 0 ? (
                 <View style={s.totalLine}>
-                  <Text style={{ color: MUTED }}>Desconto</Text>
-                  <Text>- {formatPrice(quote.discount)}</Text>
+                  <Text style={{ color: OLIVE, fontFamily: "Helvetica-Bold" }}>
+                    Desconto{savings.discountPct > 0 ? ` (${savings.discountPct}%)` : ""}
+                  </Text>
+                  <Text style={{ color: OLIVE, fontFamily: "Helvetica-Bold" }}>- {formatPrice(quote.discount)}</Text>
                 </View>
               ) : null}
               <View style={s.totalLine}>
-                <Text style={{ color: MUTED }}>Frete</Text>
-                <Text>{quote.shipping > 0 ? formatPrice(quote.shipping) : "A combinar / retirada"}</Text>
+                <Text style={{ color: savings.freeShipping ? OLIVE : MUTED, fontFamily: savings.freeShipping ? "Helvetica-Bold" : "Helvetica" }}>Frete</Text>
+                {savings.freeShipping ? (
+                  <Text style={{ color: OLIVE, fontFamily: "Helvetica-Bold" }}>
+                    {savings.shippingSaved > 0 ? <Text style={s.strike}>{formatPrice(savings.shippingSaved)}</Text> : null}
+                    {savings.shippingSaved > 0 ? "  " : ""}GRÁTIS
+                  </Text>
+                ) : (
+                  <Text>{quote.shipping > 0 ? formatPrice(quote.shipping) : "A combinar / retirada"}</Text>
+                )}
               </View>
               <View style={s.grand}>
-                <Text style={s.grandLabel}>TOTAL</Text>
+                <View>
+                  <Text style={s.grandLabel}>TOTAL</Text>
+                  {savings.total > 0 ? (
+                    <Text style={{ color: "#A6A6A0", fontSize: 8, marginTop: 2, textDecoration: "line-through" }}>{formatPrice(savings.fullPrice)}</Text>
+                  ) : null}
+                </View>
                 <Text style={s.grandValue}>{formatPrice(quote.total)}</Text>
               </View>
             </View>
@@ -176,8 +218,10 @@ export function QuotePdf({ quote, context }: { quote: Quote; context: QuotePdfCo
               <Text style={s.strong}>Para aprovar este orçamento</Text>
               <Text style={s.small}>
                 Responda a mensagem em que recebeu este arquivo ou chame a gente no WhatsApp
-                {localWhats ? ` ${formatPhone(localWhats)}` : ""} informando o número {label}. Valores válidos até{" "}
-                {formatStoreDate(quote.validUntil)}.
+                {localWhats ? ` ${formatPhone(localWhats)}` : ""} informando o número {label}.{" "}
+                {savings.total > 0
+                  ? `Aprove até ${formatStoreDate(quote.validUntil)} para garantir sua economia de ${formatPrice(savings.total)}.`
+                  : `Valores válidos até ${formatStoreDate(quote.validUntil)}.`}
               </Text>
             </View>
             <Text style={{ fontFamily: "Helvetica-Bold", fontSize: 11, color: OLIVE }}>{label}</Text>

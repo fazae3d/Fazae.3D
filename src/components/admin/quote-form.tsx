@@ -25,6 +25,8 @@ export type QuoteFormInitial = {
   items: { description: string; details?: string; quantity: number; unitPrice: number; productSlug?: string }[];
   discount: number;
   shipping: number;
+  freeShipping?: boolean;
+  shippingOriginal?: number;
   validUntil: string;
   deliveryTime: string;
   paymentTerms: string;
@@ -102,6 +104,8 @@ export function QuoteForm({
   const [discountMode, setDiscountMode] = useState<"valor" | "pct">("valor");
   const [discountInput, setDiscountInput] = useState(moneyText(initial.discount));
   const [shippingInput, setShippingInput] = useState(moneyText(initial.shipping));
+  const [freeShipping, setFreeShipping] = useState(initial.freeShipping ?? false);
+  const [shippingOriginalInput, setShippingOriginalInput] = useState(moneyText(initial.shippingOriginal ?? 0));
   const [validUntil, setValidUntil] = useState(initial.validUntil);
   const [deliveryTime, setDeliveryTime] = useState(initial.deliveryTime);
   const [paymentTerms, setPaymentTerms] = useState(initial.paymentTerms);
@@ -115,7 +119,7 @@ export function QuoteForm({
   const draftReady = useRef(false);
   const draftState = {
     customerName, customerPhone, customerEmail, customerDocument, customerAddress, title, items,
-    discountMode, discountInput, shippingInput, validUntil, deliveryTime, paymentTerms, notes,
+    discountMode, discountInput, shippingInput, freeShipping, shippingOriginalInput, validUntil, deliveryTime, paymentTerms, notes,
   };
   const draftJson = JSON.stringify(draftState);
 
@@ -152,6 +156,7 @@ export function QuoteForm({
       setCustomerDocument(d.customerDocument ?? ""); setCustomerAddress(d.customerAddress ?? ""); setTitle(d.title ?? "");
       if (Array.isArray(d.items) && d.items.length) setItems(d.items);
       setDiscountMode(d.discountMode ?? "valor"); setDiscountInput(d.discountInput ?? ""); setShippingInput(d.shippingInput ?? "");
+      setFreeShipping(d.freeShipping ?? false); setShippingOriginalInput(d.shippingOriginalInput ?? "");
       if (d.validUntil) setValidUntil(d.validUntil);
       setDeliveryTime(d.deliveryTime ?? ""); setPaymentTerms(d.paymentTerms ?? ""); setNotes(d.notes ?? "");
     } catch {
@@ -174,7 +179,9 @@ export function QuoteForm({
   );
   const subtotal = computeQuoteTotals(parsedItems, 0, 0).subtotal;
   const discountValue = discountMode === "pct" ? round2(subtotal * (Math.min(parseMoney(discountInput), 100) / 100)) : parseMoney(discountInput);
-  const totals = computeQuoteTotals(parsedItems, discountValue, parseMoney(shippingInput));
+  const totals = computeQuoteTotals(parsedItems, discountValue, freeShipping ? 0 : parseMoney(shippingInput));
+  const shippingSaved = freeShipping ? parseMoney(shippingOriginalInput) : 0;
+  const totalSavings = round2(totals.discount + shippingSaved);
 
   const updateItem = (index: number, patch: Partial<ItemState>) =>
     setItems((prev) => prev.map((item, i) => (i === index ? { ...item, ...patch } : item)));
@@ -219,6 +226,8 @@ export function QuoteForm({
       })),
       discount: totals.discount,
       shipping: totals.shipping,
+      freeShipping,
+      shippingOriginal: shippingSaved,
       validUntil,
       deliveryTime,
       paymentTerms,
@@ -398,9 +407,37 @@ export function QuoteForm({
               {totals.discount > 0 ? <p className="mt-1 text-right text-xs text-graphite">- {formatPrice(totals.discount)}</p> : null}
             </div>
             <div>
-              <dt className="mb-1.5 text-graphite">Frete (R$)</dt>
-              <input className={INPUT} value={shippingInput} onChange={(e) => setShippingInput(e.target.value)} placeholder="0,00 (retirada ou a combinar)" inputMode="decimal" aria-label="Frete" />
+              <div className="mb-1.5 flex items-center justify-between gap-2">
+                <dt className="text-graphite">Frete</dt>
+                <label className="flex cursor-pointer items-center gap-1.5 text-xs font-medium">
+                  <input type="checkbox" checked={freeShipping} onChange={(e) => setFreeShipping(e.target.checked)} className="h-4 w-4 accent-ink" />
+                  Frete grátis
+                </label>
+              </div>
+              {freeShipping ? (
+                <>
+                  <input
+                    className={INPUT}
+                    value={shippingOriginalInput}
+                    onChange={(e) => setShippingOriginalInput(e.target.value)}
+                    placeholder="Valor normal do frete (opcional)"
+                    inputMode="decimal"
+                    aria-label="Valor normal do frete"
+                  />
+                  <p className="mt-1 text-xs text-graphite">O cliente vê &ldquo;GRÁTIS&rdquo; com este valor riscado, para perceber a economia.</p>
+                </>
+              ) : (
+                <input className={INPUT} value={shippingInput} onChange={(e) => setShippingInput(e.target.value)} placeholder="0,00 (retirada ou a combinar)" inputMode="decimal" aria-label="Frete" />
+              )}
             </div>
+            {totalSavings > 0 ? (
+              <div className="rounded-lg border border-petrol/50 bg-petrol/10 px-3 py-2 text-xs">
+                O cliente vai ver <strong>economia de {formatPrice(totalSavings)}</strong>
+                {totals.discount > 0 ? ", desconto" : ""}
+                {totals.discount > 0 && shippingSaved > 0 ? " e" : ""}
+                {shippingSaved > 0 ? " frete grátis" : ""} em destaque.
+              </div>
+            ) : null}
             <div className="flex items-baseline justify-between border-t border-mist pt-3">
               <dt className="font-semibold">Total</dt>
               <dd className="text-xl font-semibold text-petrol">{formatPrice(totals.total)}</dd>

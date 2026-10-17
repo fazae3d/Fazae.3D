@@ -20,6 +20,8 @@ function toQuote(row: Row): Quote {
     subtotal: row.subtotal,
     discount: row.discount,
     shipping: row.shipping,
+    freeShipping: row.freeShipping,
+    shippingOriginal: row.shippingOriginal,
     total: row.total,
     validUntil: row.validUntil.toISOString(),
     deliveryTime: row.deliveryTime ?? undefined,
@@ -46,6 +48,8 @@ export type QuoteInput = {
   subtotal: number;
   discount: number;
   shipping: number;
+  freeShipping: boolean;
+  shippingOriginal: number;
   total: number;
   validUntil: Date;
   deliveryTime?: string;

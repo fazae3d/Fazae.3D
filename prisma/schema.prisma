@@ -542,6 +542,9 @@ model Quote {
   subtotal         Float
   discount         Float       @default(0)
   shipping         Float       @default(0)
+  /** Frete grátis para o cliente: sai "GRÁTIS" no orçamento, com o valor normal riscado (shippingOriginal) para evidenciar a economia. */
+  freeShipping     Boolean     @default(false)
+  shippingOriginal Float       @default(0)
   total            Float
   validUntil       DateTime
   deliveryTime     String?
