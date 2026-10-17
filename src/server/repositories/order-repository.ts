@@ -1,3 +1,4 @@
+import { applyManualPayment } from "@/lib/payment";
 import { db } from "../db";
 import type { Order, OrderStatus } from "../types";
 import type { Prisma, ProductionStage } from "@/generated/prisma/client";
@@ -220,6 +221,32 @@ export async function markOrdersPaid(ids: string[]): Promise<{ updated: number }
     ),
   );
   return { updated: rows.length };
+}
+
+export type SetPaymentResult =
+  | { success: true; received: number; paid: boolean; total: number }
+  | { success: false; error: string };
+
+/**
+ * Registra (mode "add") ou corrige (mode "set") o valor recebido de uma venda lançada no painel. Completou o valor: pagamento
+ * aprovado e, se estava só "recebido", o status vira "Pagamento aprovado". Voltou a faltar dinheiro (desfazer): pagamento volta a
+ * pendente e, se o status ainda é exatamente "Pagamento aprovado", volta para "Pedido recebido". Pagamento parcial não mexe no status.
+ */
+export async function setManualOrderPayment(id: string, mode: "add" | "set", amount: number): Promise<SetPaymentResult> {
+  const order = await db.order.findUnique({ where: { id } });
+  if (!order) return { success: false, error: "Pedido não encontrado." };
+  if (order.channel === "online") return { success: false, error: "O pagamento dos pedidos do site é confirmado pelo Mercado Pago." };
+  if (order.status === "Cancelado") return { success: false, error: "Esse pedido está cancelado." };
+
+  const change = applyManualPayment(order.total, order.depositAmount, mode, amount);
+  let status = order.status;
+  if (change.paid && status === "Pedido recebido") status = "Pagamento aprovado";
+  if (!change.paid && status === "Pagamento aprovado") status = "Pedido recebido";
+  await db.order.update({
+    where: { id },
+    data: { depositAmount: change.received, paymentStatus: change.paid ? "approved" : "pending", status },
+  });
+  return { success: true, received: change.received, paid: change.paid, total: order.total };
 }
 
 export type PaymentUpdateResult =

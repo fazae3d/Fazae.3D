@@ -2,7 +2,8 @@ import { EmptyState } from "@/components/admin/empty-state";
 import Link from "next/link";
 import { getAllOrders } from "@/server/repositories/order-repository";
 import { OrderStatusForm } from "@/components/admin/order-status-form";
-import { MarkAllPaidButton, MarkPaidButton } from "@/components/admin/mark-paid-button";
+import { MarkAllPaidButton } from "@/components/admin/mark-paid-button";
+import { OrderPaymentControls } from "@/components/admin/order-payment-controls";
 import { StatusBadge, type BadgeTone } from "@/components/admin/page-header";
 import { ProductPhoto } from "@/components/product-photo";
 import { getAllProducts } from "@/server/repositories/product-repository";
@@ -263,11 +264,31 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
                   <p className="mb-1 text-[11px] text-graphite">Pagamento</p>
                   <div className="flex flex-wrap items-center gap-1.5">
                     <StatusBadge>{order.paymentMethod.toUpperCase()}</StatusBadge>
-                    <StatusBadge tone={PAYMENT_TONES[order.paymentStatus ?? "pending"] ?? "neutral"}>
-                      {PAYMENT_STATUS_LABELS[order.paymentStatus ?? "pending"] ?? order.paymentStatus}
-                    </StatusBadge>
+                    {order.channel !== "online" && order.status !== "Cancelado" ? (
+                      (() => {
+                        const received = order.depositAmount ?? 0;
+                        const paid = order.paymentStatus === "approved" || received >= order.total;
+                        return paid ? (
+                          <StatusBadge tone="success">Pago</StatusBadge>
+                        ) : received > 0 ? (
+                          <StatusBadge tone="warning">Pagamento parcial</StatusBadge>
+                        ) : (
+                          <StatusBadge tone="warning">Pagamento pendente</StatusBadge>
+                        );
+                      })()
+                    ) : (
+                      <StatusBadge tone={PAYMENT_TONES[order.paymentStatus ?? "pending"] ?? "neutral"}>
+                        {PAYMENT_STATUS_LABELS[order.paymentStatus ?? "pending"] ?? order.paymentStatus}
+                      </StatusBadge>
+                    )}
                   </div>
-                  {isManualUnpaid(order) ? <MarkPaidButton id={order.id} total={order.total} /> : null}
+                  {order.channel !== "online" && order.status !== "Cancelado" ? (
+                    <OrderPaymentControls
+                      id={order.id}
+                      total={order.total}
+                      received={order.paymentStatus === "approved" ? order.total : Math.min(order.depositAmount ?? 0, order.total)}
+                    />
+                  ) : null}
                   {order.tracking ? <p className="mt-1.5 text-xs text-graphite">Rastreio {order.tracking}</p> : null}
                 </div>
                 <div className="order-2 flex flex-col items-end gap-1 text-right lg:order-4">

@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useToast } from "@/components/admin/toast";
 import { markOrdersPaidAction } from "@/app/admin/pedidos/actions";
-import { formatPrice } from "@/lib/format";
 
 function useMarkPaid(ids: string[]) {
   const router = useRouter();
@@ -25,29 +24,6 @@ function useMarkPaid(ids: string[]) {
     router.refresh();
   };
   return { confirming, setConfirming, pending, run };
-}
-
-/** "Marcar como pago" de uma venda lançada no painel (com confirmação em um clique). */
-export function MarkPaidButton({ id, total }: { id: string; total: number }) {
-  const { confirming, setConfirming, pending, run } = useMarkPaid([id]);
-  if (confirming) {
-    return (
-      <span className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-        <span className="text-graphite">Confirmar {formatPrice(total)} recebido?</span>
-        <button type="button" onClick={run} disabled={pending} className="font-semibold text-petrol hover:underline disabled:opacity-60">
-          {pending ? "Salvando…" : "Sim, está pago"}
-        </button>
-        <button type="button" onClick={() => setConfirming(false)} className="text-graphite hover:text-ink">
-          Não
-        </button>
-      </span>
-    );
-  }
-  return (
-    <button type="button" onClick={() => setConfirming(true)} className="mt-2 text-xs font-medium text-petrol hover:underline">
-      Marcar como pago
-    </button>
-  );
 }
 
 /** Marca de uma vez todos os pedidos da lista filtrada (para quem já recebeu quase tudo). */

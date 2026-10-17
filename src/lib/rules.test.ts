@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { applyManualPayment } from "./payment";
 import { pixPrice, resolveOrderDiscount, round2 } from "./money";
 import { computeShippingCost } from "./shipping";
 import { getLocalDeliveryRules, isLocalDeliveryCity, localDeliveryCost } from "./local-delivery";
@@ -267,5 +268,23 @@ describe("campanhas de e-mail", () => {
     expect(isSafeButtonUrl("javascript:alert(1)")).toBe(false);
     expect(isSafeButtonUrl("loja")).toBe(false);
     expect(isSafeButtonUrl(undefined)).toBe(false);
+  });
+});
+
+describe("pagamento em partes (vendas do painel)", () => {
+  it("soma o que entrou e só marca pago quando completa", () => {
+    expect(applyManualPayment(200, 0, "add", 100)).toEqual({ received: 100, paid: false });
+    expect(applyManualPayment(200, 100, "add", 100)).toEqual({ received: 200, paid: true });
+  });
+  it("não passa do total nem fica negativo", () => {
+    expect(applyManualPayment(200, 150, "add", 500)).toEqual({ received: 200, paid: true });
+    expect(applyManualPayment(200, 50, "set", -10)).toEqual({ received: 0, paid: false });
+  });
+  it("corrigir/desfazer define o total recebido", () => {
+    expect(applyManualPayment(200, 200, "set", 0)).toEqual({ received: 0, paid: false });
+    expect(applyManualPayment(200, 200, "set", 100)).toEqual({ received: 100, paid: false });
+  });
+  it("evita erro de centavos", () => {
+    expect(applyManualPayment(0.3, 0.1, "add", 0.2)).toEqual({ received: 0.3, paid: true });
   });
 });

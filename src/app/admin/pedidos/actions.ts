@@ -7,6 +7,7 @@ import {
   deleteOrder,
   findOrderById,
   markOrdersPaid,
+  setManualOrderPayment,
   updateOrderStatus,
   type DeleteOrderResult,
   type OrderStatusUpdateResult,
@@ -83,6 +84,26 @@ export async function markOrdersPaidAction(ids: string[]): Promise<{ success: tr
   const result = await withMutationFallback(async () => ({ success: true as const, ...(await markOrdersPaid(clean)) }));
   if (result.success) {
     await logAdminAction("pedido.pago", "Order", clean.length === 1 ? clean[0] : "varios", { pedidos: clean.length, atualizados: result.updated });
+    revalidatePath("/admin/pedidos");
+    revalidatePath("/admin");
+    revalidatePath("/admin/financas");
+    revalidatePath("/admin/producao");
+  }
+  return result;
+}
+
+/** Registra um pagamento (pode ser parcial) ou corrige/desfaz o valor recebido de uma venda lançada no painel. */
+export async function setOrderPaymentAction(
+  id: string,
+  mode: "add" | "set",
+  amount: number,
+): Promise<{ success: true; received: number; paid: boolean; total: number } | { success: false; error: string }> {
+  if (!(await requireAdmin())) return { success: false, error: "Acesso restrito ao administrador." };
+  if (!Number.isFinite(amount) || amount < 0 || amount > 1_000_000) return { success: false, error: "Informe um valor válido." };
+  if (mode === "add" && amount <= 0) return { success: false, error: "Informe quanto você recebeu." };
+  const result = await withMutationFallback(() => setManualOrderPayment(id, mode, amount));
+  if (result.success) {
+    await logAdminAction("pedido.pagamento", "Order", id, { modo: mode, valor: amount, recebido: result.received, pago: result.paid });
     revalidatePath("/admin/pedidos");
     revalidatePath("/admin");
     revalidatePath("/admin/financas");
