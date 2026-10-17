@@ -1,4 +1,7 @@
-import { getAllOrders } from "@/server/repositories/order-repository";
+import { getAllOrderPayments, getAllOrders } from "@/server/repositories/order-repository";
+import { getSettings } from "@/server/repositories/settings-repository";
+import { cashPosition } from "@/lib/cash";
+import { CashCard } from "@/components/admin/cash-card";
 import { getAllExpenses } from "@/server/repositories/expense-repository";
 import { withReadFallback } from "@/lib/db-fallback";
 import { fallbackExpenses, fallbackOrders } from "@/server/demo-fallback";
@@ -14,7 +17,7 @@ import {
 import { formatPrice } from "@/lib/format";
 import { CHANNEL_LABELS } from "@/lib/channels";
 import { round2 } from "@/lib/money";
-import { storeMonthKey } from "@/lib/store-time";
+import { storeDayKey, storeMonthKey } from "@/lib/store-time";
 import { MonthFilter } from "@/components/admin/month-filter";
 import { getAllConsignmentVisits } from "@/server/repositories/consignment-repository";
 import { ExpenseManager } from "@/components/admin/expense-manager";
@@ -50,10 +53,12 @@ function monthLabel(key: string) {
 export default async function AdminFinancePage({ searchParams }: { searchParams: Promise<{ mes?: string }> }) {
   const { mes } = await searchParams;
   const selectedMonth = mes && /^\d{4}-(0[1-9]|1[0-2])$/.test(mes) ? mes : "";
-  const [salesOrders, allExpenses, visits] = await Promise.all([
+  const [salesOrders, allExpenses, visits, payments, settings] = await Promise.all([
     withReadFallback(() => getAllOrders(), fallbackOrders),
     withReadFallback(() => getAllExpenses(), fallbackExpenses),
     withReadFallback(() => getAllConsignmentVisits(), []),
+    withReadFallback(() => getAllOrderPayments(), []),
+    withReadFallback(() => getSettings(), null),
   ]);
   // O dinheiro recebido dos lojistas em consignação também é receita: entra junto com as vendas.
   const allOrders = [...salesOrders, ...consignmentVisitsAsOrders(visits)];
@@ -83,6 +88,13 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
   const cashFlow = cashFlowByMonth(allOrders, allExpenses, 6);
   const categoryBreakdown = expenseCategoryBreakdown(expenses);
   const maxCategoryTotal = Math.max(1, ...categoryBreakdown.map((c) => c.total));
+  const cash = cashPosition({
+    openingBalance: settings?.cashBalance ?? 0,
+    openingDate: settings?.cashBalanceDate ?? null,
+    orders: allOrders,
+    payments,
+    expenses: allExpenses,
+  });
 
   return (
     <div>
@@ -91,6 +103,8 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
         Visão de custos, caixa e investimento, separada do dashboard de vendas para não misturar desempenho
         comercial com saúde financeira do negócio.
       </p>
+
+      <CashCard position={cash} today={storeDayKey(new Date())} />
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border border-mist p-4">
         <MonthFilter value={selectedMonth} options={monthOptions} />

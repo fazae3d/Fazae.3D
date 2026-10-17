@@ -1,4 +1,5 @@
-import { applyManualPayment } from "@/lib/payment";
+import { round2 } from "@/lib/money";
+import { applyManualPayment, receivedAmount } from "@/lib/payment";
 import { db } from "../db";
 import type { Order, OrderStatus } from "../types";
 import type { Prisma, ProductionStage } from "@/generated/prisma/client";
@@ -205,22 +206,32 @@ export async function updateOrderStatus(
 export async function markOrdersPaid(ids: string[]): Promise<{ updated: number }> {
   const rows = await db.order.findMany({
     where: { id: { in: ids }, channel: { not: "online" }, status: { not: "Cancelado" }, paymentStatus: { in: ["pending", "in_process"] } },
-    select: { id: true, total: true, status: true },
+    select: { id: true, total: true, status: true, depositAmount: true, paymentStatus: true },
   });
   if (rows.length === 0) return { updated: 0 };
   await db.$transaction(
-    rows.map((row) =>
-      db.order.update({
-        where: { id: row.id },
-        data: {
-          paymentStatus: "approved",
-          depositAmount: row.total,
-          ...(row.status === "Pedido recebido" ? { status: "Pagamento aprovado" } : {}),
-        },
-      }),
-    ),
+    rows.flatMap((row) => {
+      const missing = row.total - receivedAmount(row);
+      return [
+        db.order.update({
+          where: { id: row.id },
+          data: {
+            paymentStatus: "approved",
+            depositAmount: row.total,
+            ...(row.status === "Pedido recebido" ? { status: "Pagamento aprovado" } : {}),
+          },
+        }),
+        ...(missing > 0 ? [db.orderPayment.create({ data: { orderId: row.id, amount: missing } })] : []),
+      ];
+    }),
   );
   return { updated: rows.length };
+}
+
+/** Cada recebimento registrado nas vendas do painel (para o "Em caixa" saber o dia em que o dinheiro entrou). */
+export async function getAllOrderPayments(): Promise<{ orderId: string; amount: number; paidAt: string }[]> {
+  const rows = await db.orderPayment.findMany({ orderBy: { paidAt: "asc" } });
+  return rows.map((r) => ({ orderId: r.orderId, amount: r.amount, paidAt: r.paidAt.toISOString() }));
 }
 
 export type SetPaymentResult =
@@ -238,14 +249,19 @@ export async function setManualOrderPayment(id: string, mode: "add" | "set", amo
   if (order.channel === "online") return { success: false, error: "O pagamento dos pedidos do site é confirmado pelo Mercado Pago." };
   if (order.status === "Cancelado") return { success: false, error: "Esse pedido está cancelado." };
 
-  const change = applyManualPayment(order.total, order.depositAmount, mode, amount);
+  const before = receivedAmount(order);
+  const change = applyManualPayment(order.total, before, mode, amount);
   let status = order.status;
   if (change.paid && status === "Pedido recebido") status = "Pagamento aprovado";
   if (!change.paid && status === "Pagamento aprovado") status = "Pedido recebido";
-  await db.order.update({
-    where: { id },
-    data: { depositAmount: change.received, paymentStatus: change.paid ? "approved" : "pending", status },
-  });
+  const delta = round2(change.received - before);
+  await db.$transaction([
+    db.order.update({
+      where: { id },
+      data: { depositAmount: change.received, paymentStatus: change.paid ? "approved" : "pending", status },
+    }),
+    ...(delta !== 0 ? [db.orderPayment.create({ data: { orderId: id, amount: delta } })] : []),
+  ]);
   return { success: true, received: change.received, paid: change.paid, total: order.total };
 }
 

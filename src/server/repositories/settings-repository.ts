@@ -20,6 +20,8 @@ function toSettings(row: {
   pixDiscountPct: number;
   channelFees: unknown;
   monthlyGoal: number;
+  cashBalance: number;
+  cashBalanceDate: Date | null;
 }): StoreSettings {
   return {
     freeShippingThreshold: row.freeShippingThreshold,
@@ -37,6 +39,8 @@ function toSettings(row: {
     pixDiscountPct: row.pixDiscountPct,
     channelFees: parseChannelFees(row.channelFees),
     monthlyGoal: row.monthlyGoal,
+    cashBalance: row.cashBalance,
+    cashBalanceDate: row.cashBalanceDate?.toISOString().slice(0, 10),
   };
 }
 
@@ -58,6 +62,13 @@ export async function getSettings(options?: { fresh?: boolean }): Promise<StoreS
 
 export async function updateSettings(input: Partial<StoreSettings>): Promise<StoreSettings> {
   const row = await db.settings.update({ where: { id: SETTINGS_ID }, data: input });
+  settingsCache = null;
+  return toSettings(row);
+}
+
+/** Define o saldo em conta (e o dia a que ele se refere) a partir do qual o "Em caixa" é calculado. `date` = AAAA-MM-DD. */
+export async function setCashBalance(balance: number, date: string): Promise<StoreSettings> {
+  const row = await db.settings.update({ where: { id: SETTINGS_ID }, data: { cashBalance: balance, cashBalanceDate: new Date(`${date}T00:00:00.000Z`) } });
   settingsCache = null;
   return toSettings(row);
 }

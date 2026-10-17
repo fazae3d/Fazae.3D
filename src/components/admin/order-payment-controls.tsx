@@ -6,14 +6,8 @@ import { useToast } from "@/components/admin/toast";
 import { setOrderPaymentAction } from "@/app/admin/pedidos/actions";
 import { formatPrice } from "@/lib/format";
 import { round2 } from "@/lib/money";
+import { parseMoneyInput as parseMoney } from "@/lib/payment";
 
-/** "1.234,50" / "50,5" / "50.5" → número; vazio ou inválido → 0. */
-function parseMoney(value: string) {
-  const text = value.trim();
-  if (!text) return 0;
-  const n = Number(text.includes(",") ? text.replace(/\./g, "").replace(",", ".") : text);
-  return Number.isFinite(n) && n > 0 ? n : 0;
-}
 const moneyText = (value: number) => String(round2(value)).replace(".", ",");
 
 /**

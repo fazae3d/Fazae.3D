@@ -268,10 +268,26 @@ model Order {
   /** Quando o lembrete "seu Pix vence hoje" foi enviado (um só por pedido). */
   pixReminderSentAt  DateTime?
   reviews            Review[]
+  payments           OrderPayment[]
 
   @@index([userEmail])
   @@index([createdAt])
   @@index([status])
+}
+
+/**
+ * Cada vez que o dono registra (valor positivo) ou desfaz/corrige (valor negativo) um recebimento de uma venda lançada no painel.
+ * Serve para o "Em caixa" saber em que dia o dinheiro entrou; o valor recebido do pedido continua em Order.depositAmount.
+ */
+model OrderPayment {
+  id      String   @id @default(cuid())
+  orderId String
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  amount  Float
+  paidAt  DateTime @default(now())
+
+  @@index([orderId])
+  @@index([paidAt])
 }
 
 model Coupon {
@@ -329,6 +345,9 @@ model Settings {
   channelFees                Json  @default("{}")
   /** Meta de faturamento mensal (R$). 0 = sem meta. */
   monthlyGoal               Float @default(0)
+  /** Saldo em conta na data `cashBalanceDate` (R$). Vendas recebidas e despesas a partir dessa data movimentam o "Em caixa". */
+  cashBalance               Float     @default(0)
+  cashBalanceDate           DateTime?
 }
 
 /** Custo extra nomeado e reutilizável (argola, ímã, embalagem...) — somado ad-hoc na calculadora de precificação. */

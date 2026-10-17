@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { cashPosition } from "./cash";
 import { applyManualPayment } from "./payment";
 import { pixPrice, resolveOrderDiscount, round2 } from "./money";
 import { computeShippingCost } from "./shipping";
@@ -286,5 +287,53 @@ describe("pagamento em partes (vendas do painel)", () => {
   });
   it("evita erro de centavos", () => {
     expect(applyManualPayment(0.3, 0.1, "add", 0.2)).toEqual({ received: 0.3, paid: true });
+  });
+});
+
+describe("Em caixa", () => {
+  const D = "2026-10-10";
+  const at = (day: string) => `${day}T15:00:00.000Z`;
+  const expense = (day: string, value: number) =>
+    ({ id: day, description: "x", category: "material", totalValue: value, purchaseDate: `${day}T00:00:00.000Z`, createdAt: at(day) }) as never;
+  const base = { openingBalance: 1000, openingDate: D, payments: [] as { orderId: string; amount: number; paidAt: string }[], expenses: [] as never[] };
+
+  it("sem saldo informado não conta nada", () => {
+    const r = cashPosition({ ...base, openingDate: null, orders: [order({ paymentStatus: "approved" })] });
+    expect(r.configured).toBe(false);
+    expect(r.received).toBe(0);
+  });
+  it("soma vendas pagas desde a data e tira todos os gastos", () => {
+    const r = cashPosition({
+      ...base,
+      orders: [
+        order({ id: "A", createdAt: at("2026-10-12"), paymentStatus: "approved", total: 100 }),
+        order({ id: "B", createdAt: at("2026-10-05"), paymentStatus: "approved", total: 500 }), // antes do saldo: já está nele
+        order({ id: "C", createdAt: at("2026-10-12"), paymentStatus: "pending", total: 300 }), // site, não pago
+      ],
+      expenses: [expense("2026-10-11", 40), expense("2026-10-01", 999)],
+    });
+    expect(r.received).toBe(100);
+    expect(r.spent).toBe(40);
+    expect(r.balance).toBe(1060);
+  });
+  it("venda do painel entra no dia em que foi marcada como paga, em parcelas", () => {
+    const o = order({ id: "E", channel: "whatsapp", createdAt: at("2026-10-01"), paymentStatus: "pending", depositAmount: 100, total: 200 });
+    const r = cashPosition({ ...base, orders: [o], payments: [{ orderId: "E", amount: 100, paidAt: at("2026-10-14") }] });
+    expect(r.received).toBe(100);
+    expect(r.toReceive).toBe(100);
+  });
+  it("marcar pago por engano e desfazer não mexe no caixa", () => {
+    const o = order({ id: "F", channel: "whatsapp", createdAt: at("2026-10-01"), paymentStatus: "pending", depositAmount: 0, total: 200 });
+    const r = cashPosition({ ...base, orders: [o], payments: [{ orderId: "F", amount: -200, paidAt: at("2026-10-15") }] });
+    expect(r.received).toBe(0);
+  });
+  it("desconta a taxa na proporção do que entrou", () => {
+    const r = cashPosition({ ...base, orders: [order({ createdAt: at("2026-10-12"), paymentStatus: "approved", total: 100, paymentFee: 5 })] });
+    expect(r.fees).toBe(5);
+    expect(r.balance).toBe(1095);
+  });
+  it("cancelado não entra", () => {
+    const r = cashPosition({ ...base, orders: [order({ createdAt: at("2026-10-12"), paymentStatus: "approved", status: "Cancelado" })] });
+    expect(r.received).toBe(0);
   });
 });

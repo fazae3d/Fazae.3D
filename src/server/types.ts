@@ -143,6 +143,9 @@ export type StoreSettings = {
   channelFees?: import("@/lib/channels").ChannelFees;
   /** Meta de faturamento mensal (R$); 0 ou ausente = sem meta. */
   monthlyGoal?: number;
+  /** Saldo em conta informado pelo dono e o dia (AAAA-MM-DD) a que ele se refere; sem data = "Em caixa" ainda não configurado. */
+  cashBalance?: number;
+  cashBalanceDate?: string;
 };
 
 /** Custo extra nomeado e reutilizável (argola, ímã, embalagem...) — somado ad-hoc na calculadora de precificação. */

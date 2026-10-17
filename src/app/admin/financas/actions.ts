@@ -5,6 +5,8 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { ADMIN_AUTH_DISABLED } from "@/lib/dev-flags";
 import { createExpense, deleteExpense } from "@/server/repositories/expense-repository";
+import { setCashBalance } from "@/server/repositories/settings-repository";
+import { storeDayKey } from "@/lib/store-time";
 import { withMutationFallback } from "@/lib/db-fallback";
 import type { Expense } from "@/server/types";
 
@@ -50,5 +52,27 @@ export async function deleteExpenseAction(id: string): Promise<DeleteExpenseMuta
 
   const result = await withMutationFallback(() => deleteExpense(id));
   if (result.success) revalidatePath("/admin/financas");
+  return result;
+}
+
+/** Informa quanto há em conta e a partir de que dia vendas pagas e despesas passam a mexer no "Em caixa". */
+export async function saveCashBalanceAction(balance: number, date: string): Promise<{ success: true } | { success: false; error: string }> {
+  const session = await auth();
+  if (!ADMIN_AUTH_DISABLED && session?.user?.role !== "admin") {
+    return { success: false, error: "Acesso restrito ao administrador." };
+  }
+  if (!Number.isFinite(balance) || Math.abs(balance) > 100_000_000) return { success: false, error: "Informe um valor válido." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(new Date(`${date}T00:00:00.000Z`).getTime())) {
+    return { success: false, error: "Informe uma data válida." };
+  }
+  if (date > storeDayKey(new Date())) return { success: false, error: "A data não pode ser no futuro." };
+  const result = await withMutationFallback(async () => {
+    await setCashBalance(Math.round(balance * 100) / 100, date);
+    return { success: true as const };
+  });
+  if (result.success) {
+    revalidatePath("/admin/financas");
+    revalidatePath("/admin");
+  }
   return result;
 }
