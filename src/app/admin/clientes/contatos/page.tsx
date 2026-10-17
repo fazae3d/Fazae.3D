@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { AddContactForm } from "@/components/admin/add-contact-form";
 import { EmptyState } from "@/components/admin/empty-state";
 import { PageHeader, StatusBadge } from "@/components/admin/page-header";
 import { withReadFallback } from "@/lib/db-fallback";
@@ -6,7 +8,7 @@ import { getAllSubscribers } from "@/server/repositories/subscriber-repository";
 
 export const metadata = { title: "Contatos de novidades" };
 
-const SOURCE_LABELS: Record<string, string> = { rodape: "Rodapé da loja", home: "Página inicial", checkout: "Checkout" };
+const SOURCE_LABELS: Record<string, string> = { rodape: "Rodapé da loja", home: "Página inicial", checkout: "Checkout", painel: "Adicionado no painel" };
 
 export default async function ContactsPage() {
   const subscribers = await withReadFallback(() => getAllSubscribers(), []);
@@ -18,11 +20,17 @@ export default async function ContactsPage() {
         title="Contatos de novidades"
         description={`${active.length} pessoa(s) aceitaram receber novidades e ofertas (rodapé da loja e caixa do checkout). Só envie para quem está nesta lista.`}
         actions={
-          <a href="/admin/exportar/contatos" className="rounded-lg border border-mist px-3.5 py-2 text-sm text-graphite transition-colors hover:border-petrol hover:text-ink">
-            Exportar CSV
-          </a>
+          <>
+            <a href="/admin/exportar/contatos" className="rounded-lg border border-mist px-3.5 py-2 text-sm text-graphite transition-colors hover:border-petrol hover:text-ink">
+              Exportar CSV
+            </a>
+            <Link href="/admin/clientes/campanhas/nova" className="rounded-lg bg-petrol px-3.5 py-2 text-sm font-semibold transition-opacity hover:opacity-90">
+              Enviar novidades
+            </Link>
+          </>
         }
       />
+      <AddContactForm />
       {subscribers.length === 0 ? (
         <EmptyState
           icon="clients"

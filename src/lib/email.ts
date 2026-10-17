@@ -18,6 +18,31 @@ export function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (char) => HTML_ESCAPES[char]);
 }
 
+export type BatchEmail = { to: string; subject: string; html: string };
+
+/**
+ * Envia vários e-mails de uma vez (até 100 por chamada, cada um com o seu próprio conteúdo): usado nas campanhas.
+ * Devolve { success: false } se o Resend recusar o lote inteiro (cota diária, domínio não verificado...).
+ */
+export async function sendEmailBatch(emails: BatchEmail[]): Promise<SendEmailResult> {
+  if (emails.length === 0) return { success: true };
+  if (!resend) {
+    console.warn("[email] RESEND_API_KEY não configurado: campanha não enviada.");
+    return { success: false, error: "Envio de e-mail não configurado." };
+  }
+  try {
+    const { error } = await resend.batch.send(emails.map((e) => ({ from: FROM_EMAIL, to: e.to, subject: e.subject, html: e.html })));
+    if (error) {
+      console.error("[email] Resend recusou o lote", error);
+      return { success: false, error: error.message || "O serviço de e-mail recusou o envio." };
+    }
+    return { success: true };
+  } catch (error) {
+    console.error("[email] falha ao enviar lote", error);
+    return { success: false, error: "Falha ao enviar o lote de e-mails." };
+  }
+}
+
 /**
  * No-ops (logs and returns success:false) when RESEND_API_KEY isn't set, so
  * every dev/demo environment keeps working without a real provider — set

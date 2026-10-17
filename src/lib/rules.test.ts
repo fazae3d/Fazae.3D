@@ -13,6 +13,7 @@ import { computeChannelFee, isMarketplace, parseChannelFees } from "./channels";
 import { buildCustomerMetrics, isInactive, phoneKey, rankCustomers, reactivationMessage, wasRecentlyReminded } from "./customer-insights";
 import { monthGoalProgress, channelResults } from "./finance-stats";
 import { needsFollowUp, quoteSavings } from "./quote";
+import { campaignBodyHtml, isSafeButtonUrl } from "./campaign-email";
 import { computeQuoteTotals, daysUntil, isQuoteExpired, quoteDisplayStatus, quoteNumberLabel, validityEndOfDay, validityFromNow } from "./quote";
 import type { Product } from "./types";
 import type { Order } from "@/server/types";
@@ -248,5 +249,23 @@ describe("orçamento: sentimento de ganho", () => {
   it("frete cobrado entra no preço cheio e não conta como ganho", () => {
     const s = quoteSavings({ subtotal: 200, discount: 20, freeShipping: false, shippingOriginal: 0, shipping: 25 });
     expect(s).toMatchObject({ total: 20, shippingSaved: 0, fullPrice: 225 });
+  });
+});
+
+describe("campanhas de e-mail", () => {
+  it("texto vira parágrafos e listas, sempre com HTML escapado", () => {
+    const html = campaignBodyHtml("Oi <b>você</b>!\nSegunda linha\n\n- um\n- dois\n\nFim");
+    expect(html).toContain("&lt;b&gt;");
+    expect(html).not.toContain("<b>");
+    expect(html).toContain("Oi &lt;b&gt;você&lt;/b&gt;!<br />Segunda linha");
+    expect(html).toContain("<ul");
+    expect((html.match(/<li/g) ?? []).length).toBe(2);
+    expect((html.match(/<p /g) ?? []).length).toBe(2);
+  });
+  it("botão só aceita http(s)", () => {
+    expect(isSafeButtonUrl("https://www.fazae3d.com.br/loja")).toBe(true);
+    expect(isSafeButtonUrl("javascript:alert(1)")).toBe(false);
+    expect(isSafeButtonUrl("loja")).toBe(false);
+    expect(isSafeButtonUrl(undefined)).toBe(false);
   });
 });

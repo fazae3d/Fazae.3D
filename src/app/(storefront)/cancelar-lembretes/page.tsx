@@ -5,7 +5,7 @@ import { readSignedToken } from "@/server/signed-token";
 import { optOutOfReminders } from "@/server/repositories/abandoned-cart-repository";
 
 export const metadata: Metadata = {
-  title: "Cancelar lembretes",
+  title: "Cancelar e-mails",
   robots: { index: false, follow: false },
 };
 
@@ -28,7 +28,7 @@ export default async function UnsubscribePage({ searchParams }: { searchParams: 
       <h1 className="font-display text-3xl sm:text-4xl">{ok ? "Lembretes cancelados" : "Link inválido"}</h1>
       <p className="mt-4 text-graphite">
         {ok
-          ? "Pronto, você não vai mais receber lembretes de carrinho da Fazaê. Seus pedidos continuam normais."
+          ? "Pronto, você não vai mais receber novidades, ofertas nem lembretes de carrinho da Fazaê. Seus pedidos continuam normais e você receberá apenas os avisos deles."
           : "Não conseguimos validar este link. Se quiser parar de receber, fale com a gente pelo WhatsApp."}
       </p>
       <ButtonLink href="/loja" variant="primary" className="mt-8 inline-flex">

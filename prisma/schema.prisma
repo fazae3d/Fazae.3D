@@ -465,6 +465,40 @@ model AbandonedCart {
 }
 
 /**
+ * Campanha de e-mail (novidades/ofertas) montada no painel e enviada aos contatos que aceitaram receber.
+ * status: "rascunho" (editável), "enviando" (em andamento), "parcial" (parte dos e-mails não saiu: dá para reenviar só aos que faltam)
+ * ou "enviada".
+ */
+model Campaign {
+  id          String             @id @default(cuid())
+  subject     String
+  heading     String
+  /** Texto do e-mail: parágrafos separados por linha em branco; linhas começando com "- " viram lista. */
+  body        String
+  buttonLabel String?
+  buttonUrl   String?
+  status      String             @default("rascunho")
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  sentAt      DateTime?
+  deliveries  CampaignDelivery[]
+}
+
+/** Resultado de envio por destinatário: evita mandar duas vezes a mesma campanha para a mesma pessoa. */
+model CampaignDelivery {
+  id         String   @id @default(cuid())
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  email      String
+  /** "enviado" ou "erro". */
+  status     String
+  error      String?
+  createdAt  DateTime @default(now())
+
+  @@unique([campaignId, email])
+}
+
+/**
  * Contatos que aceitaram receber novidades e ofertas (rodapé da loja, home ou caixa do checkout).
  * O consentimento fica registrado com data e origem (LGPD); `unsubscribedAt` preenchido = não enviar mais.
  */
