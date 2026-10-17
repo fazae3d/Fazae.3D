@@ -1,3 +1,14 @@
+import { ProductGrid } from "@/components/product-grid";
+import { isSoldOut } from "@/lib/badges";
+import { withReadFallback } from "@/lib/db-fallback";
+import { getAllProducts } from "@/lib/demo-data";
+import { formatPrice } from "@/lib/format";
+import { getLocalDeliveryRules } from "@/lib/local-delivery";
+import { DEFAULT_PIX_DISCOUNT_PCT, formatPct } from "@/lib/money";
+import type { Product } from "@/lib/types";
+import { publicProducts } from "@/lib/visibility";
+import { fallbackProducts } from "@/server/demo-fallback";
+import { getSettings } from "@/server/repositories/settings-repository";
 import { Hero } from "@/components/hero";
 import { SectionHeading } from "@/components/section-heading";
 import { CatalogTeaserCard } from "@/components/catalog-teaser-card";
@@ -62,10 +73,56 @@ export const metadata = {
   alternates: { canonical: "/" },
 };
 
-export default function Home() {
+export const revalidate = 60;
+
+/** Produtos em destaque na home: mais pedidos primeiro, depois novidades, depois o resto; esgotados e rascunhos ficam de fora. */
+function pickShelf(products: Product[]) {
+  const available = publicProducts(products).filter((p) => p.price !== undefined && !isSoldOut(p) && p.images && p.images.length > 0);
+  const score = (p: Product) => (p.isBestSeller ? 2 : 0) + (p.isNew ? 1 : 0);
+  return [...available].sort((a, b) => score(b) - score(a)).slice(0, 8);
+}
+
+export default async function Home() {
+  const [products, settings] = await Promise.all([
+    withReadFallback(() => getAllProducts(), fallbackProducts),
+    withReadFallback(() => getSettings(), null),
+  ]);
+  const shelf = pickShelf(products);
+  const local = getLocalDeliveryRules(settings ?? {});
+  const pixPct = settings?.pixDiscountPct ?? DEFAULT_PIX_DISCOUNT_PCT;
+  const benefits = [
+    { title: "Moto em Natal e Parnamirim", text: `Grátis acima de ${formatPrice(local.threshold)}` },
+    { title: "Frete grátis para o Brasil", text: `Acima de ${formatPrice(settings?.freeShippingThreshold ?? 199.9)}` },
+    { title: `${formatPct(pixPct)}% de desconto no Pix`, text: "Pagamento aprovado na hora" },
+    { title: "Peça do seu jeito", text: "Orçamento sob encomenda" },
+  ];
+
   return (
     <>
       <Hero />
+
+      <section aria-label="Vantagens da loja" className="border-y border-paper/10 bg-ink">
+        <ul className="mx-auto grid max-w-7xl grid-cols-2 gap-px px-4 sm:px-6 lg:grid-cols-4 lg:px-8">
+          {benefits.map((b) => (
+            <li key={b.title} className="px-2 py-4 sm:px-4">
+              <p className="text-sm font-medium text-paper">{b.title}</p>
+              <p className="mt-0.5 text-xs text-graphite">{b.text}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {shelf.length > 0 && (
+        <section className="mx-auto max-w-7xl px-4 pt-12 sm:px-6 sm:pt-16 lg:px-8 lg:pt-20">
+          <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+            <SectionHeading eyebrow="Em destaque" title="Peças que saem rápido" />
+            <ButtonLink href="/loja" variant="secondary">
+              Ver todos
+            </ButtonLink>
+          </div>
+          <ProductGrid products={shelf} />
+        </section>
+      )}
 
       <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
         <div className="mb-12 flex flex-wrap items-end justify-between gap-6">

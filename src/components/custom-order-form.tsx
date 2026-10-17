@@ -1,5 +1,6 @@
 "use client";
 
+import { trackEvent } from "@/lib/analytics";
 import { useState, type FormEvent } from "react";
 import { FormField } from "./form-field";
 import { SelectField } from "@/components/select-field";
@@ -60,6 +61,7 @@ export function CustomOrderForm({ referenceProductSlug, defaultDescription }: { 
       return;
     }
 
+    trackEvent("generate_lead", { lead_type: "peca_personalizada", quantity: Number(data.quantity) || 1 });
     const link = getWhatsAppLink(settings.whatsappNumber, buildMessage(data));
     window.open(link, "_blank", "noopener,noreferrer");
     setSentLink(link);

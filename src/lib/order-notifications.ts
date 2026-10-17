@@ -2,11 +2,11 @@ import { escapeHtml, sendEmail } from "@/lib/email";
 import { getEmailContactUrl, renderEmailLayout, type EmailAction } from "@/lib/email-template";
 import { firstName } from "@/lib/format";
 import { SITE_URL } from "@/lib/site-config";
+import { createReviewUrl } from "@/server/review-link";
 import type { Order, OrderStatus } from "@/server/types";
 
 const TRACKING_ACTION: EmailAction = { label: "Rastrear pedido", url: `${SITE_URL}/rastreamento` };
 const ACCOUNT_ACTION: EmailAction = { label: "Acompanhar pedido", url: `${SITE_URL}/conta/pedidos` };
-const REVIEW_ACTION: EmailAction = { label: "Avaliar produto", url: `${SITE_URL}/conta/pedidos` };
 
 type StatusEmailContent = {
   subject: string;
@@ -64,8 +64,8 @@ function contentForStatus(order: Order): StatusEmailContent | null {
         eyebrow: "Entrega",
         greeting: `E aí, ${name}!`,
         heading: "Seu pedido chegou!",
-        bodyHtml: `<p style="margin:0;">Chegou a hora! Esperamos muito que você ame cada detalhe do pedido ${id}. Adoraríamos saber o que achou, sua opinião significa muito pra gente.</p>`,
-        action: REVIEW_ACTION,
+        bodyHtml: `<p style="margin:0;">Chegou a hora! Esperamos muito que você ame cada detalhe do pedido ${id}. Adoraríamos saber o que achou: avalie em um minuto, sem precisar de login, e ganhe <strong>R$ 5 de desconto</strong> na próxima compra (a partir de R$ 30, vale para qualquer nota).</p>`,
+        action: { label: "Avaliar e ganhar R$ 5", url: createReviewUrl(order) },
       };
     case "Cancelado":
       return {

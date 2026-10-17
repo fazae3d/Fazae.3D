@@ -1,12 +1,5 @@
 import { ButtonLink } from "./button";
 
-const FEATURES = [
-  "Tecnologia em 3D",
-  "Precisão em cada detalhe",
-  "Impressão de qualidade",
-  "Ideias que ganham forma",
-];
-
 export function Hero() {
   return (
     <section className="relative flex min-h-[440px] items-end overflow-hidden bg-ink text-paper sm:min-h-[520px] lg:min-h-[600px]">
@@ -42,13 +35,6 @@ export function Hero() {
             Personalizar
           </ButtonLink>
         </div>
-        <ul className="animate-slide-up mt-8 flex flex-wrap gap-x-8 gap-y-3 [animation-delay:0.4s]">
-          {FEATURES.map((feature) => (
-            <li key={feature} className="label-caps text-[10px] text-paper/60">
-              {feature}
-            </li>
-          ))}
-        </ul>
       </div>
     </section>
   );

@@ -5,6 +5,8 @@ import { OrderStatusForm } from "@/components/admin/order-status-form";
 import { DeleteOrderButton } from "@/components/admin/delete-order-button";
 import { formatPrice } from "@/lib/format";
 import { CHANNEL_LABELS } from "@/lib/channels";
+import { createReviewUrl } from "@/server/review-link";
+import { firstName } from "@/lib/format";
 import type { Order, OrderStatus } from "@/server/types";
 import { withReadFallback } from "@/lib/db-fallback";
 import { fallbackOrders } from "@/server/demo-fallback";
@@ -38,6 +40,15 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
 }
 
+
+/** Mensagem pronta pedindo a avaliação, com o link que dispensa login. O cupom de R$ 5 é gerado quando a pessoa avalia. */
+function reviewWhatsAppHref(order: Order) {
+  const digits = (order.customerPhone ?? "").replace(/\D/g, "");
+  const phone = digits ? (digits.length <= 11 ? `55${digits}` : digits) : "";
+  const name = firstName(order.customerName ?? order.address?.recipient ?? "tudo bem");
+  const message = `Oi, ${name}! Aqui é da Fazaê 3D. Seu pedido ${order.id} chegou direitinho? Conta pra gente o que achou: avalie em um minuto e ganhe R$ 5 de desconto na próxima compra (a partir de R$ 30). ${createReviewUrl(order)}`;
+  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+}
 
 function matchesQuery(order: Order, query: string) {
   const term = query.toLowerCase();
@@ -242,6 +253,19 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
                     {order.address.complement ? ` (${order.address.complement})` : ""} · {order.address.neighborhood} ·{" "}
                     {order.address.city}/{order.address.state} · CEP {order.address.zip}
                   </p>
+                </div>
+              )}
+
+              {order.status === "Entregue" && (
+                <div className="mb-3 border-t border-mist pt-4">
+                  <a
+                    href={reviewWhatsAppHref(order)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-petrol hover:underline"
+                  >
+                    Pedir avaliação no WhatsApp (cliente ganha R$ 5)
+                  </a>
                 </div>
               )}
 

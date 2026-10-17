@@ -138,6 +138,112 @@ export const GUIDES: Guide[] = [
       },
     ],
   },
+  {
+    slug: "como-encomendar-peca-3d-personalizada",
+    seoTitle: "Como encomendar uma peça 3D personalizada, passo a passo",
+    title: "Como encomendar uma peça 3D personalizada: passo a passo para pedir do jeito certo",
+    description:
+      "Quer uma peça única impressa em 3D? Veja o que informar, como funciona o orçamento, os prazos e como a Fazaê produz peças personalizadas em Natal e Parnamirim.",
+    published: "2026-10-18",
+    blocks: [
+      {
+        paragraphs: [
+          "Encomendar uma peça personalizada em 3D é mais simples do que parece. Você não precisa saber desenhar nem entender de impressora: basta contar a ideia. Neste guia mostramos o que informar para o orçamento sair certeiro e como é o caminho até a peça chegar em você.",
+        ],
+      },
+      {
+        heading: "1. Conte a ideia (e mostre referências)",
+        paragraphs: [
+          "Descreva o que você imagina com as suas palavras. Fotos, desenhos, prints e links de referência ajudam muito: eles mostram o estilo, o formato e o nível de detalhe que você espera. Se você já tem um arquivo 3D, pode avisar também.",
+        ],
+      },
+      {
+        heading: "2. Informe tamanho, uso e quantidade",
+        paragraphs: ["Esses dados deixam o orçamento mais preciso e evitam retrabalho:"],
+        list: [
+          "Tamanho aproximado (altura, largura, profundidade). Para peças que precisam encaixar em algo, medidas exatas fazem toda a diferença.",
+          "Onde a peça vai ser usada: decoração, presente, uso diário, área externa ou perto de calor.",
+          "Quantidade: pedidos em maior quantidade costumam ter condições melhores por unidade.",
+          "Prazo desejado, se houver uma data importante (aniversário, evento, presente).",
+        ],
+      },
+      {
+        heading: "3. Escolha material e cor",
+        paragraphs: [
+          "Para decoração, miniaturas e chaveiros, o PLA entrega ótimo acabamento e muitas cores. Para peças de uso mais intenso, o PETG é mais resistente. Se estiver em dúvida, é só dizer para que a peça serve que a gente sugere o melhor material.",
+        ],
+      },
+      {
+        heading: "4. Receba o orçamento e aprove",
+        paragraphs: [
+          "Com as informações em mãos, enviamos o orçamento com valor, prazo de produção e condições de pagamento. Você pode pedir ajustes (tamanho, cor, quantidade) antes de aprovar. Só começamos a produzir depois da sua aprovação.",
+        ],
+      },
+      {
+        heading: "5. Produção e entrega",
+        paragraphs: [
+          "A peça é produzida em impressoras próprias, em Parnamirim/RN, e revisada antes do envio. Em Natal e Parnamirim a entrega pode ser feita por motoboy; para o resto do Brasil enviamos pelos Correios ou transportadora, com código de rastreio.",
+        ],
+      },
+      {
+        heading: "Dicas para um pedido sem surpresas",
+        list: [
+          "Peças que precisam de encaixe: envie as medidas reais ou uma foto com régua ao lado.",
+          "Cores na tela podem variar um pouco da peça real: se a cor é importante, peça uma referência.",
+          "Detalhes muito finos (letras pequenas, pontas fininhas) precisam de um tamanho mínimo para ficarem nítidos: a gente avisa se algo precisar de ajuste.",
+          "Planeje com antecedência para datas especiais: peças personalizadas levam o tempo da produção.",
+        ],
+      },
+    ],
+  },
+  {
+    slug: "presentes-geek-criativos-impressos-em-3d",
+    seoTitle: "Presentes geek e criativos impressos em 3D: ideias",
+    title: "Presentes geek e criativos impressos em 3D: ideias para todos os gostos",
+    description:
+      "Ideias de presente geek e criativo feitos em impressão 3D: chaveiros, miniaturas, decoração e utilidades. Dicas para escolher e como personalizar.",
+    published: "2026-10-18",
+    blocks: [
+      {
+        paragraphs: [
+          "Um presente impresso em 3D tem algo que poucos têm: é diferente, tem personalidade e pode ser feito sob medida para quem vai receber. Separamos ideias que funcionam para fãs de cultura geek, para quem curte decorar a casa e para quem gosta de coisas práticas.",
+        ],
+      },
+      {
+        heading: "Chaveiros: o presente fácil e certeiro",
+        paragraphs: [
+          "Chaveiros são leves, cabem em qualquer orçamento e agradam muita gente. Dá para escolher temas (personagens, bichos, esportes, símbolos) e, em muitos casos, personalizar com nome ou cor. São ótimos para lembrancinhas, amigo secreto e para presentear colegas.",
+        ],
+      },
+      {
+        heading: "Miniaturas e colecionáveis para fãs",
+        paragraphs: [
+          "Esculturas e miniaturas de cultura pop e geek são presente de peso para quem coleciona ou tem uma estante para exibir. Vale olhar o tamanho e o nível de detalhe e combinar a cor com o ambiente onde a peça vai ficar.",
+        ],
+      },
+      {
+        heading: "Decoração com estilo",
+        paragraphs: [
+          "Vasos geométricos, luminárias, porta-objetos e peças decorativas dão personalidade à casa e ao escritório. Cores neutras combinam com tudo; cores vivas funcionam como ponto de destaque na decoração.",
+        ],
+      },
+      {
+        heading: "Utilidades que facilitam o dia a dia",
+        paragraphs: [
+          "Suportes, organizadores e ganchos são presentes práticos que a pessoa usa todo dia, e lembra de você a cada uso. Para home office e setup gamer, suportes de fone, de celular e organizadores de mesa fazem sucesso.",
+        ],
+      },
+      {
+        heading: "Como escolher o presente certo",
+        list: [
+          "Pense no gosto da pessoa: um tema que ela ama vale mais do que uma peça cara.",
+          "Considere onde ela vai usar ou exibir (mesa, estante, chaveiro, parede).",
+          "Quer algo único? Peça uma versão personalizada com nome, cor ou tema.",
+          "Para datas especiais, peça com antecedência, principalmente se for personalizado.",
+        ],
+      },
+    ],
+  },
 ];
 
 export function getGuide(slug: string) {

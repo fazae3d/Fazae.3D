@@ -6,9 +6,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { FormField } from "../form-field";
+import { subscribeAction } from "@/app/actions/subscribe";
 
 const guestSchema = z.object({
   email: z.string().min(1, "Informe seu e-mail.").email("E-mail inválido."),
+  marketing: z.boolean().optional(),
 });
 type GuestInput = z.infer<typeof guestSchema>;
 
@@ -56,7 +58,14 @@ export function StepIdentificacao({
   }
 
   return (
-    <form onSubmit={handleSubmit((data) => onNext(data.email))} className="flex flex-col gap-6">
+    <form
+      onSubmit={handleSubmit((data) => {
+        // Caixa marcada = consentimento para receber novidades e ofertas (não bloqueia a compra se falhar).
+        if (data.marketing) void subscribeAction({ email: data.email, source: "checkout" });
+        onNext(data.email);
+      })}
+      className="flex flex-col gap-6"
+    >
       <div>
         <p className="label-caps mb-2 text-xs text-graphite">Identificação</p>
         <p className="mb-4 text-sm text-graphite">
@@ -74,6 +83,10 @@ export function StepIdentificacao({
           error={errors.email?.message}
           {...register("email")}
         />
+        <label className="mt-3 flex cursor-pointer items-start gap-2 text-xs text-graphite">
+          <input type="checkbox" className="mt-0.5 h-4 w-4 accent-[#B6FF00]" {...register("marketing")} />
+          Quero receber novidades e ofertas da Fazaê por e-mail (opcional).
+        </label>
       </div>
       <button
         type="submit"

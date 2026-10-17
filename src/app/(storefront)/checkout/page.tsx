@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { ButtonLink } from "@/components/button";
@@ -17,6 +17,7 @@ import { getLocalDeliveryRules } from "@/lib/local-delivery";
 import { usePixDiscountPct } from "@/contexts/pix-discount-context";
 import { resolveOrderDiscount, round2 } from "@/lib/money";
 import { captureAbandonedCartAction, clearAbandonedCartAction } from "@/app/actions/abandoned-cart";
+import { trackEvent } from "@/lib/analytics";
 import type { CheckoutAddressInput } from "@/lib/validation";
 import type { Order } from "@/server/types";
 import type { PendingPaymentInstructions } from "@/app/(storefront)/checkout/actions";
@@ -28,6 +29,13 @@ export default function CheckoutPage() {
   const pixPct = usePixDiscountPct();
 
   const [step, setStep] = useState<CheckoutStep>("identificacao");
+  // Início do checkout (uma vez por visita à página), para medir o funil carrinho → checkout → compra no Google Analytics.
+  const beganCheckout = useRef(false);
+  useEffect(() => {
+    if (beganCheckout.current || lines.length === 0) return;
+    beganCheckout.current = true;
+    trackEvent("begin_checkout", { currency: "BRL", value: subtotal, items: lines.map((l) => ({ item_id: l.productSlug, quantity: l.quantity })) });
+  }, [lines, subtotal]);
   const [guestEmail, setGuestEmail] = useState<string | null>(null);
   const [address, setAddress] = useState<CheckoutAddressInput | null>(null);
   const [shipping, setShipping] = useState<ShippingOption | null>(null);

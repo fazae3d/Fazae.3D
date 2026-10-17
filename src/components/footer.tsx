@@ -2,6 +2,7 @@ import Link from "next/link";
 import { FlowLines } from "./flow-lines";
 import { PaymentIcons } from "./payment-icons";
 import { SecurityBadge } from "./security-badge";
+import { NewsletterForm } from "./newsletter-form";
 import { DEFAULT_WHATSAPP_NUMBER, INSTAGRAM_URL, SITE_NAME, SITE_TAGLINE, getWhatsAppLink, companyIdentification } from "@/lib/site-config";
 import { getSettings } from "@/server/repositories/settings-repository";
 import { withReadFallback } from "@/lib/db-fallback";
@@ -88,6 +89,10 @@ export async function Footer() {
               Fazer orçamento no WhatsApp
             </a>
           </div>
+        </div>
+
+        <div className="border-b border-paper/15 py-10">
+          <NewsletterForm source="rodape" />
         </div>
 
         <div className="grid grid-cols-2 gap-10 py-12 sm:grid-cols-4">

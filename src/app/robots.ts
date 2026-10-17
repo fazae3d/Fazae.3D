@@ -15,6 +15,7 @@ export default function robots(): MetadataRoute.Robots {
           "/rastreamento",
           "/admin",
           "/orcamento/",
+          "/avaliar/",
           "/api/",
           "/esqueci-senha",
           "/redefinir-senha",

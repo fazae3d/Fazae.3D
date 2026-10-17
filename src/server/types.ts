@@ -292,6 +292,8 @@ export type AbandonedCart = {
   createdAt: string;
   updatedAt: string;
   remindedAt?: string;
+  /** Quantos lembretes já foram enviados (0, 1 ou 2). */
+  reminderCount?: number;
 };
 
 /** Item de produção sem pedido associado — ver ProductionItem em schema.prisma. */

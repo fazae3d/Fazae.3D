@@ -5,6 +5,7 @@ import { Breadcrumb } from "@/components/breadcrumb";
 import { ProductGallery } from "@/components/product-gallery";
 import { ProductGrid } from "@/components/product-grid";
 import { ProductPurchasePanel } from "@/components/product-purchase-panel";
+import { TrackViewItem } from "@/components/track-view-item";
 import { RecentlyViewed } from "@/components/recently-viewed";
 import { SectionHeading } from "@/components/section-heading";
 import {
@@ -100,7 +101,17 @@ export default async function ProductPage({ params }: PageProps<"/produto/[slug]
             "@type": "Offer",
             priceCurrency: "BRL",
             price: product.price.toFixed(2),
+            // O Google pede uma validade para o preço; renovamos a cada geração da página (a cada minuto no máximo).
+            priceValidUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
             itemCondition: "https://schema.org/NewCondition",
+            hasMerchantReturnPolicy: {
+              "@type": "MerchantReturnPolicy",
+              applicableCountry: "BR",
+              returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
+              merchantReturnDays: 7,
+              merchantReturnLink: `${SITE_URL}/trocas-e-devolucoes`,
+            },
+            seller: { "@type": "Organization", name: "Fazaê 3D" },
             availability: isSoldOut(product) ? "https://schema.org/OutOfStock" : "https://schema.org/InStock",
             url: `${SITE_URL}/produto/${product.slug}`,
           },
@@ -130,6 +141,7 @@ export default async function ProductPage({ params }: PageProps<"/produto/[slug]
       />
 
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-2 lg:gap-16">
+        <TrackViewItem slug={product.slug} name={product.name} price={product.price} category={product.categoryName} />
         <ProductGallery product={product} />
         <ProductPurchasePanel product={product} reviewStats={reviewStats} />
       </div>

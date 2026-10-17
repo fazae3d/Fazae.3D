@@ -27,7 +27,7 @@ export async function upsertAbandonedCart(input: UpsertAbandonedCartInput): Prom
   const row = await db.abandonedCart.upsert({
     where: { email: input.email },
     create: { email: input.email, name: input.name, items: input.items, subtotal: input.subtotal },
-    update: { name: input.name, items: input.items, subtotal: input.subtotal, remindedAt: null },
+    update: { name: input.name, items: input.items, subtotal: input.subtotal, remindedAt: null, reminderCount: 0 },
   });
   return toAbandonedCart(row);
 }
@@ -39,6 +39,8 @@ export async function isEmailOptedOut(email: string): Promise<boolean> {
 /** Registra o pedido de "não quero mais lembretes" e apaga o carrinho guardado. */
 export async function optOutOfReminders(email: string): Promise<void> {
   await db.emailOptOut.upsert({ where: { email: email.toLowerCase() }, create: { email: email.toLowerCase() }, update: {} });
+  // Quem pede para parar também sai da lista de novidades (consentimento retirado).
+  await db.subscriber.updateMany({ where: { email: { equals: email, mode: "insensitive" }, unsubscribedAt: null }, data: { unsubscribedAt: new Date() } });
   await db.abandonedCart.deleteMany({ where: { email: { equals: email, mode: "insensitive" } } });
 }
 
@@ -53,14 +55,20 @@ export async function getAbandonedCart(id: string): Promise<AbandonedCart | unde
   return row ? toAbandonedCart(row) : undefined;
 }
 
-/** Carts worth reminding right now: never reminded, and untouched since before `olderThan`. */
-export async function getRemindableAbandonedCarts(olderThan: Date): Promise<AbandonedCart[]> {
+/**
+ * Carrinhos que merecem lembrete agora, ainda parados desde antes de `olderThan`:
+ * 1º lembrete (nunca lembrado) e 2º lembrete (já recebeu um há `secondStageBefore` ou mais, e nada mudou desde então).
+ */
+export async function getRemindableAbandonedCarts(olderThan: Date, secondStageBefore: Date): Promise<AbandonedCart[]> {
   const rows = await db.abandonedCart.findMany({
-    where: { remindedAt: null, updatedAt: { lt: olderThan } },
+    where: {
+      updatedAt: { lt: olderThan },
+      OR: [{ remindedAt: null }, { reminderCount: 1, remindedAt: { lt: secondStageBefore } }],
+    },
   });
   return rows.map(toAbandonedCart);
 }
 
 export async function markAbandonedCartReminded(id: string): Promise<void> {
-  await db.abandonedCart.update({ where: { id }, data: { remindedAt: new Date() } });
+  await db.abandonedCart.update({ where: { id }, data: { remindedAt: new Date(), reminderCount: { increment: 1 } } });
 }

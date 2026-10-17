@@ -299,6 +299,30 @@ export async function cancelUnpaidOrder(id: string): Promise<boolean> {
   return true;
 }
 
+/**
+ * Pedidos com Pix ainda sem pagar, criados entre `createdAfter` e `createdBefore` e que ainda não receberam o lembrete
+ * "seu Pix vence hoje" (o Pix vence em 1 dia).
+ */
+export async function findPixOrdersAwaitingReminder(createdAfter: Date, createdBefore: Date): Promise<Order[]> {
+  const rows = await db.order.findMany({
+    where: {
+      channel: "online",
+      paymentMethod: "pix",
+      status: "Pedido recebido",
+      paymentStatus: { in: ["pending", "in_process"] },
+      pixReminderSentAt: null,
+      userEmail: { not: null },
+      mpPaymentId: { not: null },
+      createdAt: { gt: createdAfter, lt: createdBefore },
+    },
+  });
+  return rows.map(toOrder);
+}
+
+export async function markPixReminderSent(id: string): Promise<void> {
+  await db.order.update({ where: { id }, data: { pixReminderSentAt: new Date() } });
+}
+
 export async function findStaleUnpaidOrders(olderThan: Date): Promise<Order[]> {
   const rows = await db.order.findMany({
     where: {

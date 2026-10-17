@@ -265,6 +265,8 @@ model Order {
    * vazia em pedidos antigos e vendas lançadas à mão.
    */
   paymentFee         Float?
+  /** Quando o lembrete "seu Pix vence hoje" foi enviado (um só por pedido). */
+  pixReminderSentAt  DateTime?
   reviews            Review[]
 
   @@index([userEmail])
@@ -456,8 +458,25 @@ model AbandonedCart {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   remindedAt DateTime?
+  /** Quantos lembretes já saíram (1 = primeiro e-mail, 2 = segundo com incentivo); zera quando a pessoa mexe no carrinho de novo. */
+  reminderCount Int @default(0)
 
   @@index([remindedAt])
+}
+
+/**
+ * Contatos que aceitaram receber novidades e ofertas (rodapé da loja, home ou caixa do checkout).
+ * O consentimento fica registrado com data e origem (LGPD); `unsubscribedAt` preenchido = não enviar mais.
+ */
+model Subscriber {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  name           String?
+  whatsapp       String?
+  /** Onde a pessoa se inscreveu: "rodape", "home" ou "checkout". */
+  source         String
+  createdAt      DateTime  @default(now())
+  unsubscribedAt DateTime?
 }
 
 /**

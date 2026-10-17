@@ -152,11 +152,26 @@ function ProntaEntregaPanel({ product, header }: { product: Product; header: Rea
         <p className="text-2xl text-petrol">Sob consulta</p>
       )}
 
+      {(product.dimensions || product.weightGrams) && (
+        <p className="text-sm text-graphite">
+          <span className="text-paper">Tamanho:</span> {product.dimensions}
+          {product.dimensions && product.weightGrams ? " · " : ""}
+          {product.weightGrams ? `${product.weightGrams} g` : ""}
+        </p>
+      )}
+
       {product.price !== undefined && (
         <ShippingEstimate productSlug={product.slug} price={product.price} quantity={quantity} />
       )}
 
-      {product.materials.length > 0 && (
+      {product.materials.length === 1 && product.materials[0].colors.length <= 1 && (
+        <p className="text-sm text-graphite">
+          <span className="text-paper">Material:</span> {materialName}
+          {color ? <> · <span className="text-paper">Cor:</span> {color}</> : null}
+        </p>
+      )}
+
+      {product.materials.length > 1 && (
         <div>
           <p className="label-caps mb-2 text-[11px] text-graphite">Material: {materialName}</p>
           <div className="flex flex-wrap gap-2">
@@ -177,7 +192,35 @@ function ProntaEntregaPanel({ product, header }: { product: Product; header: Rea
         </div>
       )}
 
-      {currentMaterial && currentMaterial.colors.length > 0 && (
+      {product.materials.length > 1 && currentMaterial && currentMaterial.colors.length === 1 && (
+        <p className="text-sm text-graphite">
+          <span className="text-paper">Cor:</span> {color}
+        </p>
+      )}
+
+      {product.materials.length === 1 && currentMaterial && currentMaterial.colors.length > 1 && (
+        <div>
+          <p className="label-caps mb-1 text-[11px] text-graphite">Material: {materialName}</p>
+          <p className="label-caps mb-2 mt-3 text-[11px] text-graphite">Cor: {color}</p>
+          <div className="flex flex-wrap gap-2">
+            {currentMaterial.colors.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setColor(c)}
+                aria-pressed={color === c}
+                className={`label-caps flex h-10 items-center justify-center border px-3 text-xs transition-colors ${
+                  color === c ? "border-petrol bg-petrol text-ink" : "border-paper/15 text-paper hover:border-petrol"
+                }`}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {product.materials.length > 1 && currentMaterial && currentMaterial.colors.length > 1 && (
         <div>
           <p className="label-caps mb-2 text-[11px] text-graphite">Cor: {color}</p>
           <div className="flex flex-wrap gap-2">
