@@ -2,6 +2,7 @@ import { EmptyState } from "@/components/admin/empty-state";
 import Link from "next/link";
 import { getAllOrders } from "@/server/repositories/order-repository";
 import { OrderStatusForm } from "@/components/admin/order-status-form";
+import { MarkAllPaidButton, MarkPaidButton } from "@/components/admin/mark-paid-button";
 import { StatusBadge, type BadgeTone } from "@/components/admin/page-header";
 import { ProductPhoto } from "@/components/product-photo";
 import { getAllProducts } from "@/server/repositories/product-repository";
@@ -26,6 +27,14 @@ const ALL_STATUSES: OrderStatus[] = [
 
 const PAGE_SIZE = 10;
 const TO_SHIP = "a-enviar";
+const TO_RECEIVE = "a-receber";
+
+/** Venda lançada no painel (não é do site) cujo pagamento ainda não foi confirmado: é essa que o dono marca como paga à mão. */
+function isManualUnpaid(order: Order) {
+  return (
+    order.channel !== "online" && order.status !== "Cancelado" && ["pending", "in_process"].includes(order.paymentStatus ?? "pending")
+  );
+}
 
 const PAYMENT_STATUS_LABELS: Record<string, string> = {
   pending: "Pagamento pendente",
@@ -99,7 +108,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
   // "A enviar" = já pago, ainda sem código de rastreio e sem ter saído: a fila de trabalho do dia.
   const toShip = (o: Order) => (o.status === "Pagamento aprovado" || o.status === "Em preparação") && !o.tracking;
   const filtered = orders
-    .filter((o) => !statusFilter || (statusFilter === TO_SHIP ? toShip(o) : o.status === statusFilter))
+    .filter((o) => !statusFilter || (statusFilter === TO_SHIP ? toShip(o) : statusFilter === TO_RECEIVE ? isManualUnpaid(o) : o.status === statusFilter))
     .filter((o) => !query || matchesQuery(o, query))
     .filter((o) => !from || o.createdAt.slice(0, 10) >= from)
     .filter((o) => !to || o.createdAt.slice(0, 10) <= to);
@@ -199,6 +208,14 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
         >
           A enviar ({orders.filter(toShip).length})
         </Link>
+        <Link
+          href={`/admin/pedidos${buildQueryString({ ...baseParams, status: TO_RECEIVE })}`}
+          className={`label-caps border px-3.5 py-2 text-[11px] transition-colors ${
+            statusFilter === TO_RECEIVE ? "border-petrol bg-petrol text-ink" : "border-petrol/60 text-petrol hover:border-petrol"
+          }`}
+        >
+          Falta pagar ({orders.filter(isManualUnpaid).length})
+        </Link>
         {ALL_STATUSES.map((status) => (
           <Link
             key={status}
@@ -211,6 +228,12 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
           </Link>
         ))}
       </div>
+
+      {statusFilter === TO_RECEIVE && filtered.length > 0 && (
+        <div className="mb-4">
+          <MarkAllPaidButton ids={filtered.map((o) => o.id)} />
+        </div>
+      )}
 
       {paginated.length === 0 ? (
         <EmptyState icon="orders" title="Nenhum pedido encontrado" description="Troque o filtro, o período ou a busca para ver mais resultados." action={{ href: "/admin/vendas/nova", label: "Lançar venda" }} />
@@ -244,6 +267,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
                       {PAYMENT_STATUS_LABELS[order.paymentStatus ?? "pending"] ?? order.paymentStatus}
                     </StatusBadge>
                   </div>
+                  {isManualUnpaid(order) ? <MarkPaidButton id={order.id} total={order.total} /> : null}
                   {order.tracking ? <p className="mt-1.5 text-xs text-graphite">Rastreio {order.tracking}</p> : null}
                 </div>
                 <div className="order-2 flex flex-col items-end gap-1 text-right lg:order-4">

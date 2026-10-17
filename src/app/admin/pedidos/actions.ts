@@ -6,6 +6,7 @@ import { ADMIN_AUTH_DISABLED } from "@/lib/dev-flags";
 import {
   deleteOrder,
   findOrderById,
+  markOrdersPaid,
   updateOrderStatus,
   type DeleteOrderResult,
   type OrderStatusUpdateResult,
@@ -68,6 +69,22 @@ export async function deleteOrderAction(id: string): Promise<DeleteOrderResult> 
       cliente: before?.customerName ?? before?.userEmail,
     });
     revalidatePath("/admin/pedidos");
+    revalidatePath("/admin/financas");
+    revalidatePath("/admin/producao");
+  }
+  return result;
+}
+
+/** Marca como pagas vendas lançadas no painel (até 200 de uma vez). Pedidos do site e cancelados são ignorados. */
+export async function markOrdersPaidAction(ids: string[]): Promise<{ success: true; updated: number } | { success: false; error: string }> {
+  if (!(await requireAdmin())) return { success: false, error: "Acesso restrito ao administrador." };
+  const clean = [...new Set(ids.filter((id) => typeof id === "string" && id.length > 0 && id.length < 80))].slice(0, 200);
+  if (clean.length === 0) return { success: false, error: "Nenhum pedido selecionado." };
+  const result = await withMutationFallback(async () => ({ success: true as const, ...(await markOrdersPaid(clean)) }));
+  if (result.success) {
+    await logAdminAction("pedido.pago", "Order", clean.length === 1 ? clean[0] : "varios", { pedidos: clean.length, atualizados: result.updated });
+    revalidatePath("/admin/pedidos");
+    revalidatePath("/admin");
     revalidatePath("/admin/financas");
     revalidatePath("/admin/producao");
   }

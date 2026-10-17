@@ -196,6 +196,32 @@ export async function updateOrderStatus(
   return { success: true, order: toOrder(updated), previousStatus: existing.status as OrderStatus };
 }
 
+/**
+ * Confirma à mão o pagamento de vendas lançadas no painel (presencial, WhatsApp, marketplace, encomenda): pagamento aprovado,
+ * valor recebido = total (some do "a receber") e, se o pedido ainda estava só "recebido", ele passa a "Pagamento aprovado" para
+ * entrar no faturamento. Pedidos do site não entram: quem confirma o Pix/cartão deles é o Mercado Pago, sozinho.
+ */
+export async function markOrdersPaid(ids: string[]): Promise<{ updated: number }> {
+  const rows = await db.order.findMany({
+    where: { id: { in: ids }, channel: { not: "online" }, status: { not: "Cancelado" }, paymentStatus: { in: ["pending", "in_process"] } },
+    select: { id: true, total: true, status: true },
+  });
+  if (rows.length === 0) return { updated: 0 };
+  await db.$transaction(
+    rows.map((row) =>
+      db.order.update({
+        where: { id: row.id },
+        data: {
+          paymentStatus: "approved",
+          depositAmount: row.total,
+          ...(row.status === "Pedido recebido" ? { status: "Pagamento aprovado" } : {}),
+        },
+      }),
+    ),
+  );
+  return { updated: rows.length };
+}
+
 export type PaymentUpdateResult =
   | { success: true; order: Order; previousStatus: OrderStatus }
   | { success: false; reason: "not_found" | "amount_mismatch"; error: string };
