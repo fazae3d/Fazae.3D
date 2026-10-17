@@ -186,7 +186,7 @@ export async function processCheckoutPaymentAction(
     // Runs even with a free-shipping coupon, because the label tells the admin
     // this order goes out by motoboy, not by a carrier.
     if (!(await isLocalDeliveryCep(address.zip))) {
-      return { success: false, error: "Entrega por motoboy indisponível para este pedido. Volte e escolha outra forma de entrega." };
+      return { success: false, error: "Entrega local indisponível para este pedido. Volte e escolha outra forma de entrega." };
     }
     shipping = freeShippingFromCoupon ? 0 : localDeliveryCost(subtotal, getLocalDeliveryRules(settings));
     shippingMethod = LOCAL_DELIVERY_LABEL;

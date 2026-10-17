@@ -17,7 +17,7 @@ const inter = Inter({
 
 const SEO_TITLE = "Fazaê 3D | Impressão 3D em Natal e Parnamirim";
 const DESCRIPTION =
-  "Impressão 3D em Natal e Parnamirim: chaveiros, decoração e peças personalizadas, prontas ou sob encomenda. Entrega por motoboy na região e envio para todo o Brasil.";
+  "Impressão 3D em Natal e Parnamirim: chaveiros, decoração e peças personalizadas, prontas ou sob encomenda. Entrega rápida na região e envio para todo o Brasil.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

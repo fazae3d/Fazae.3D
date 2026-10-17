@@ -17,12 +17,12 @@ const CITIES: City[] = [
   {
     slug: "natal",
     name: "Natal",
-    intro: "Atendemos Natal com entrega por motoboy: você compra online e recebe em casa, sem esperar o envio pelos Correios.",
+    intro: "Atendemos Natal com entrega rápida: você compra online e recebe em casa, sem esperar o envio pelos Correios.",
   },
   {
     slug: "parnamirim",
     name: "Parnamirim",
-    intro: "A Fazaê fica em Parnamirim: as peças são produzidas aqui e a entrega por motoboy na cidade é rápida.",
+    intro: "A Fazaê fica em Parnamirim: as peças são produzidas aqui e a entrega na cidade é rápida.",
   },
 ];
 
@@ -38,7 +38,7 @@ export async function generateMetadata({ params }: CityParams): Promise<Metadata
   if (!city) return {};
   return pageMeta({
     title: `Impressão 3D em ${city.name}/RN: peças prontas e sob encomenda`,
-    description: `Impressão 3D em ${city.name}/RN: chaveiros, decoração e peças personalizadas. Entrega por motoboy em até 48h, orçamento sob encomenda e Pix, cartão ou boleto.`,
+    description: `Impressão 3D em ${city.name}/RN: chaveiros, decoração e peças personalizadas. Entrega em até 48h, orçamento sob encomenda e Pix, cartão ou boleto.`,
     path: `/impressao-3d/${city.slug}`,
   });
 }
@@ -55,7 +55,7 @@ export default async function LocalLandingPage({ params }: CityParams) {
   const faq = [
     {
       q: `Vocês fazem entrega em ${city.name}?`,
-      a: `Sim. Em Natal e Parnamirim a entrega é feita por motoboy, em até 48h. O frete é ${formatPrice(rules.fee)} e fica grátis em compras a partir de ${formatPrice(rules.threshold)}.`,
+      a: `Sim. Em Natal e Parnamirim entregamos em até 48h. O frete é ${formatPrice(rules.fee)} e fica grátis em compras a partir de ${formatPrice(rules.threshold)}.`,
     },
     {
       q: "Dá para pedir uma peça personalizada?",
@@ -112,9 +112,9 @@ export default async function LocalLandingPage({ params }: CityParams) {
         </section>
 
         <section>
-          <h2 className="font-display mb-3 text-xl text-paper">Entrega por motoboy em {city.name}</h2>
+          <h2 className="font-display mb-3 text-xl text-paper">Entrega em {city.name}</h2>
           <p className="leading-relaxed">
-            Em Natal e Parnamirim a gente entrega por motoboy, em até 48h. O frete é de {formatPrice(rules.fee)} e fica{" "}
+            Em Natal e Parnamirim a gente entrega em até 48h. O frete é de {formatPrice(rules.fee)} e fica{" "}
             <strong className="text-paper">grátis em compras a partir de {formatPrice(rules.threshold)}</strong>. Para o resto do Brasil,
             enviamos pelos Correios e transportadoras, com frete calculado no checkout.
           </p>

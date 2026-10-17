@@ -86,7 +86,7 @@ export const GUIDES: Guide[] = [
         heading: "Como pedir a sua peça",
         paragraphs: [
           "É simples: você conta a ideia, o tamanho aproximado, a cor e a quantidade, e a gente monta o orçamento. Se tiver uma referência, melhor ainda. Depois que você aprova, a peça é produzida do zero e enviada para você.",
-          "Na região de Natal e Parnamirim a entrega pode ser feita por motoboy. Para o resto do Brasil, enviamos pelos Correios e transportadoras.",
+          "Na região de Natal e Parnamirim a entrega é feita direto por nós, de forma rápida. Para o resto do Brasil, enviamos pelos Correios e transportadoras.",
         ],
       },
       {
@@ -182,7 +182,7 @@ export const GUIDES: Guide[] = [
       {
         heading: "5. Produção e entrega",
         paragraphs: [
-          "A peça é produzida em impressoras próprias, em Parnamirim/RN, e revisada antes do envio. Em Natal e Parnamirim a entrega pode ser feita por motoboy; para o resto do Brasil enviamos pelos Correios ou transportadora, com código de rastreio.",
+          "A peça é produzida em impressoras próprias, em Parnamirim/RN, e revisada antes do envio. Em Natal e Parnamirim a entrega é feita direto por nós, de forma rápida; para o resto do Brasil enviamos pelos Correios ou transportadora, com código de rastreio.",
         ],
       },
       {

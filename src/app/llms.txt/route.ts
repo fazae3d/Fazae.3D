@@ -6,7 +6,7 @@ export const dynamic = "force-static";
 export function GET() {
   const body = `# Fazaê 3D
 
-> Loja de impressão 3D em Parnamirim/RN: chaveiros, decoração, itens geek e utilidades, prontos ou sob encomenda. Entrega por motoboy em Natal e Parnamirim e envio para todo o Brasil.
+> Loja de impressão 3D em Parnamirim/RN: chaveiros, decoração, itens geek e utilidades, prontos ou sob encomenda. Entrega em até 48h em Natal e Parnamirim e envio para todo o Brasil.
 
 Endereço: ${COMPANY.address}, CEP ${COMPANY.zip}
 

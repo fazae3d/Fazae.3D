@@ -35,7 +35,7 @@ export async function generateMetadata({
   const category = await findCategory(slug);
   if (!category) return { title: "Categoria" };
   const base = `${category.label}. ${category.description || "Peças impressas em 3D."}`;
-  const description = `${base} Compre online com entrega por motoboy em Natal e Parnamirim e envio para todo o Brasil.`;
+  const description = `${base} Compre online com entrega rápida em Natal e Parnamirim e envio para todo o Brasil.`;
   return pageMeta({
     title: `${category.label} em 3D`,
     // O Google corta perto de 160 caracteres: se passar, usa a versão curta sem a frase de frete.

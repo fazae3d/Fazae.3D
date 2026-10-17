@@ -28,8 +28,8 @@ export function AnnouncementBar() {
   const remainingLocal = Math.max(0, getLocalDeliveryRules(settings).threshold - subtotal);
   const localMessage =
     remainingLocal > 0
-      ? `${LOCAL_DELIVERY_CITIES_LABEL}: faltam ${formatPrice(remainingLocal)} para frete grátis via motoboy`
-      : `${LOCAL_DELIVERY_CITIES_LABEL}: você garantiu frete grátis via motoboy 🎉`;
+      ? `${LOCAL_DELIVERY_CITIES_LABEL}: faltam ${formatPrice(remainingLocal)} para frete grátis`
+      : `${LOCAL_DELIVERY_CITIES_LABEL}: você garantiu frete grátis 🎉`;
 
   const pixPct = usePixDiscountPct();
   const messages = [

@@ -131,7 +131,7 @@ export function StepEntrega({
         <div className="flex flex-col gap-3">
           {localEligible && remainingForLocal > 0 && (
             <p className="text-xs text-petrol">
-              Faltam <strong>{formatPrice(remainingForLocal)}</strong> para a entrega por motoboy ficar grátis.
+              Faltam <strong>{formatPrice(remainingForLocal)}</strong> para o frete ficar grátis.
             </p>
           )}
           {options.map((option) => {

@@ -10,7 +10,7 @@ import { fallbackCategories, fallbackProducts } from "@/server/demo-fallback";
 // Filtros e ordenação (?categoria=, ?ordenar=...) geram a mesma página: o Google deve indexar só a principal.
 export const metadata: Metadata = pageMeta({
   title: "Loja de peças impressas em 3D",
-  description: "Chaveiros, decoração, itens geek e utilidades impressos em 3D. Compre online na Fazaê, com entrega por motoboy em Natal e Parnamirim e envio para todo o Brasil.",
+  description: "Chaveiros, decoração, itens geek e utilidades impressos em 3D. Compre online na Fazaê, com entrega rápida em Natal e Parnamirim e envio para todo o Brasil.",
   path: "/loja",
 });
 
