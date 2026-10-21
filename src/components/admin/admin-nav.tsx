@@ -37,7 +37,17 @@ export const NAV_GROUPS: NavGroup[] = [
     extraMatch: ["/admin/vendas"],
   },
   { key: "orcamentos", label: "Orçamentos", icon: "quotes", href: "/admin/orcamentos", links: [] },
-  { key: "conversas", label: "Conversas", icon: "chat", href: "/admin/conversas", links: [] },
+  {
+    key: "conversas",
+    label: "Conversas",
+    icon: "chat",
+    href: "/admin/conversas",
+    links: [
+      { href: "/admin/conversas", label: "Conversas" },
+      { href: "/admin/conversas/cadencias", label: "Cadências" },
+      { href: "/admin/conversas/importar", label: "Importar lista" },
+    ],
+  },
   {
     key: "catalogo",
     label: "Catálogo",

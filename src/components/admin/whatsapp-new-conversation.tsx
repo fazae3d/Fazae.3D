@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { startConversationAction } from "@/app/admin/conversas/actions";
+import { Select } from "@/components/select";
 import { CONVERSATION_SOURCES } from "@/lib/whatsapp";
 
 const field = "w-full rounded-lg border border-mist bg-transparent px-2.5 py-2 text-sm outline-none focus:border-petrol";
@@ -45,13 +46,7 @@ export function WhatsAppNewConversation() {
     <div className="space-y-2 rounded-lg border border-mist p-3">
       <input value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" placeholder="Telefone com DDD" className={field} />
       <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome (opcional)" className={field} />
-      <select value={source} onChange={(e) => setSource(e.target.value)} className={field}>
-        {CONVERSATION_SOURCES.map((s) => (
-          <option key={s.key} value={s.key}>
-            {s.label}
-          </option>
-        ))}
-      </select>
+      <Select value={source} onChange={setSource} options={CONVERSATION_SOURCES.map((s) => ({ value: s.key, label: s.label }))} className="rounded-lg border border-mist bg-transparent px-2.5 py-2 text-sm focus:border-petrol" />
       <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={3} placeholder="Primeira mensagem (opcional)" className={field} />
       {error ? <p className="text-xs text-red-500">{error}</p> : null}
       <div className="flex items-center gap-3">

@@ -396,3 +396,10 @@ summary:focus-visible,
   border-radius: 2px;
   animation: skeleton-pulse 1.4s ease-in-out infinite;
 }
+
+/* Lista de opções dos selects nativos do painel: sem isso, com o campo transparente, ela abre branca com texto claro. */
+#admin-shell select option,
+#admin-shell select optgroup {
+  background-color: var(--admin-surface);
+  color: var(--color-ink);
+}

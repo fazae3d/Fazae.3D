@@ -691,6 +691,8 @@ model WaMessage {
 model WaCadence {
   id          String         @id @default(cuid())
   name        String
+  /** prospeccao | orcamento | pos_venda | reativacao | personalizada */
+  kind        String         @default("personalizada")
   active      Boolean        @default(true)
   steps       Json
   createdAt   DateTime       @default(now())
@@ -708,8 +710,21 @@ model WaEnrollment {
   /** ativa | concluida | parada */
   status         String         @default("ativa")
   stopReason     String?
+  /** Tentativas de envio que falharam no passo atual (depois de 3, a inscrição é parada). */
+  attempts       Int            @default(0)
   createdAt      DateTime       @default(now())
 
   @@unique([cadenceId, conversationId])
   @@index([status, nextRunAt])
+}
+
+/** Regras do envio automático (cadências). Linha única (id = 1). Nasce DESLIGADA: nada sai sozinho até o dono ligar. */
+model WaConfig {
+  id              Int     @id @default(1)
+  autoSendEnabled Boolean @default(false)
+  /** Teto de mensagens automáticas por dia (cadências + campanhas). */
+  dailyLimit      Int     @default(100)
+  /** Janela de envio, em horas do fuso da loja (segunda a sábado). */
+  windowStartHour Int     @default(8)
+  windowEndHour   Int     @default(18)
 }

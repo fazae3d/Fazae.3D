@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { detectColumns, effectiveDailyLimit, isWithinSendWindow, normalizeSteps, parseCsv, prepareImportRows, renderMessage } from "./wa-cadence";
 import { formatPhone, isOptOutText, nextStatus, normalizePhone, parseUazapiMessage, parseUazapiStatusUpdate, phoneFromJid } from "./whatsapp";
 import { cashPosition } from "./cash";
 import { applyManualPayment } from "./payment";
@@ -403,5 +404,69 @@ describe("orçamento por WhatsApp", () => {
   it("sem vantagem não inventa ganho", () => {
     expect(quoteWhatsAppMessage(base)).not.toMatch(/economizando|frete/);
     expect(quoteWhatsAppMessage({ ...base, freeShipping: true })).toContain("E o frete é grátis");
+  });
+});
+
+describe("cadências de WhatsApp", () => {
+  it("renderiza nome e variações, sem sobra de pontuação", () => {
+    expect(renderMessage("Olá {{nome}}! Tudo bem?", { name: "Maria da Silva" })).toBe("Olá Maria! Tudo bem?");
+    expect(renderMessage("Olá {{nome}}! Tudo bem?", { name: null })).toBe("Olá! Tudo bem?");
+    expect(renderMessage("{{nome}}, vou deixar meu contato.", { name: "" })).toBe("Vou deixar meu contato.");
+    expect(renderMessage("{Oi|Olá|E aí} {{nome}}", { name: "Ana" }, () => 0)).toBe("Oi Ana");
+    expect(renderMessage("{Oi|Olá|E aí} {{nome}}", { name: "Ana" }, () => 0.99)).toBe("E aí Ana");
+  });
+  it("valida os passos", () => {
+    expect(normalizeSteps([{ delayHours: 0, text: " Oi " }])).toEqual({ ok: true, steps: [{ delayHours: 0, text: "Oi" }] });
+    expect(normalizeSteps([]).ok).toBe(false);
+    expect(normalizeSteps([{ delayHours: 1, text: "" }]).ok).toBe(false);
+    expect(normalizeSteps([{ delayHours: -1, text: "x" }]).ok).toBe(false);
+    expect(normalizeSteps(Array.from({ length: 11 }, () => ({ delayHours: 1, text: "x" }))).ok).toBe(false);
+  });
+  it("só envia de segunda a sábado, dentro do horário da loja (UTC-3)", () => {
+    expect(isWithinSendWindow(new Date("2026-10-21T13:00:00Z"), 8, 18)).toBe(true); // quarta 10h
+    expect(isWithinSendWindow(new Date("2026-10-21T10:59:00Z"), 8, 18)).toBe(false); // quarta 7h59
+    expect(isWithinSendWindow(new Date("2026-10-21T11:00:00Z"), 8, 18)).toBe(true); // quarta 8h
+  });
+  it("domingo e fora do horário não enviam", () => {
+    expect(isWithinSendWindow(new Date("2026-10-25T15:00:00Z"), 8, 18)).toBe(false); // domingo
+    expect(isWithinSendWindow(new Date("2026-10-21T22:00:00Z"), 8, 18)).toBe(false); // quarta 19h
+    expect(isWithinSendWindow(new Date("2026-10-24T14:00:00Z"), 8, 18)).toBe(true); // sábado 11h
+  });
+  it("aquece o limite diário aos poucos", () => {
+    expect(effectiveDailyLimit(100, null, "2026-10-21")).toBe(20);
+    expect(effectiveDailyLimit(100, "2026-10-21", "2026-10-21")).toBe(20);
+    expect(effectiveDailyLimit(100, "2026-10-21", "2026-10-23")).toBe(50);
+    expect(effectiveDailyLimit(100, "2026-10-01", "2026-10-21")).toBe(100);
+    expect(effectiveDailyLimit(30, "2026-10-01", "2026-10-21")).toBe(30);
+  });
+  it("lê planilha: acha as colunas pelo cabeçalho e limpa os telefones", () => {
+    const rows = [
+      ["Cliente", "WhatsApp", "Cidade"],
+      ["Maria", "(84) 99999-8888", "Natal"],
+      ["João", 84988887777, "Parnamirim"],
+      ["Duplicada", "84 99999-8888", ""],
+      ["Sem fone", "abc", ""],
+      ["", "", ""],
+    ];
+    const cols = detectColumns(rows);
+    expect(cols).toEqual({ nameCol: 0, phoneCol: 1, hasHeader: true });
+    const prepared = prepareImportRows(rows, cols);
+    expect(prepared.valid).toEqual([
+      { name: "Maria", phone: "5584999998888" },
+      { name: "João", phone: "5584988887777" },
+    ]);
+    expect(prepared.duplicates).toBe(1);
+    expect(prepared.invalid).toHaveLength(1);
+  });
+  it("sem cabeçalho, descobre a coluna do telefone pelo conteúdo", () => {
+    const cols = detectColumns([["Maria", "84999998888"], ["João", "84988887777"]]);
+    expect(cols).toEqual({ nameCol: 0, phoneCol: 1, hasHeader: false });
+  });
+  it("lê CSV com ponto e vírgula e aspas", () => {
+    expect(parseCsv('nome;telefone\n"Silva; Maria";84999998888\r\nJoão;84988887777\n')).toEqual([
+      ["nome", "telefone"],
+      ["Silva; Maria", "84999998888"],
+      ["João", "84988887777"],
+    ]);
   });
 });

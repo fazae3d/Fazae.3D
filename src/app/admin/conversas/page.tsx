@@ -8,6 +8,7 @@ import { phoneKey } from "@/lib/customer-insights";
 import { LEAD_STAGES, formatPhone, sourceLabel, stageLabel } from "@/lib/whatsapp";
 import { getWhatsAppProvider } from "@/server/whatsapp/provider";
 import { getAllCustomersWithStats } from "@/server/repositories/customer-repository";
+import { listCadences, listConversationEnrollments, type EnrollmentView } from "@/server/repositories/wa-cadence-repository";
 import {
   getConversation,
   getConversationMessages,
@@ -46,6 +47,8 @@ export default async function ConversasPage({ searchParams }: { searchParams: Pr
     provider.name === "uazapi" ? provider.connectionStatus() : Promise.resolve(null),
   ]);
   const messages = selected ? await withReadFallback(() => getConversationMessages(selected.id), []) : [];
+  const activeCadences = selected ? (await withReadFallback(() => listCadences(), [])).filter((c) => c.active).map((c) => ({ id: c.id, name: c.name })) : [];
+  const enrollments = selected ? await withReadFallback(() => listConversationEnrollments(selected.id), [] as EnrollmentView[]) : [];
 
   let customer: LinkedCustomer = null;
   if (selected) {
@@ -72,7 +75,7 @@ export default async function ConversasPage({ searchParams }: { searchParams: Pr
         </div>
       ) : null}
 
-      <div className="grid gap-4 lg:h-[calc(100vh-15rem)] lg:min-h-[480px] lg:grid-cols-[320px_minmax(0,1fr)_300px]">
+      <div className="grid gap-4 lg:h-[calc(100vh-18rem)] lg:min-h-[480px] lg:grid-cols-[320px_minmax(0,1fr)_300px]">
         {/* Lista */}
         <div className={`min-h-0 flex-col gap-3 ${selected ? "hidden lg:flex" : "flex"}`}>
           <WhatsAppNewConversation />
@@ -131,7 +134,7 @@ export default async function ConversasPage({ searchParams }: { searchParams: Pr
         {/* Ficha do lead */}
         <div className={`admin-card min-h-0 overflow-y-auto rounded-xl border border-mist ${selected ? "block" : "hidden lg:block"}`}>
           {selected ? (
-            <WhatsAppLeadPanel key={selected.id + selected.stage + selected.optedOut} conversation={selected} customer={customer} simulated={simulated} />
+            <WhatsAppLeadPanel key={selected.id + selected.stage + selected.optedOut} conversation={selected} customer={customer} simulated={simulated} cadences={activeCadences} enrollments={enrollments} />
           ) : (
             <p className="p-6 text-center text-sm text-graphite">Aqui aparecem etapa, etiquetas e observações do contato.</p>
           )}

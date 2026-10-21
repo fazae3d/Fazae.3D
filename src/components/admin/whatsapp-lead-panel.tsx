@@ -4,16 +4,32 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { setOptOutAction, simulateInboundAction, updateLeadAction } from "@/app/admin/conversas/actions";
+import { enrollConversationAction, stopEnrollmentAction } from "@/app/admin/conversas/cadencias/actions";
+import { Select } from "@/components/select";
 import { useToast } from "@/components/admin/toast";
 import { formatPrice } from "@/lib/format";
 import { CONVERSATION_SOURCES, LEAD_STAGES } from "@/lib/whatsapp";
 import type { WaConversationView } from "@/server/repositories/whatsapp-repository";
+import type { EnrollmentView } from "@/server/repositories/wa-cadence-repository";
 
 export type LinkedCustomer = { id: string; name: string; orderCount: number; totalSpent: number } | null;
 
 const field = "w-full rounded-lg border border-mist bg-transparent px-2.5 py-2 text-sm outline-none focus:border-petrol";
+const selectField = "rounded-lg border border-mist bg-transparent px-2.5 py-2 text-sm focus:border-petrol";
 
-export function WhatsAppLeadPanel({ conversation, customer, simulated }: { conversation: WaConversationView; customer: LinkedCustomer; simulated: boolean }) {
+export function WhatsAppLeadPanel({
+  conversation,
+  customer,
+  simulated,
+  cadences,
+  enrollments,
+}: {
+  conversation: WaConversationView;
+  customer: LinkedCustomer;
+  simulated: boolean;
+  cadences: { id: string; name: string }[];
+  enrollments: EnrollmentView[];
+}) {
   const router = useRouter();
   const { toast } = useToast();
   const [name, setName] = useState(conversation.name ?? "");
@@ -23,6 +39,7 @@ export function WhatsAppLeadPanel({ conversation, customer, simulated }: { conve
   const [notes, setNotes] = useState(conversation.notes ?? "");
   const [pending, setPending] = useState(false);
   const [simText, setSimText] = useState("");
+  const [cadenceId, setCadenceId] = useState("");
 
   const dirty =
     name !== (conversation.name ?? "") ||
@@ -53,6 +70,29 @@ export function WhatsAppLeadPanel({ conversation, customer, simulated }: { conve
     router.refresh();
   };
 
+  const enroll = async () => {
+    if (!cadenceId) return;
+    const result = await enrollConversationAction(cadenceId, conversation.id);
+    if (!result.success) {
+      toast(result.error, "error");
+      return;
+    }
+    const r = result.result;
+    toast(r.enrolled ? "Contato colocado na cadência" : r.optedOut ? "Esse contato pediu para sair" : "Esse contato já passou por essa cadência", r.enrolled ? "success" : "error");
+    setCadenceId("");
+    router.refresh();
+  };
+
+  const stopEnrollment = async (id: string) => {
+    const result = await stopEnrollmentAction(id);
+    if (!result.success) {
+      toast(result.error, "error");
+      return;
+    }
+    toast("Cadência parada para esse contato");
+    router.refresh();
+  };
+
   const simulate = async () => {
     const result = await simulateInboundAction(conversation.id, simText);
     if (!result.success) {
@@ -72,23 +112,11 @@ export function WhatsAppLeadPanel({ conversation, customer, simulated }: { conve
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="mb-1 block text-xs text-graphite">Etapa</label>
-          <select value={stage} onChange={(e) => setStage(e.target.value)} className={field}>
-            {LEAD_STAGES.map((s) => (
-              <option key={s.key} value={s.key}>
-                {s.label}
-              </option>
-            ))}
-          </select>
+          <Select value={stage} onChange={setStage} options={LEAD_STAGES.map((s) => ({ value: s.key, label: s.label }))} className={selectField} />
         </div>
         <div>
           <label className="mb-1 block text-xs text-graphite">Origem</label>
-          <select value={source} onChange={(e) => setSource(e.target.value)} className={field}>
-            {CONVERSATION_SOURCES.map((s) => (
-              <option key={s.key} value={s.key}>
-                {s.label}
-              </option>
-            ))}
-          </select>
+          <Select value={source} onChange={setSource} options={CONVERSATION_SOURCES.map((s) => ({ value: s.key, label: s.label }))} className={selectField} />
         </div>
       </div>
       <div>
@@ -102,6 +130,43 @@ export function WhatsAppLeadPanel({ conversation, customer, simulated }: { conve
       <button type="button" onClick={save} disabled={!dirty || pending} className="w-full rounded-lg bg-petrol px-4 py-2 font-semibold text-[#111] disabled:opacity-40">
         {pending ? "Salvando…" : "Salvar"}
       </button>
+
+      <div className="border-t border-mist pt-4">
+        <p className="mb-2 text-xs font-medium">Cadências</p>
+        {enrollments.length > 0 ? (
+          <ul className="mb-3 space-y-1.5">
+            {enrollments.map((e) => (
+              <li key={e.id} className="flex items-center justify-between gap-2 text-xs">
+                <span className="min-w-0 truncate">
+                  {e.cadenceName}{" "}
+                  <span className="text-graphite">
+                    {e.status === "ativa" ? `· ${e.stepIndex}/${e.totalSteps}` : e.status === "concluida" ? "· concluída" : `· parada (${e.stopReason ?? "—"})`}
+                  </span>
+                </span>
+                {e.status === "ativa" ? (
+                  <button type="button" onClick={() => stopEnrollment(e.id)} className="shrink-0 text-graphite hover:text-red-400 hover:underline">
+                    Parar
+                  </button>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {conversation.optedOut ? (
+          <p className="text-xs text-graphite">Contato marcado como "não quer receber": não entra em cadências.</p>
+        ) : cadences.length === 0 ? (
+          <p className="text-xs text-graphite">Nenhuma cadência ativa. Crie uma na aba Cadências.</p>
+        ) : (
+          <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <Select value={cadenceId} onChange={setCadenceId} placeholder="Colocar em uma cadência…" options={cadences.map((c) => ({ value: c.id, label: c.name }))} className={selectField} />
+            </div>
+            <button type="button" onClick={enroll} disabled={!cadenceId} className="rounded-lg border border-mist px-3 py-2 text-xs hover:border-petrol disabled:opacity-40">
+              Colocar
+            </button>
+          </div>
+        )}
+      </div>
 
       <div className="border-t border-mist pt-4">
         {customer ? (
