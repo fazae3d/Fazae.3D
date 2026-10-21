@@ -9,7 +9,9 @@ import { escapeHtml, sendEmail } from "@/lib/email";
 import { getEmailContactUrl, renderEmailLayout } from "@/lib/email-template";
 import { formatPrice } from "@/lib/format";
 import { round2 } from "@/lib/money";
-import { computeQuoteTotals, formatStoreDate, quoteNumberLabel, quoteSavings, validityEndOfDay, type Quote, type QuoteStatus } from "@/lib/quote";
+import { computeQuoteTotals, formatStoreDate, quoteNumberLabel, quoteSavings, quoteWhatsAppMessage, validityEndOfDay, type Quote, type QuoteStatus } from "@/lib/quote";
+import { normalizePhone } from "@/lib/whatsapp";
+import { registerQuoteSent, sendConversationText, startConversation } from "@/server/repositories/whatsapp-repository";
 import { SITE_URL } from "@/lib/site-config";
 import { logAdminAction } from "@/server/audit";
 import {
@@ -170,6 +172,42 @@ export async function markQuoteSentAction(id: string): Promise<SimpleResult> {
     }
     return { success: true };
   });
+}
+
+/** Envia o orçamento pelo WhatsApp da loja (módulo Conversas): a mensagem fica registrada na conversa e o lead vira "Proposta enviada". */
+export async function sendQuoteViaConversationAction(id: string): Promise<{ success: true; conversationId: string } | { success: false; error: string }> {
+  if (!(await requireAdmin())) return DENIED;
+  const quote = await getQuote(id);
+  if (!quote) return { success: false, error: "Orçamento não encontrado." };
+  const phone = normalizePhone(quote.customerPhone);
+  if (!phone) return { success: false, error: "O telefone do cliente está vazio ou inválido. Corrija no orçamento e tente de novo." };
+
+  const savings = quoteSavings(quote);
+  const message = quoteWhatsAppMessage({
+    customerName: quote.customerName,
+    number: quote.number,
+    total: quote.total,
+    savings: savings.total,
+    freeShipping: savings.freeShipping,
+    validUntil: quote.validUntil,
+    link: `${SITE_URL}/orcamento/${quote.token}`,
+  });
+
+  const result = await withMutationFallback(async (): Promise<{ success: true; conversationId: string } | { success: false; error: string }> => {
+    const opened = await startConversation({ phone, name: quote.customerName, source: "entrada" });
+    if (!opened.success) return opened;
+    const sent = await sendConversationText(opened.id, message, { origin: "manual" });
+    if (!sent.success) return sent;
+    await registerQuoteSent(opened.id);
+    if (quote.status === "rascunho") await setQuoteStatus(id, "enviado");
+    await logAdminAction("orcamento.enviar", "Quote", id, { number: quote.number, via: "conversas" });
+    return { success: true, conversationId: opened.id };
+  });
+  if (result.success) {
+    revalidateQuotes(id);
+    revalidatePath("/admin/conversas");
+  }
+  return result;
 }
 
 export async function emailQuoteAction(id: string): Promise<SimpleResult> {

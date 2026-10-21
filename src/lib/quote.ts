@@ -150,3 +150,24 @@ export function daysUntil(iso: string, now = new Date()) {
   const b = Math.floor(toStoreTime(now).getTime() / 86_400_000);
   return a - b;
 }
+
+/** Texto do orçamento para WhatsApp: valor, o que o cliente ganha (desconto/frete grátis), validade e o link. */
+export function quoteWhatsAppMessage(input: {
+  customerName: string;
+  number: number;
+  total: number;
+  savings?: number;
+  freeShipping?: boolean;
+  validUntil: string;
+  link: string;
+}) {
+  const first = input.customerName.trim().split(/\s+/)[0] || input.customerName;
+  const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const win =
+    input.savings && input.savings > 0
+      ? ` Você está economizando ${brl(input.savings)}${input.freeShipping ? " e ainda ganha frete grátis" : ""}!`
+      : input.freeShipping
+        ? " E o frete é grátis!"
+        : "";
+  return `Olá, ${first}! Segue o orçamento ${quoteNumberLabel(input.number)} da Fazaê 3D, no valor de ${brl(input.total)}.${win} A condição vale até ${formatStoreDate(input.validUntil)}:\n${input.link}`;
+}

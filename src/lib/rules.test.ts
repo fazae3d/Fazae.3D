@@ -15,7 +15,7 @@ import { toCsv } from "./csv";
 import { computeChannelFee, isMarketplace, parseChannelFees } from "./channels";
 import { buildCustomerMetrics, isInactive, phoneKey, rankCustomers, reactivationMessage, wasRecentlyReminded } from "./customer-insights";
 import { monthGoalProgress, channelResults } from "./finance-stats";
-import { needsFollowUp, quoteSavings } from "./quote";
+import { needsFollowUp, quoteSavings, quoteWhatsAppMessage } from "./quote";
 import { campaignBodyHtml, isSafeButtonUrl } from "./campaign-email";
 import { computeQuoteTotals, daysUntil, isQuoteExpired, quoteDisplayStatus, quoteNumberLabel, validityEndOfDay, validityFromNow } from "./quote";
 import type { Product } from "./types";
@@ -388,5 +388,20 @@ describe("WhatsApp: telefone, opt-out e webhooks da uazapi", () => {
     expect(nextStatus("sent", "delivered")).toBe("delivered");
     expect(nextStatus("sent", "failed")).toBe("sent");
     expect(nextStatus("queued", "failed")).toBe("failed");
+  });
+});
+
+describe("orçamento por WhatsApp", () => {
+  const base = { customerName: "Maria da Silva", number: 12, total: 250, validUntil: "2026-11-30T23:59:59.000Z", link: "https://x.com/orcamento/abc" };
+  it("destaca economia e frete grátis", () => {
+    const text = quoteWhatsAppMessage({ ...base, savings: 30, freeShipping: true });
+    expect(text).toContain("Olá, Maria!");
+    expect(text).toContain("economizando");
+    expect(text).toContain("frete grátis");
+    expect(text.endsWith("https://x.com/orcamento/abc")).toBe(true);
+  });
+  it("sem vantagem não inventa ganho", () => {
+    expect(quoteWhatsAppMessage(base)).not.toMatch(/economizando|frete/);
+    expect(quoteWhatsAppMessage({ ...base, freeShipping: true })).toContain("E o frete é grátis");
   });
 });

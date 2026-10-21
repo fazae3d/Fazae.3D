@@ -251,3 +251,16 @@ export async function setConversationOptOut(id: string, optedOut: boolean): Prom
       : []),
   ]);
 }
+
+/** Orçamento enviado pela conversa: lead que ainda estava no começo do funil passa para "Proposta enviada" e ganha a etiqueta "orçamento". */
+export async function registerQuoteSent(conversationId: string): Promise<void> {
+  const conversation = await db.waConversation.findUnique({ where: { id: conversationId }, select: { stage: true, tags: true } });
+  if (!conversation) return;
+  await db.waConversation.update({
+    where: { id: conversationId },
+    data: {
+      ...(["novo", "contato", "interessado"].includes(conversation.stage) ? { stage: "proposta" } : {}),
+      ...(conversation.tags.includes("orçamento") ? {} : { tags: [...conversation.tags, "orçamento"] }),
+    },
+  });
+}

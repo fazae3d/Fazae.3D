@@ -8,14 +8,14 @@ import { AdminIcon } from "@/components/admin/admin-icons";
 import { useToast } from "@/components/admin/toast";
 import {
   convertQuoteToOrderAction,
+  sendQuoteViaConversationAction,
   deleteQuoteAction,
   duplicateQuoteAction,
   emailQuoteAction,
   markQuoteSentAction,
   setQuoteStatusAction,
 } from "@/app/admin/orcamentos/actions";
-import { formatPrice } from "@/lib/format";
-import { formatStoreDate, quoteNumberLabel, validityFromNow, DEFAULT_QUOTE_VALIDITY_DAYS, type QuoteStatus } from "@/lib/quote";
+import { quoteNumberLabel, quoteWhatsAppMessage, validityFromNow, DEFAULT_QUOTE_VALIDITY_DAYS, type QuoteStatus } from "@/lib/quote";
 
 const BTN = "flex items-center gap-1.5 rounded-lg border border-mist px-3.5 py-2 text-sm transition-colors hover:border-petrol disabled:opacity-60";
 const BTN_PRIMARY = "flex items-center gap-1.5 rounded-lg bg-petrol px-3.5 py-2 text-sm font-semibold text-[#111] transition-opacity hover:opacity-90 disabled:opacity-60";
@@ -57,7 +57,6 @@ export function QuoteActions({
   const label = quoteNumberLabel(quote.number);
   const link = `${publicUrl}/orcamento/${quote.token}`;
   const pdfHref = `/orcamento/${quote.token}/pdf`;
-  const first = quote.customerName.trim().split(/\s+/)[0] ?? quote.customerName;
 
   const run = (task: () => Promise<{ success: boolean; error?: string }>, okMessage: string) => {
     startTransition(async () => {
@@ -72,11 +71,22 @@ export function QuoteActions({
   };
 
   const sendWhatsApp = () => {
-    const win = quote.savings && quote.savings > 0 ? ` Você está economizando ${formatPrice(quote.savings)}${quote.freeShipping ? " e ainda ganha frete grátis" : ""}!` : quote.freeShipping ? " E o frete é grátis!" : "";
-    const message = `Olá, ${first}! Segue o orçamento ${label} da Fazaê 3D, no valor de ${formatPrice(quote.total)}.${win} A condição vale até ${formatStoreDate(quote.validUntil)}:\n${link}`;
+    const message = quoteWhatsAppMessage({ ...quote, link });
     const digits = whatsappDigits(quote.customerPhone);
     window.open(`https://wa.me/${digits}?text=${encodeURIComponent(message)}`, "_blank", "noopener");
     void markQuoteSentAction(quote.id).then(() => router.refresh());
+  };
+
+  const sendViaConversations = () => {
+    startTransition(async () => {
+      const result = await sendQuoteViaConversationAction(quote.id);
+      if (!result.success) {
+        toast(result.error, "error");
+        return;
+      }
+      toast("Orçamento enviado pelo Conversas");
+      router.push(`/admin/conversas?c=${result.conversationId}`);
+    });
   };
 
   const copyLink = async () => {
@@ -96,8 +106,17 @@ export function QuoteActions({
         <a href={pdfHref} target="_blank" rel="noopener noreferrer" className={BTN_PRIMARY}>
           <AdminIcon name="download" className="h-4 w-4" /> Baixar PDF
         </a>
+        <button
+          type="button"
+          disabled={pending || !whatsappDigits(quote.customerPhone)}
+          title={whatsappDigits(quote.customerPhone) ? "Envia a mensagem pelo número da loja e abre a conversa no painel" : "Cadastre o telefone do cliente para enviar"}
+          onClick={sendViaConversations}
+          className={BTN}
+        >
+          <AdminIcon name="send" className="h-4 w-4" /> Enviar pelo Conversas
+        </button>
         <button type="button" onClick={sendWhatsApp} className={BTN}>
-          <AdminIcon name="send" className="h-4 w-4" /> Enviar por WhatsApp
+          <AdminIcon name="send" className="h-4 w-4" /> Abrir no WhatsApp
         </button>
         <button
           type="button"
