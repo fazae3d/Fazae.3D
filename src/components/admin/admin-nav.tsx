@@ -37,6 +37,7 @@ export const NAV_GROUPS: NavGroup[] = [
     extraMatch: ["/admin/vendas"],
   },
   { key: "orcamentos", label: "Orçamentos", icon: "quotes", href: "/admin/orcamentos", links: [] },
+  { key: "conversas", label: "Conversas", icon: "chat", href: "/admin/conversas", links: [] },
   {
     key: "catalogo",
     label: "Catálogo",

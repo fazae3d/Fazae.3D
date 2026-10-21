@@ -25,11 +25,12 @@ export const metadata: Metadata = {
 /** Contadores do menu: o que está esperando ação (pedidos pagos sem envio, orçamentos aguardando resposta). */
 async function loadNavBadges(): Promise<Record<string, number>> {
   try {
-    const [toShip, quotesSent] = await Promise.all([
+    const [toShip, quotesSent, unreadChats] = await Promise.all([
       db.order.count({ where: { status: { in: ["Pagamento aprovado", "Em preparação"] }, tracking: null } }),
       db.quote.count({ where: { status: "enviado" } }),
+      db.waConversation.count({ where: { unreadCount: { gt: 0 } } }),
     ]);
-    return { pedidos: toShip, orcamentos: quotesSent };
+    return { pedidos: toShip, orcamentos: quotesSent, conversas: unreadChats };
   } catch {
     return {};
   }

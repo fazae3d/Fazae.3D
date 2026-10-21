@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { formatPhone, isOptOutText, nextStatus, normalizePhone, parseUazapiMessage, parseUazapiStatusUpdate, phoneFromJid } from "./whatsapp";
 import { cashPosition } from "./cash";
 import { applyManualPayment } from "./payment";
 import { pixPrice, resolveOrderDiscount, round2 } from "./money";
@@ -335,5 +336,57 @@ describe("Em caixa", () => {
   it("cancelado não entra", () => {
     const r = cashPosition({ ...base, orders: [order({ createdAt: at("2026-10-12"), paymentStatus: "approved", status: "Cancelado" })] });
     expect(r.received).toBe(0);
+  });
+});
+
+describe("WhatsApp: telefone, opt-out e webhooks da uazapi", () => {
+  it("normaliza telefones brasileiros", () => {
+    expect(normalizePhone("(84) 99999-8888")).toBe("5584999998888");
+    expect(normalizePhone("84 3333-4444")).toBe("558433334444");
+    expect(normalizePhone("+55 84 99999-8888")).toBe("5584999998888");
+    expect(normalizePhone("123")).toBeNull();
+    expect(phoneFromJid("5584999998888@s.whatsapp.net")).toBe("5584999998888");
+    expect(phoneFromJid("5584999998888:12@s.whatsapp.net")).toBe("5584999998888");
+    expect(phoneFromJid("123456@lid")).toBeNull();
+    expect(formatPhone("5584999998888")).toBe("(84) 99999-8888");
+  });
+  it("só entende 'sair' quando é o pedido inteiro", () => {
+    expect(isOptOutText("Sair")).toBe(true);
+    expect(isOptOutText("  PARE de enviar!! ")).toBe(true);
+    expect(isOptOutText("Não quero mais")).toBe(true);
+    expect(isOptOutText("preciso sair às 15h, depois falo")).toBe(false);
+    expect(isOptOutText("")).toBe(false);
+  });
+  const incoming = (over: Record<string, unknown> = {}) => ({
+    EventType: "messages",
+    token: "t",
+    message: { messageid: "ABC", chatid: "5584999998888@s.whatsapp.net", senderName: "Maria", fromMe: false, isGroup: false, messageType: "Conversation", text: "Oi, quero um chaveiro", messageTimestamp: 1788868800000, ...over },
+  });
+  it("lê mensagem recebida", () => {
+    const m = parseUazapiMessage(incoming());
+    expect(m).toMatchObject({ phone: "5584999998888", name: "Maria", fromMe: false, text: "Oi, quero um chaveiro", providerId: "ABC", mediaType: null });
+    expect(m?.at.getTime()).toBe(1788868800000);
+  });
+  it("detecta mídia e mensagem enviada do celular", () => {
+    expect(parseUazapiMessage(incoming({ messageType: "ImageMessage", text: "" }))?.mediaType).toBe("image");
+    expect(parseUazapiMessage(incoming({ fromMe: true }))?.fromMe).toBe(true);
+  });
+  it("ignora grupos, stories, canais e outros eventos", () => {
+    expect(parseUazapiMessage(incoming({ isGroup: true }))).toBeNull();
+    expect(parseUazapiMessage(incoming({ chatid: "123@g.us" }))).toBeNull();
+    expect(parseUazapiMessage(incoming({ chatid: "status@broadcast" }))).toBeNull();
+    expect(parseUazapiMessage({ EventType: "connection" })).toBeNull();
+    expect(parseUazapiMessage(null)).toBeNull();
+  });
+  it("usa sender_pn quando o contato vem como @lid", () => {
+    expect(parseUazapiMessage(incoming({ chatid: "999@lid", sender_pn: "5584988887777@s.whatsapp.net" }))?.phone).toBe("5584988887777");
+  });
+  it("lê confirmação de leitura e nunca regride o status", () => {
+    expect(parseUazapiStatusUpdate({ EventType: "messages_update", state: "Read", event: { MessageIDs: ["A", "B"] } })).toEqual({ providerIds: ["A", "B"], status: "read" });
+    expect(parseUazapiStatusUpdate({ EventType: "messages", state: "Read" })).toBeNull();
+    expect(nextStatus("read", "delivered")).toBe("read");
+    expect(nextStatus("sent", "delivered")).toBe("delivered");
+    expect(nextStatus("sent", "failed")).toBe("sent");
+    expect(nextStatus("queued", "failed")).toBe("failed");
   });
 });
