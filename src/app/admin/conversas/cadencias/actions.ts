@@ -6,8 +6,10 @@ import { ADMIN_AUTH_DISABLED } from "@/lib/dev-flags";
 import { withMutationFallback } from "@/lib/db-fallback";
 import { logAdminAction } from "@/server/audit";
 import { db } from "@/server/db";
-import { normalizeSteps } from "@/lib/wa-cadence";
+import { hasAudience, normalizeAudience, normalizeSendDays, normalizeSteps, normalizeWindow } from "@/lib/wa-cadence";
 import {
+  applyAudience,
+  previewAudience,
   MAX_IMPORT_ROWS,
   deleteCadence,
   enrollConversations,
@@ -40,14 +42,42 @@ const refresh = () => {
 
 export async function saveCadenceAction(
   id: string | null,
-  input: { name: string; kind: string; active: boolean; steps: unknown },
+  input: {
+    name: string;
+    kind: string;
+    active: boolean;
+    steps: unknown;
+    sendDays?: number[];
+    windowStartHour?: number | null;
+    windowEndHour?: number | null;
+    autoEnroll?: boolean;
+    audience?: unknown;
+    repeatAfterDays?: number | null;
+  },
 ): Promise<{ success: true; id: string } | { success: false; error: string }> {
   if (!(await requireAdmin())) return DENIED;
   const name = input.name.trim();
   if (name.length < 2 || name.length > 80) return { success: false, error: "Dê um nome para a cadência (até 80 letras)." };
   const steps = normalizeSteps(input.steps);
   if (!steps.ok) return { success: false, error: steps.error };
-  const result = await withMutationFallback(async () => ({ success: true as const, id: await saveCadence(id, { name, kind: input.kind, active: input.active, steps: steps.steps }) }));
+  const audience = normalizeAudience(input.audience);
+  const autoEnroll = Boolean(input.autoEnroll);
+  if (autoEnroll && !hasAudience(audience)) return { success: false, error: "Para colocar contatos automaticamente, escolha para quem vale (contatos das conversas e/ou clientes parados)." };
+  const repeat = Number(input.repeatAfterDays);
+  const repeatAfterDays = Number.isInteger(repeat) && repeat >= 1 && repeat <= 730 ? repeat : null;
+  const result = await withMutationFallback(async () => ({
+    success: true as const,
+    id: await saveCadence(id, {
+      name,
+      kind: input.kind,
+      active: input.active,
+      steps: steps.steps,
+      schedule: { sendDays: normalizeSendDays(input.sendDays), ...normalizeWindow(input.windowStartHour, input.windowEndHour) },
+      autoEnroll,
+      audience,
+      repeatAfterDays,
+    }),
+  }));
   if (result.success) {
     await logAdminAction(id ? "whatsapp.cadencia.editar" : "whatsapp.cadencia.criar", "WaCadence", result.id, { nome: name });
     refresh();
@@ -205,6 +235,40 @@ export async function stopManyEnrollmentsAction(ids: string[]): Promise<{ succes
   const result = await withMutationFallback(async () => ({ success: true as const, stopped: await stopManyEnrollments(clean) }));
   if (result.success) {
     await logAdminAction("whatsapp.cadencia.cancelar-varios", "WaEnrollment", "varios", { cancelados: result.stopped });
+    refresh();
+  }
+  return result;
+}
+
+/** "Ver quem entraria agora" com o público do formulário (mesmo antes de salvar). Não grava nada. */
+export async function previewAudienceAction(input: {
+  id: string | null;
+  audience: unknown;
+  repeatAfterDays: number | null;
+}): Promise<{ success: true; count: number; sample: string[]; restarting: number } | { success: false; error: string }> {
+  if (!(await requireAdmin())) return DENIED;
+  const audience = normalizeAudience(input.audience);
+  if (!hasAudience(audience)) return { success: false, error: "Escolha para quem vale antes de conferir." };
+  const repeat = Number(input.repeatAfterDays);
+  const result = await withMutationFallback(async () => {
+    const preview = await previewAudience({ id: input.id ?? "novo", audience, repeatAfterDays: Number.isInteger(repeat) && repeat >= 1 ? repeat : null });
+    return { success: true as const, ...preview };
+  });
+  return result;
+}
+
+/** "Colocar agora": inscreve quem combina com o público salvo da cadência (até 100 por vez). Enviar continua dependendo do envio automático. */
+export async function applyAudienceAction(id: string): Promise<{ success: true; enrolled: number } | { success: false; error: string }> {
+  if (!(await requireAdmin())) return DENIED;
+  const result = await withMutationFallback(async () => {
+    try {
+      return { success: true as const, enrolled: await applyAudience(id) };
+    } catch (error) {
+      return { success: false as const, error: error instanceof Error ? error.message : "Não foi possível colocar os contatos." };
+    }
+  });
+  if (result.success) {
+    await logAdminAction("whatsapp.cadencia.aplicar-publico", "WaCadence", id, { inscritos: result.enrolled });
     refresh();
   }
   return result;

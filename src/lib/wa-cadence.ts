@@ -230,3 +230,108 @@ export function relativeFromNow(target: Date | string | null, now = new Date()) 
   const days = Math.round(hours / 24);
   return `em ${days} dia${days > 1 ? "s" : ""}`;
 }
+
+/* ---------- agenda (dias e horário) ---------- */
+
+export const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"] as const;
+export const DEFAULT_SEND_DAYS = [1, 2, 3, 4, 5, 6];
+
+export type CadenceSchedule = { sendDays: number[]; windowStartHour: number | null; windowEndHour: number | null };
+
+/** Dias válidos, sem repetição e em ordem; vazio vira o padrão (segunda a sábado). */
+export function normalizeSendDays(raw: unknown): number[] {
+  const days = Array.isArray(raw) ? [...new Set(raw.map(Number).filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))].sort() : [];
+  return days.length > 0 ? days : DEFAULT_SEND_DAYS;
+}
+
+/** O horário próprio precisa ter início e fim juntos e o início antes do fim; senão vale a regra geral. */
+export function normalizeWindow(start: unknown, end: unknown): { windowStartHour: number | null; windowEndHour: number | null } {
+  const s = start === null || start === undefined || start === "" ? null : Number(start);
+  const e = end === null || end === undefined || end === "" ? null : Number(end);
+  if (s === null || e === null || !Number.isInteger(s) || !Number.isInteger(e) || s < 0 || e > 24 || s >= e) return { windowStartHour: null, windowEndHour: null };
+  return { windowStartHour: s, windowEndHour: e };
+}
+
+/** Pode enviar agora? Vale o dia da semana e o horário (da cadência, ou os gerais quando ela não tem os seus), no horário da loja. */
+export function isWithinSchedule(now: Date, schedule: CadenceSchedule, defaults: { windowStartHour: number; windowEndHour: number }) {
+  const local = toStoreTime(now);
+  if (!schedule.sendDays.includes(local.getUTCDay())) return false;
+  const start = schedule.windowStartHour ?? defaults.windowStartHour;
+  const end = schedule.windowEndHour ?? defaults.windowEndHour;
+  const hour = local.getUTCHours() + local.getUTCMinutes() / 60;
+  return hour >= start && hour < end;
+}
+
+/** "Seg a Sáb", "Seg, Qua e Sex", "Todos os dias". */
+export function describeDays(days: number[]) {
+  const sorted = normalizeSendDays(days);
+  if (sorted.length === 7) return "Todos os dias";
+  const contiguous = sorted.every((d, i) => i === 0 || d === sorted[i - 1] + 1);
+  if (contiguous && sorted.length >= 3) return `${DAY_LABELS[sorted[0]]} a ${DAY_LABELS[sorted[sorted.length - 1]]}`;
+  const names = sorted.map((d) => DAY_LABELS[d]);
+  return names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} e ${names[names.length - 1]}`;
+}
+
+export function describeSchedule(schedule: CadenceSchedule, defaults: { windowStartHour: number; windowEndHour: number }) {
+  const start = schedule.windowStartHour ?? defaults.windowStartHour;
+  const end = schedule.windowEndHour ?? defaults.windowEndHour;
+  return `${describeDays(schedule.sendDays)}, ${start}h às ${end}h`;
+}
+
+/* ---------- público (quem entra sozinho) ---------- */
+
+export type CadenceAudience = {
+  /** Contatos que já estão em Conversas, filtrados. Ausente = não usa. */
+  conversations?: { sources: string[]; stages: string[]; tag?: string; silentDays?: number };
+  /** Clientes cadastrados que já compraram e estão parados há N dias (viram contatos em Conversas). Ausente = não usa. */
+  inactiveCustomersDays?: number;
+};
+
+export const MAX_AUDIENCE_DAYS = 730;
+
+export function normalizeAudience(raw: unknown): CadenceAudience {
+  const input = (raw ?? {}) as { conversations?: Record<string, unknown>; inactiveCustomersDays?: unknown };
+  const audience: CadenceAudience = {};
+  const sources = ["entrada", "prospeccao", "cliente"];
+  const stages = ["novo", "contato", "interessado", "proposta", "ganho", "perdido"];
+  if (input.conversations && typeof input.conversations === "object") {
+    const c = input.conversations;
+    const silent = Number(c.silentDays);
+    const tag = typeof c.tag === "string" ? c.tag.trim().toLowerCase().slice(0, 40) : "";
+    audience.conversations = {
+      sources: Array.isArray(c.sources) ? c.sources.filter((s): s is string => typeof s === "string" && sources.includes(s)) : [],
+      stages: Array.isArray(c.stages) ? c.stages.filter((s): s is string => typeof s === "string" && stages.includes(s)) : [],
+      ...(tag ? { tag } : {}),
+      ...(Number.isInteger(silent) && silent > 0 && silent <= MAX_AUDIENCE_DAYS ? { silentDays: silent } : {}),
+    };
+  }
+  const inactive = Number(input.inactiveCustomersDays);
+  if (Number.isInteger(inactive) && inactive > 0 && inactive <= MAX_AUDIENCE_DAYS) audience.inactiveCustomersDays = inactive;
+  return audience;
+}
+
+export function hasAudience(audience: CadenceAudience) {
+  return Boolean(audience.conversations) || audience.inactiveCustomersDays !== undefined;
+}
+
+/** Resumo em português do público: "Contatos em Interessado e Proposta enviada, sem resposta há 5 dias". */
+export function describeAudience(audience: CadenceAudience, labels: { source: (k: string) => string; stage: (k: string) => string }) {
+  const parts: string[] = [];
+  const c = audience.conversations;
+  if (c) {
+    const bits: string[] = [];
+    if (c.stages.length) bits.push(`na etapa ${c.stages.map(labels.stage).join(" ou ")}`);
+    if (c.sources.length) bits.push(`origem ${c.sources.map(labels.source).join(" ou ")}`);
+    if (c.tag) bits.push(`com a etiqueta "${c.tag}"`);
+    if (c.silentDays) bits.push(`sem nenhuma mensagem há ${c.silentDays} dias`);
+    parts.push(bits.length ? `Contatos ${bits.join(", ")}` : "Todos os contatos das conversas");
+  }
+  if (audience.inactiveCustomersDays) parts.push(`Clientes que não compram há ${audience.inactiveCustomersDays} dias`);
+  return parts.join(" + ") || "Ninguém (só entra quem você colocar)";
+}
+
+/** Já pode entrar de novo? Só se a cadência repete, terminou de verdade (não foi parada) e o intervalo passou. */
+export function canRepeat(repeatAfterDays: number | null, enrollment: { status: string; finishedAt: Date | null }, now: Date) {
+  if (!repeatAfterDays || enrollment.status !== "concluida" || !enrollment.finishedAt) return false;
+  return now.getTime() - enrollment.finishedAt.getTime() >= repeatAfterDays * 86_400_000;
+}

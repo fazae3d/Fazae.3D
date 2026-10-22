@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { detectColumns, effectiveDailyLimit, isWithinSendWindow, normalizeSteps, parseCsv, prepareImportRows, relativeFromNow, renderMessage } from "./wa-cadence";
+import { canRepeat, describeAudience, describeDays, detectColumns, effectiveDailyLimit, hasAudience, isWithinSchedule, isWithinSendWindow, normalizeAudience, normalizeSendDays, normalizeSteps, normalizeWindow, parseCsv, prepareImportRows, relativeFromNow, renderMessage } from "./wa-cadence";
 import { formatPhone, isOptOutText, nextStatus, normalizePhone, parseUazapiMessage, parseUazapiStatusUpdate, phoneFromJid } from "./whatsapp";
 import { cashPosition } from "./cash";
 import { applyManualPayment } from "./payment";
@@ -479,5 +479,48 @@ describe("tempo relativo da fila", () => {
     expect(relativeFromNow("2026-10-22T12:25:00Z", now)).toBe("em 25 min");
     expect(relativeFromNow("2026-10-22T15:00:00Z", now)).toBe("em 3 h");
     expect(relativeFromNow("2026-10-24T12:00:00Z", now)).toBe("em 2 dias");
+  });
+});
+
+describe("regras de envio: agenda, público e repetição", () => {
+  const defaults = { windowStartHour: 8, windowEndHour: 18 };
+  it("agenda por dia da semana e horário (própria ou geral)", () => {
+    const seg = { sendDays: [1, 3, 5], windowStartHour: null, windowEndHour: null };
+    expect(isWithinSchedule(new Date("2026-10-21T13:00:00Z"), seg, defaults)).toBe(true); // quarta 10h
+    expect(isWithinSchedule(new Date("2026-10-20T13:00:00Z"), seg, defaults)).toBe(false); // terça
+    expect(isWithinSchedule(new Date("2026-10-21T13:00:00Z"), { ...seg, windowStartHour: 14, windowEndHour: 16 }, defaults)).toBe(false); // 10h fora de 14–16
+    expect(isWithinSchedule(new Date("2026-10-25T15:00:00Z"), { sendDays: [0], windowStartHour: null, windowEndHour: null }, defaults)).toBe(true); // domingo liberado
+  });
+  it("normaliza dias e horário", () => {
+    expect(normalizeSendDays([5, 1, 1, 9, "x"])).toEqual([1, 5]);
+    expect(normalizeSendDays([])).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(normalizeWindow(9, 17)).toEqual({ windowStartHour: 9, windowEndHour: 17 });
+    expect(normalizeWindow(17, 9)).toEqual({ windowStartHour: null, windowEndHour: null });
+    expect(normalizeWindow(9, null)).toEqual({ windowStartHour: null, windowEndHour: null });
+  });
+  it("descreve os dias", () => {
+    expect(describeDays([1, 2, 3, 4, 5, 6])).toBe("Seg a Sáb");
+    expect(describeDays([0, 1, 2, 3, 4, 5, 6])).toBe("Todos os dias");
+    expect(describeDays([1, 3, 5])).toBe("Seg, Qua e Sex");
+    expect(describeDays([6])).toBe("Sáb");
+  });
+  it("valida o público e descreve em português", () => {
+    const audience = normalizeAudience({ conversations: { sources: ["prospeccao", "lixo"], stages: ["interessado"], tag: " Lista-X ", silentDays: 7 }, inactiveCustomersDays: 120 });
+    expect(audience).toEqual({ conversations: { sources: ["prospeccao"], stages: ["interessado"], tag: "lista-x", silentDays: 7 }, inactiveCustomersDays: 120 });
+    expect(hasAudience(audience)).toBe(true);
+    expect(hasAudience(normalizeAudience({}))).toBe(false);
+    expect(normalizeAudience({ inactiveCustomersDays: -3 })).toEqual({});
+    const text = describeAudience(audience, { source: (k) => k, stage: (k) => k });
+    expect(text).toContain("sem nenhuma mensagem há 7 dias");
+    expect(text).toContain("Clientes que não compram há 120 dias");
+  });
+  it("repete só quem concluiu e já passou o intervalo", () => {
+    const now = new Date("2026-10-22T12:00:00Z");
+    const done = { status: "concluida", finishedAt: new Date("2026-09-01T12:00:00Z") };
+    expect(canRepeat(30, done, now)).toBe(true);
+    expect(canRepeat(90, done, now)).toBe(false);
+    expect(canRepeat(null, done, now)).toBe(false);
+    expect(canRepeat(30, { status: "parada", finishedAt: done.finishedAt }, now)).toBe(false);
+    expect(canRepeat(30, { status: "concluida", finishedAt: null }, now)).toBe(false);
   });
 });

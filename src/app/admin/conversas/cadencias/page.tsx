@@ -4,7 +4,8 @@ import { CadenceActiveToggle } from "@/components/admin/whatsapp-cadence-control
 import { PageHeader, StatusBadge } from "@/components/admin/page-header";
 import { WhatsAppAutoSendPanel } from "@/components/admin/whatsapp-auto-send-panel";
 import { withReadFallback } from "@/lib/db-fallback";
-import { CADENCE_KINDS, CADENCE_PRESETS, describeDelay, kindLabel } from "@/lib/wa-cadence";
+import { CADENCE_KINDS, CADENCE_PRESETS, describeAudience, describeDelay, describeSchedule, hasAudience, kindLabel } from "@/lib/wa-cadence";
+import { sourceLabel, stageLabel } from "@/lib/whatsapp";
 import { getWhatsAppProvider } from "@/server/whatsapp/provider";
 import { getSendBudget, getWaConfig, listCadences, type CadenceView, type SendBudget, type WaConfigView } from "@/server/repositories/wa-cadence-repository";
 
@@ -62,6 +63,24 @@ export default async function CadenciasPage() {
                   </li>
                 ))}
               </ol>
+              <dl className="mt-3 space-y-1 text-xs text-graphite">
+                <div className="flex gap-2">
+                  <dt className="w-16 shrink-0">Quando</dt>
+                  <dd className="text-ink">{describeSchedule(c.schedule, config)}</dd>
+                </div>
+                <div className="flex gap-2">
+                  <dt className="w-16 shrink-0">Para quem</dt>
+                  <dd className="text-ink">
+                    {c.autoEnroll && hasAudience(c.audience)
+                      ? `Entrada automática: ${describeAudience(c.audience, { source: sourceLabel, stage: stageLabel })}`
+                      : "Só quem você colocar ou importar"}
+                  </dd>
+                </div>
+                <div className="flex gap-2">
+                  <dt className="w-16 shrink-0">Repete</dt>
+                  <dd className="text-ink">{c.repeatAfterDays ? `Sim, depois de ${c.repeatAfterDays} dias de concluída` : "Não"}</dd>
+                </div>
+              </dl>
               <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-mist pt-3 text-xs text-graphite">
                 <span>
                   <strong className="text-ink">{c.counts.ativa}</strong> em andamento · {c.counts.concluida} concluídos · {c.counts.parada} parados

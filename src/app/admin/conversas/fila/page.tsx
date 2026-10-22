@@ -2,7 +2,7 @@ import Link from "next/link";
 import { PageHeader, StatusBadge, type BadgeTone } from "@/components/admin/page-header";
 import { BulkCancelButton, QueueRowActions, ResumeButton } from "@/components/admin/whatsapp-queue-actions";
 import { withReadFallback } from "@/lib/db-fallback";
-import { isWithinSendWindow, relativeFromNow } from "@/lib/wa-cadence";
+import { isWithinSchedule, relativeFromNow } from "@/lib/wa-cadence";
 import { formatPhone } from "@/lib/whatsapp";
 import { getWhatsAppProvider } from "@/server/whatsapp/provider";
 import {
@@ -76,11 +76,11 @@ export default async function FilaPage({ searchParams }: { searchParams: Promise
   const closed: ClosedItem[] = tab === "encerradas" ? await withReadFallback(() => listClosed(filter), []) : [];
 
   // Por que nada está saindo agora? (só importa quando há alguém esperando)
-  const insideWindow = isWithinSendWindow(now, config.windowStartHour, config.windowEndHour);
+  const insideWindow = cadences.length === 0 || cadences.some((c) => c.active && isWithinSchedule(now, c.schedule, config));
   const blocker = !config.autoSendEnabled
     ? "O envio automático está desligado: nada sai sozinho. Ligue em Cadências quando quiser começar."
     : !insideWindow
-      ? `Fora do horário de envio (segunda a sábado, ${config.windowStartHour}h às ${config.windowEndHour}h). As mensagens saem quando o horário abrir.`
+      ? "Agora é fora do dia ou do horário de envio das cadências. As mensagens saem quando o horário abrir (veja os dias e horários em cada cadência)."
       : budget.remaining <= 0
         ? `O limite de hoje (${budget.limit}) já foi atingido. O resto sai amanhã.`
         : null;

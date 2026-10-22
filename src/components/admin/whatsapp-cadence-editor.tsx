@@ -5,7 +5,8 @@ import { useRef, useState } from "react";
 import { deleteCadenceAction, saveCadenceAction } from "@/app/admin/conversas/cadencias/actions";
 import { Select } from "@/components/select";
 import { useToast } from "@/components/admin/toast";
-import { CADENCE_KINDS, MAX_STEPS, MAX_STEP_TEXT, renderMessage, type CadenceStep } from "@/lib/wa-cadence";
+import { WhatsAppCadenceRules, initialRules, rulesToPayload, type RulesState } from "@/components/admin/whatsapp-cadence-rules";
+import { CADENCE_KINDS, MAX_STEPS, MAX_STEP_TEXT, renderMessage, type CadenceAudience, type CadenceSchedule, type CadenceStep } from "@/lib/wa-cadence";
 
 type Draft = { text: string; amount: string; unit: "h" | "d" };
 
@@ -26,9 +27,20 @@ function toHours(draft: Draft) {
 export function WhatsAppCadenceEditor({
   id,
   initial,
+  defaults,
 }: {
   id: string | null;
-  initial: { name: string; kind: string; active: boolean; steps: CadenceStep[] };
+  initial: {
+    name: string;
+    kind: string;
+    active: boolean;
+    steps: CadenceStep[];
+    schedule: CadenceSchedule;
+    autoEnroll: boolean;
+    audience: CadenceAudience;
+    repeatAfterDays: number | null;
+  };
+  defaults: { windowStartHour: number; windowEndHour: number };
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -36,6 +48,9 @@ export function WhatsAppCadenceEditor({
   const [kind, setKind] = useState(initial.kind);
   const [active, setActive] = useState(initial.active);
   const [steps, setSteps] = useState<Draft[]>(initial.steps.map(toDraft));
+  const [rules, setRules] = useState<RulesState>(() => initialRules(initial, defaults));
+  const [baseline] = useState(() => JSON.stringify({ name: initial.name, kind: initial.kind, active: initial.active, steps: initial.steps.map(toDraft), rules: initialRules(initial, defaults) }));
+  const dirty = JSON.stringify({ name, kind, active, steps, rules }) !== baseline;
   const [pending, setPending] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const areas = useRef<(HTMLTextAreaElement | null)[]>([]);
@@ -66,7 +81,7 @@ export function WhatsAppCadenceEditor({
   const save = async () => {
     const payload = steps.map((s) => ({ text: s.text, delayHours: toHours(s) }));
     setPending(true);
-    const result = await saveCadenceAction(id, { name, kind, active, steps: payload });
+    const result = await saveCadenceAction(id, { name, kind, active, steps: payload, ...rulesToPayload(rules) });
     setPending(false);
     if (!result.success) {
       toast(result.error, "error");
@@ -212,6 +227,8 @@ export function WhatsAppCadenceEditor({
           + Adicionar mensagem
         </button>
       ) : null}
+
+      <WhatsAppCadenceRules id={id} rules={rules} onChange={setRules} defaults={defaults} dirty={dirty} />
 
       <div className="flex flex-wrap items-center gap-3 border-t border-mist pt-5">
         <button type="button" onClick={save} disabled={pending} className="rounded-lg bg-petrol px-5 py-2.5 text-sm font-semibold text-[#111] disabled:opacity-60">

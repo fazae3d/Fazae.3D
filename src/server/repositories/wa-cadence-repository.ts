@@ -1,15 +1,21 @@
 import { db } from "../db";
 import { sendConversationText } from "./whatsapp-repository";
-import { getAllCustomers } from "./customer-repository";
-import { phoneKey } from "@/lib/customer-insights";
+import { getAllCustomers, getCustomersWithMetrics, markCustomerReminded } from "./customer-repository";
+import { isInactive, phoneKey, wasRecentlyReminded } from "@/lib/customer-insights";
 import { storeDayKey } from "@/lib/store-time";
 import { normalizePhone } from "@/lib/whatsapp";
 import {
   CADENCE_KINDS,
+  canRepeat,
   effectiveDailyLimit,
-  isWithinSendWindow,
+  hasAudience,
+  isWithinSchedule,
+  normalizeAudience,
+  normalizeSendDays,
   normalizeSteps,
   renderMessage,
+  type CadenceAudience,
+  type CadenceSchedule,
   type CadenceStep,
 } from "@/lib/wa-cadence";
 
@@ -64,13 +70,50 @@ export type CadenceView = {
   kind: string;
   active: boolean;
   steps: CadenceStep[];
+  schedule: CadenceSchedule;
+  autoEnroll: boolean;
+  audience: CadenceAudience;
+  repeatAfterDays: number | null;
   counts: CadenceCounts;
   createdAt: string;
 };
 
-function toCadence(row: { id: string; name: string; kind: string; active: boolean; steps: unknown; createdAt: Date }, counts: CadenceCounts): CadenceView {
+type CadenceRow = {
+  id: string;
+  name: string;
+  kind: string;
+  active: boolean;
+  steps: unknown;
+  sendDays: number[];
+  windowStartHour: number | null;
+  windowEndHour: number | null;
+  autoEnroll: boolean;
+  audience: unknown;
+  repeatAfterDays: number | null;
+  createdAt: Date;
+};
+
+const scheduleOf = (row: Pick<CadenceRow, "sendDays" | "windowStartHour" | "windowEndHour">): CadenceSchedule => ({
+  sendDays: normalizeSendDays(row.sendDays),
+  windowStartHour: row.windowStartHour,
+  windowEndHour: row.windowEndHour,
+});
+
+function toCadence(row: CadenceRow, counts: CadenceCounts): CadenceView {
   const parsed = normalizeSteps(row.steps);
-  return { id: row.id, name: row.name, kind: row.kind, active: row.active, steps: parsed.ok ? parsed.steps : [], counts, createdAt: row.createdAt.toISOString() };
+  return {
+    id: row.id,
+    name: row.name,
+    kind: row.kind,
+    active: row.active,
+    steps: parsed.ok ? parsed.steps : [],
+    schedule: scheduleOf(row),
+    autoEnroll: row.autoEnroll,
+    audience: normalizeAudience(row.audience),
+    repeatAfterDays: row.repeatAfterDays,
+    counts,
+    createdAt: row.createdAt.toISOString(),
+  };
 }
 
 export async function listCadences(): Promise<CadenceView[]> {
@@ -94,11 +137,31 @@ export async function getCadence(id: string): Promise<CadenceView | null> {
   return toCadence(row, counts);
 }
 
-export type CadenceInput = { name: string; kind: string; active: boolean; steps: CadenceStep[] };
+export type CadenceInput = {
+  name: string;
+  kind: string;
+  active: boolean;
+  steps: CadenceStep[];
+  schedule: CadenceSchedule;
+  autoEnroll: boolean;
+  audience: CadenceAudience;
+  repeatAfterDays: number | null;
+};
 
 export async function saveCadence(id: string | null, input: CadenceInput): Promise<string> {
   const kind = CADENCE_KINDS.some((k) => k.key === input.kind) ? input.kind : "personalizada";
-  const data = { name: input.name.trim(), kind, active: input.active, steps: input.steps };
+  const data = {
+    name: input.name.trim(),
+    kind,
+    active: input.active,
+    steps: input.steps,
+    sendDays: input.schedule.sendDays,
+    windowStartHour: input.schedule.windowStartHour,
+    windowEndHour: input.schedule.windowEndHour,
+    autoEnroll: input.autoEnroll,
+    audience: input.audience,
+    repeatAfterDays: input.repeatAfterDays,
+  };
   if (id) {
     await db.waCadence.update({ where: { id }, data });
     return id;
@@ -285,7 +348,7 @@ export async function importContacts(input: ImportInput, now = new Date()): Prom
 
 /* ---------- motor: envia o que está na hora ---------- */
 
-export type TickResult = { ran: boolean; reason?: string; sent: number; failed: number; stopped: number; remainingToday?: number };
+export type TickResult = { ran: boolean; reason?: string; sent: number; failed: number; stopped: number; enrolled?: number; remainingToday?: number };
 
 const MAX_SENDS_PER_TICK = 3;
 const RETRY_AFTER_MS = 30 * 60_000;
@@ -300,20 +363,26 @@ export async function runCadenceTick(now = new Date()): Promise<TickResult> {
   const empty = { sent: 0, failed: 0, stopped: 0 };
   const config = await getWaConfig();
   if (!config.autoSendEnabled) return { ran: false, reason: "O envio automático está desligado.", ...empty };
-  if (!isWithinSendWindow(now, config.windowStartHour, config.windowEndHour)) {
-    return { ran: false, reason: `Fora do horário de envio (segunda a sábado, ${config.windowStartHour}h às ${config.windowEndHour}h).`, ...empty };
-  }
-  const budget = await getSendBudget(now, config);
-  if (budget.remaining <= 0) return { ran: false, reason: `O limite de hoje (${budget.limit}) já foi atingido.`, ...empty, remainingToday: 0 };
 
-  const due = await db.waEnrollment.findMany({
+  // Quem combina com as regras de "para quem" entra na cadência sozinho (mesmo fora do horário: entrar não envia nada).
+  const enrolled = await runAutoEnroll(now);
+
+  const budget = await getSendBudget(now, config);
+  if (budget.remaining <= 0) return { ran: false, reason: `O limite de hoje (${budget.limit}) já foi atingido.`, ...empty, enrolled, remainingToday: 0 };
+
+  const candidates = await db.waEnrollment.findMany({
     where: { status: "ativa", nextRunAt: { lte: now }, cadence: { active: true } },
     include: { cadence: true },
     orderBy: { nextRunAt: "asc" },
-    take: Math.min(budget.remaining, MAX_SENDS_PER_TICK),
+    take: 60,
   });
+  // Cada cadência tem seus dias e horário (ou usa os gerais): só entra na rodada quem está dentro da própria agenda.
+  const due = candidates.filter((e) => isWithinSchedule(now, scheduleOf(e.cadence), config)).slice(0, Math.min(budget.remaining, MAX_SENDS_PER_TICK));
+  if (candidates.length > 0 && due.length === 0) {
+    return { ran: false, reason: "Há mensagens na hora de sair, mas todas as cadências estão fora do dia ou do horário de envio delas.", ...empty, enrolled };
+  }
 
-  const result: TickResult = { ran: true, ...empty };
+  const result: TickResult = { ran: true, ...empty, enrolled };
   for (const enrollment of due) {
     const outcome = await processEnrollment(enrollment, now, { force: false });
     if (outcome === "sent") result.sent += 1;
@@ -354,7 +423,7 @@ export async function processEnrollment(
   if (!parsed.ok) return stop("cadência sem mensagens válidas");
   const step = parsed.steps[enrollment.stepIndex];
   if (!step) {
-    await db.waEnrollment.update({ where: { id: enrollment.id }, data: { status: "concluida", nextRunAt: null } });
+    await db.waEnrollment.update({ where: { id: enrollment.id }, data: { status: "concluida", finishedAt: now, nextRunAt: null } });
     return "concluded";
   }
 
@@ -373,7 +442,7 @@ export async function processEnrollment(
     where: { id: enrollment.id },
     data: nextStep
       ? { stepIndex: enrollment.stepIndex + 1, attempts: 0, nextRunAt: new Date(now.getTime() + nextStep.delayHours * 3_600_000) }
-      : { stepIndex: enrollment.stepIndex + 1, attempts: 0, status: "concluida", nextRunAt: null },
+      : { stepIndex: enrollment.stepIndex + 1, attempts: 0, status: "concluida", finishedAt: now, nextRunAt: null },
   });
   return "sent";
 }
@@ -563,4 +632,139 @@ export async function resumeEnrollment(id: string, now = new Date()): Promise<vo
 export async function stopManyEnrollments(ids: string[]): Promise<number> {
   const result = await db.waEnrollment.updateMany({ where: { id: { in: ids }, status: "ativa" }, data: { status: "parada", stopReason: "parada manualmente", nextRunAt: null } });
   return result.count;
+}
+
+/* ---------- regras de entrada: para quem, e repetição ---------- */
+
+export type AudienceCandidate = {
+  /** Conversa já existente (vazio = ainda vai ser criada a partir do cadastro de clientes). */
+  conversationId?: string;
+  phone: string;
+  name: string | null;
+  customerId?: string;
+  /** Inscrição antiga nesta cadência que será reiniciada (repetição). */
+  restartEnrollmentId?: string;
+};
+
+type AudienceCadence = { id: string; audience: unknown; repeatAfterDays: number | null };
+
+/** Quem entraria agora: combina o público da cadência, tira quem pediu para sair e quem já está em alguma cadência. Não grava nada. */
+export async function collectAudience(cadence: AudienceCadence, now = new Date()): Promise<AudienceCandidate[]> {
+  const audience = normalizeAudience(cadence.audience);
+  const found = new Map<string, AudienceCandidate>();
+
+  const c = audience.conversations;
+  if (c) {
+    const cutoff = c.silentDays ? new Date(now.getTime() - c.silentDays * 86_400_000) : null;
+    const rows = await db.waConversation.findMany({
+      where: {
+        optedOut: false,
+        ...(c.sources.length ? { source: { in: c.sources } } : {}),
+        ...(c.stages.length ? { stage: { in: c.stages } } : {}),
+        ...(c.tag ? { tags: { has: c.tag } } : {}),
+        ...(cutoff ? { createdAt: { lt: cutoff }, OR: [{ lastMessageAt: null }, { lastMessageAt: { lt: cutoff } }] } : {}),
+      },
+      select: { id: true, phone: true, name: true },
+      take: 3000,
+    });
+    for (const r of rows) found.set(r.phone, { conversationId: r.id, phone: r.phone, name: r.name });
+  }
+
+  if (audience.inactiveCustomersDays) {
+    const customers = await getCustomersWithMetrics();
+    const inactive = customers.flatMap((cu) => {
+      const phone = normalizePhone(cu.phone);
+      return phone && isInactive(cu.metrics, now, audience.inactiveCustomersDays) && !wasRecentlyReminded(cu.lastReminderAt, now) ? [{ phone, name: cu.name, customerId: cu.id }] : [];
+    });
+    if (inactive.length > 0) {
+      const existing = await db.waConversation.findMany({ where: { phone: { in: inactive.map((i) => i.phone) } }, select: { id: true, phone: true, optedOut: true } });
+      const byPhone = new Map(existing.map((e) => [e.phone, e]));
+      for (const i of inactive) {
+        const conv = byPhone.get(i.phone);
+        if (conv?.optedOut) continue;
+        found.set(i.phone, { ...(found.get(i.phone) ?? {}), conversationId: conv?.id, phone: i.phone, name: i.name, customerId: i.customerId });
+      }
+    }
+  }
+
+  const withConversation = [...found.values()].filter((f) => f.conversationId);
+  const ids = withConversation.map((f) => f.conversationId!);
+  const [busy, mine] = ids.length
+    ? await Promise.all([
+        db.waEnrollment.findMany({ where: { status: "ativa", conversationId: { in: ids } }, select: { conversationId: true } }),
+        db.waEnrollment.findMany({ where: { cadenceId: cadence.id, conversationId: { in: ids } }, select: { id: true, conversationId: true, status: true, finishedAt: true } }),
+      ])
+    : [[], []];
+  const busySet = new Set(busy.map((b) => b.conversationId));
+  const mineBy = new Map(mine.map((m) => [m.conversationId, m]));
+
+  const result: AudienceCandidate[] = [];
+  for (const cand of found.values()) {
+    if (!cand.conversationId) {
+      result.push(cand);
+      continue;
+    }
+    if (busySet.has(cand.conversationId)) continue;
+    const previous = mineBy.get(cand.conversationId);
+    if (previous) {
+      if (!canRepeat(cadence.repeatAfterDays, previous, now)) continue;
+      cand.restartEnrollmentId = previous.id;
+    }
+    result.push(cand);
+  }
+  return result;
+}
+
+/** Quantos entrariam agora e alguns nomes de exemplo (para o "ver quem entraria" do editor). */
+export async function previewAudience(cadence: AudienceCadence, now = new Date()): Promise<{ count: number; sample: string[]; restarting: number }> {
+  const list = await collectAudience(cadence, now);
+  return { count: list.length, sample: list.slice(0, 6).map((c) => c.name ?? c.phone), restarting: list.filter((c) => c.restartEnrollmentId).length };
+}
+
+const MAX_AUTO_ENROLL_PER_RUN = 100;
+
+/** Coloca na cadência quem combina com o público dela (até 100 por vez; o limite diário de envio segura o ritmo). */
+export async function applyAudience(cadenceId: string, now = new Date(), limit = MAX_AUTO_ENROLL_PER_RUN): Promise<number> {
+  const cadence = await db.waCadence.findUnique({ where: { id: cadenceId } });
+  if (!cadence) throw new Error("Cadência não encontrada.");
+  const parsed = normalizeSteps(cadence.steps);
+  if (!parsed.ok) throw new Error("A cadência não tem mensagens válidas.");
+  if (!hasAudience(normalizeAudience(cadence.audience))) return 0;
+
+  const candidates = (await collectAudience(cadence, now)).slice(0, limit);
+  const nextRunAt = new Date(now.getTime() + parsed.steps[0].delayHours * 3_600_000);
+  let enrolled = 0;
+  for (const cand of candidates) {
+    let conversationId = cand.conversationId;
+    if (!conversationId) {
+      const created = await db.waConversation.upsert({ where: { phone: cand.phone }, create: { phone: cand.phone, name: cand.name, source: "cliente" }, update: {} });
+      if (created.optedOut) continue;
+      conversationId = created.id;
+    }
+    if (cand.restartEnrollmentId) {
+      await db.waEnrollment.update({
+        where: { id: cand.restartEnrollmentId },
+        data: { status: "ativa", stepIndex: 0, attempts: 0, stopReason: null, finishedAt: null, nextRunAt, createdAt: now, rounds: { increment: 1 } },
+      });
+    } else {
+      await db.waEnrollment.createMany({ data: [{ cadenceId, conversationId, stepIndex: 0, nextRunAt, status: "ativa" }], skipDuplicates: true });
+    }
+    if (cand.customerId) await markCustomerReminded(cand.customerId).catch(() => null);
+    enrolled += 1;
+  }
+  return enrolled;
+}
+
+/** Entrada automática de todas as cadências ativas que têm regra de público. */
+export async function runAutoEnroll(now = new Date()): Promise<number> {
+  const cadences = await db.waCadence.findMany({ where: { active: true, autoEnroll: true } });
+  let total = 0;
+  for (const cadence of cadences) {
+    try {
+      total += await applyAudience(cadence.id, now);
+    } catch (error) {
+      console.error("[whatsapp] erro na entrada automática da cadência", cadence.id, error);
+    }
+  }
+  return total;
 }

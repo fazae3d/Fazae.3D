@@ -695,6 +695,16 @@ model WaCadence {
   kind        String         @default("personalizada")
   active      Boolean        @default(true)
   steps       Json
+  /** Dias da semana em que pode enviar (0 = domingo ... 6 = sábado). */
+  sendDays        Int[]    @default([1, 2, 3, 4, 5, 6])
+  /** Janela de horário própria desta cadência; vazio = usa a regra geral (WaConfig). */
+  windowStartHour Int?
+  windowEndHour   Int?
+  /** Coloca sozinha na cadência quem combina com `audience` (ver lib/wa-cadence.ts). */
+  autoEnroll      Boolean  @default(false)
+  audience        Json?
+  /** Depois de quantos dias de concluída quem não respondeu pode entrar de novo (vazio = não repete). */
+  repeatAfterDays Int?
   createdAt   DateTime       @default(now())
   enrollments WaEnrollment[]
 }
@@ -712,6 +722,10 @@ model WaEnrollment {
   stopReason     String?
   /** Tentativas de envio que falharam no passo atual (depois de 3, a inscrição é parada). */
   attempts       Int            @default(0)
+  /** Quando terminou todas as mensagens (base para a repetição). */
+  finishedAt     DateTime?
+  /** Quantas vezes já passou por esta cadência. */
+  rounds         Int            @default(1)
   createdAt      DateTime       @default(now())
 
   @@unique([cadenceId, conversationId])
