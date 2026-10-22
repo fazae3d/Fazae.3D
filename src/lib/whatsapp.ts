@@ -19,12 +19,46 @@ export const CONVERSATION_SOURCES = [
 ] as const;
 export const sourceLabel = (key: string) => CONVERSATION_SOURCES.find((s) => s.key === key)?.label ?? key;
 
-/** Telefone só com dígitos e DDI. 10 ou 11 dígitos (DDD + número) ganham o 55 do Brasil; fora disso devolve null. */
+/**
+ * Telefone só com dígitos e DDI (55 + DDD + número). 10 ou 11 dígitos ganham o 55 do Brasil; fora disso devolve null.
+ * Celular antigo escrito sem o nono dígito (DDD + 8 números começando em 6 a 9) ganha o 9: o WhatsApp informa o mesmo número das
+ * duas formas, e sem essa unificação a mesma pessoa viraria duas conversas.
+ */
 export function normalizePhone(input: string | null | undefined): string | null {
   const digits = (input ?? "").replace(/\D/g, "");
-  if (digits.length === 10 || digits.length === 11) return `55${digits}`;
-  if ((digits.length === 12 || digits.length === 13) && digits.startsWith("55")) return digits;
-  return null;
+  let local: string;
+  if (digits.length === 10 || digits.length === 11) local = digits;
+  else if ((digits.length === 12 || digits.length === 13) && digits.startsWith("55")) local = digits.slice(2);
+  else return null;
+  const ddd = local.slice(0, 2);
+  let rest = local.slice(2);
+  if (!/^[1-9][1-9]$/.test(ddd)) return null;
+  if (rest.length === 8 && /^[6-9]/.test(rest)) rest = `9${rest}`;
+  return `55${ddd}${rest}`;
+}
+
+/** Celular (9 dígitos começando em 9) tem WhatsApp; telefone fixo (8 dígitos começando em 2 a 5) quase nunca tem. */
+export function isMobilePhone(phone: string | null | undefined) {
+  const normalized = normalizePhone(phone);
+  return normalized !== null && /^55\d{2}9\d{8}$/.test(normalized);
+}
+
+/** "Prazo de entrega" → "prazo-de-entrega" (minúsculo, sem acento, só letras, números e hífen). */
+export function slugifyShortcut(text: string) {
+  return text
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 30);
+}
+
+export const OPT_OUT_NOTICE = "Se não quiser receber mais mensagens, responda SAIR.";
+
+/** Garante o aviso de saída na mensagem (não duplica se o texto já fala em SAIR). */
+export function withOptOutNotice(text: string) {
+  return /\bsair\b/i.test(text) ? text : `${text.trimEnd()}\n\n${OPT_OUT_NOTICE}`;
 }
 
 /** "5584999998888@s.whatsapp.net" → "5584999998888". IDs do tipo @lid não são telefone: devolve null. */
@@ -99,6 +133,8 @@ export type InboundMessage = {
   text: string;
   mediaType: string | null;
   providerId: string;
+  /** Endereço do arquivo (imagem, áudio, documento), quando o provedor informa. */
+  mediaUrl: string | null;
   at: Date;
 };
 
@@ -148,6 +184,7 @@ export function parseUazapiMessage(payload: unknown): InboundMessage | null {
     text: str(message.text) ?? "",
     mediaType,
     providerId,
+    mediaUrl: mediaType ? (str(message.fileURL) ?? null) : null,
     at,
   };
 }

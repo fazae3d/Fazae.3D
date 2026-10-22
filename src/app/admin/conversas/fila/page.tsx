@@ -6,6 +6,7 @@ import { isWithinSchedule, relativeFromNow } from "@/lib/wa-cadence";
 import { formatPhone } from "@/lib/whatsapp";
 import { getWhatsAppProvider } from "@/server/whatsapp/provider";
 import {
+  DEFAULT_WA_CONFIG,
   getQueueStats,
   getSendBudget,
   getWaConfig,
@@ -64,7 +65,7 @@ export default async function FilaPage({ searchParams }: { searchParams: Promise
   const filter = { cadenceId: cad || undefined, q };
 
   const [config, cadences, stats] = await Promise.all([
-    withReadFallback(() => getWaConfig(), { autoSendEnabled: false, dailyLimit: 100, windowStartHour: 8, windowEndHour: 18 }),
+    withReadFallback(() => getWaConfig(), DEFAULT_WA_CONFIG),
     withReadFallback(() => listCadences(), []),
     withReadFallback(() => getQueueStats(now), EMPTY_STATS),
   ]);

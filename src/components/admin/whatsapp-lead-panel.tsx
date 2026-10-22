@@ -41,6 +41,9 @@ export function WhatsAppLeadPanel({
   const [source, setSource] = useState(conversation.source);
   const [tags, setTags] = useState(conversation.tags.join(", "));
   const [notes, setNotes] = useState(conversation.notes ?? "");
+  const initialAction = conversation.nextActionAt ? new Date(conversation.nextActionAt).toLocaleDateString("sv-SE", { timeZone: "America/Fortaleza" }) : "";
+  const [actionDate, setActionDate] = useState(initialAction);
+  const [actionNote, setActionNote] = useState(conversation.nextActionNote ?? "");
   const [pending, setPending] = useState(false);
   const [simText, setSimText] = useState("");
   const [cadenceId, setCadenceId] = useState("");
@@ -50,11 +53,13 @@ export function WhatsAppLeadPanel({
     stage !== conversation.stage ||
     source !== conversation.source ||
     tags !== conversation.tags.join(", ") ||
-    notes !== (conversation.notes ?? "");
+    notes !== (conversation.notes ?? "") ||
+    actionDate !== initialAction ||
+    actionNote !== (conversation.nextActionNote ?? "");
 
   const save = async () => {
     setPending(true);
-    const result = await updateLeadAction(conversation.id, { name, stage, source, tagsRaw: tags, notes });
+    const result = await updateLeadAction(conversation.id, { name, stage, source, tagsRaw: tags, notes, nextActionDate: actionDate, nextActionNote: actionNote });
     setPending(false);
     if (!result.success) {
       toast(result.error, "error");
@@ -126,6 +131,20 @@ export function WhatsAppLeadPanel({
       <div>
         <label className="mb-1 block text-xs text-graphite">Etiquetas (separadas por vírgula)</label>
         <input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="atacado, personalizado, chaveiro" className={field} />
+      </div>
+      <div className="rounded-lg border border-mist p-3">
+        <label className="mb-1 block text-xs font-medium">Próxima ação</label>
+        <div className="flex gap-2">
+          <input type="date" value={actionDate} onChange={(e) => setActionDate(e.target.value)} className={`${field} w-40 shrink-0`} aria-label="Data da próxima ação" />
+          <input value={actionNote} onChange={(e) => setActionNote(e.target.value)} placeholder="Ex.: ligar, mandar prova" className={field} />
+        </div>
+        {actionDate ? (
+          <button type="button" onClick={() => { setActionDate(""); setActionNote(""); }} className="mt-1.5 text-xs text-graphite hover:text-red-400 hover:underline">
+            Limpar
+          </button>
+        ) : (
+          <p className="mt-1.5 text-xs text-graphite">Aparece em “Para hoje” quando chegar o dia.</p>
+        )}
       </div>
       <div>
         <label className="mb-1 block text-xs text-graphite">Observações</label>

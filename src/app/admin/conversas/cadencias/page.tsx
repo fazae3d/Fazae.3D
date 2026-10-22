@@ -7,11 +7,11 @@ import { withReadFallback } from "@/lib/db-fallback";
 import { CADENCE_KINDS, CADENCE_PRESETS, describeAudience, describeDelay, describeSchedule, hasAudience, kindLabel } from "@/lib/wa-cadence";
 import { sourceLabel, stageLabel } from "@/lib/whatsapp";
 import { getWhatsAppProvider } from "@/server/whatsapp/provider";
-import { getSendBudget, getWaConfig, listCadences, type CadenceView, type SendBudget, type WaConfigView } from "@/server/repositories/wa-cadence-repository";
+import { DEFAULT_WA_CONFIG, getSendBudget, getWaConfig, listCadences, type CadenceView, type SendBudget, type WaConfigView } from "@/server/repositories/wa-cadence-repository";
 
 export const dynamic = "force-dynamic";
 
-const FALLBACK_CONFIG: WaConfigView = { autoSendEnabled: false, dailyLimit: 100, windowStartHour: 8, windowEndHour: 18 };
+const FALLBACK_CONFIG: WaConfigView = DEFAULT_WA_CONFIG;
 const FALLBACK_BUDGET: SendBudget = { limit: 20, sentToday: 0, remaining: 20 };
 
 export default async function CadenciasPage() {

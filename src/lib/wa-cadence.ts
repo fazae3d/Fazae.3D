@@ -1,5 +1,5 @@
 import { storeDayKey, toStoreTime } from "@/lib/store-time";
-import { normalizePhone } from "@/lib/whatsapp";
+import { isMobilePhone, normalizePhone } from "@/lib/whatsapp";
 
 export type CadenceStep = { delayHours: number; text: string };
 
@@ -14,34 +14,46 @@ export type CadenceKind = (typeof CADENCE_KINDS)[number]["key"];
 export const kindLabel = (key: string) => CADENCE_KINDS.find((k) => k.key === key)?.label ?? "Personalizada";
 
 /** Modelos para começar. O texto sempre pode ser editado; {{nome}} vira o primeiro nome e {Oi|Olá} sorteia uma das opções. */
-export const CADENCE_PRESETS: Record<CadenceKind, { name: string; steps: CadenceStep[] }> = {
+export type CadencePreset = { name: string; steps: CadenceStep[]; autoEnroll?: boolean; audience?: CadenceAudience; repeatAfterDays?: number | null };
+
+export const CADENCE_PRESETS: Record<CadenceKind, CadencePreset> = {
   prospeccao: {
     name: "Prospecção — 3 contatos",
     steps: [
       { delayHours: 0, text: "{Oi|Olá} {{nome}}! Aqui é da Fazaê 3D, a gente faz peças personalizadas em impressão 3D (chaveiros, brindes, displays e o que você imaginar). Posso te mostrar alguns exemplos?" },
       { delayHours: 48, text: "{Oi|Olá} {{nome}}, passando para ver se você chegou a ver minha mensagem. Se quiser, te mando um orçamento sem compromisso. É só dizer o que você precisa." },
-      { delayHours: 96, text: "{{nome}}, vou deixar meu contato por aqui. Quando precisar de algo personalizado, é só chamar! Se não quiser mais receber mensagens, responda SAIR." },
+      { delayHours: 96, text: "{{nome}}, vou deixar meu contato por aqui. Quando precisar de algo personalizado, é só chamar!" },
     ],
   },
   orcamento: {
     name: "Follow-up de orçamento",
+    // Entra sozinho quem está em "Proposta enviada" e ficou 3 dias sem nenhuma mensagem.
+    autoEnroll: true,
+    audience: { conversations: { sources: [], stages: ["proposta"], silentDays: 3 } },
     steps: [
-      { delayHours: 24, text: "{Oi|Olá} {{nome}}! Conseguiu dar uma olhada no orçamento que te enviei? Se quiser ajustar algo (quantidade, cor, prazo), eu resolvo por aqui." },
+      { delayHours: 0, text: "{Oi|Olá} {{nome}}! Conseguiu dar uma olhada no orçamento que te enviei? Está aqui de novo: {{link_orcamento}}. Se quiser ajustar algo (quantidade, cor, prazo), eu resolvo por aqui." },
       { delayHours: 72, text: "{{nome}}, só lembrando que a condição do seu orçamento tem validade. Posso reservar a produção para você?" },
       { delayHours: 96, text: "Última mensagem sobre o orçamento, {{nome}}: se mudar de ideia é só me chamar que a gente retoma. Obrigado pela atenção!" },
     ],
   },
   pos_venda: {
     name: "Pós-venda e avaliação",
+    // Gatilho por evento: 3 dias depois de o pedido ser marcado como entregue.
+    autoEnroll: true,
+    audience: { deliveredOrdersDays: 3 },
     steps: [
-      { delayHours: 72, text: "{Oi|Olá} {{nome}}! Seu pedido da Fazaê 3D já chegou? Queria saber se está tudo certo com as peças." },
-      { delayHours: 168, text: "{{nome}}, se você gostou do pedido, uma avaliação ajuda muito a gente a crescer. Leva menos de 1 minuto e você ainda ganha um cupom na próxima compra. Obrigado!" },
+      { delayHours: 0, text: "{Oi|Olá} {{nome}}! Seu pedido {{pedido}} ({{produto}}) chegou direitinho? Queria saber se está tudo certo com as peças." },
+      { delayHours: 96, text: "{{nome}}, se você gostou, uma avaliação ajuda muito a gente a crescer. Leva menos de 1 minuto e você ganha R$ 5 de desconto na próxima compra: {{link_avaliacao}} Obrigado!" },
     ],
   },
   reativacao: {
     name: "Reativação de clientes",
+    // Clientes que compraram e estão parados há 120 dias; pode voltar a receber depois de 180 dias.
+    autoEnroll: true,
+    audience: { inactiveCustomersDays: 120 },
+    repeatAfterDays: 180,
     steps: [
-      { delayHours: 0, text: "{Oi|Olá} {{nome}}, quanto tempo! Aqui é da Fazaê 3D. Tem novidades na loja e queria te mostrar. Está precisando de alguma peça?" },
+      { delayHours: 0, text: "{Oi|Olá} {{nome}}, quanto tempo! Aqui é da Fazaê 3D. Da última vez você levou {{produto}} e tem novidade na loja. Está precisando de alguma peça?" },
       { delayHours: 168, text: "{{nome}}, separei uma condição especial para clientes que já compraram com a gente. Quer que eu te envie?" },
     ],
   },
@@ -81,9 +93,32 @@ export function describeDelay(hours: number, first = false) {
  * Monta a mensagem de cada contato: {{nome}} vira o primeiro nome (e some, sem deixar sobra de pontuação, se não houver nome) e
  * {Oi|Olá|E aí} sorteia uma das opções. As variações evitam mandar o mesmo texto idêntico para muita gente.
  */
-export function renderMessage(template: string, contact: { name?: string | null }, random: () => number = Math.random) {
+export const MESSAGE_VARIABLES = [
+  { key: "nome", label: "Nome", example: "Maria" },
+  { key: "produto", label: "Produto da última compra", example: "Chaveiro Coração" },
+  { key: "pedido", label: "Número do último pedido", example: "FAZ-1042" },
+  { key: "ultima_compra", label: "Data da última compra", example: "12/09/2026" },
+  { key: "link_orcamento", label: "Link do último orçamento", example: "https://www.fazae3d.com.br/orcamento/…" },
+  { key: "link_avaliacao", label: "Link para avaliar o pedido", example: "https://www.fazae3d.com.br/avaliar/…" },
+] as const;
+export type MessageVars = Partial<Record<(typeof MESSAGE_VARIABLES)[number]["key"], string>>;
+
+/** Variáveis {{...}} usadas num texto (sem repetir). */
+export function usedVariables(template: string) {
+  return [...new Set([...template.matchAll(/\{\{\s*([a-z_]+)\s*\}\}/gi)].map((m) => m[1].toLowerCase()))];
+}
+
+/** Variáveis que o texto usa e que não têm valor para esse contato (o nome não conta: some sem deixar sobra). */
+export function missingVariables(template: string, vars: MessageVars) {
+  return usedVariables(template).filter((k) => k !== "nome" && MESSAGE_VARIABLES.some((v) => v.key === k) && !vars[k as keyof MessageVars]);
+}
+
+export function renderMessage(template: string, contact: { name?: string | null }, random: () => number = Math.random, vars: MessageVars = {}) {
   const first = (contact.name ?? "").trim().split(/\s+/)[0] ?? "";
-  const withName = template.replace(/\{\{\s*nome\s*\}\}/gi, first);
+  const withName = template.replace(/\{\{\s*([a-z_]+)\s*\}\}/gi, (_, key: string) => {
+    const k = key.toLowerCase();
+    return k === "nome" ? first : (vars[k as keyof MessageVars] ?? "");
+  });
   const spun = withName.replace(/\{([^{}|]+(?:\|[^{}|]*)+)\}/g, (_, options: string) => {
     const choices = options.split("|");
     return choices[Math.min(choices.length - 1, Math.floor(random() * choices.length))];
@@ -156,6 +191,8 @@ export type PreparedImport = {
   valid: ImportRow[];
   invalid: { line: number; value: string }[];
   duplicates: number;
+  /** Telefones fixos (sem WhatsApp): ficam de fora para não manchar a reputação do número. */
+  landlines: number;
 };
 
 /** Limpa as linhas: telefone normalizado (55 + DDD + número), inválidos separados e repetidos do arquivo removidos. */
@@ -164,6 +201,7 @@ export function prepareImportRows(rows: unknown[][], cols: { nameCol: number; ph
   const invalid: { line: number; value: string }[] = [];
   const seen = new Set<string>();
   let duplicates = 0;
+  let landlines = 0;
   rows.forEach((row, index) => {
     if (cols.hasHeader && index === 0) return;
     const rawPhone = String(row[cols.phoneCol] ?? "").trim();
@@ -179,9 +217,13 @@ export function prepareImportRows(rows: unknown[][], cols: { nameCol: number; ph
       return;
     }
     seen.add(phone);
+    if (!isMobilePhone(phone)) {
+      landlines += 1;
+      return;
+    }
     valid.push({ name: rawName.slice(0, 120), phone });
   });
-  return { valid, invalid, duplicates };
+  return { valid, invalid, duplicates, landlines };
 }
 
 /** CSV simples (vírgula ou ponto e vírgula, aspas duplas). */
@@ -285,12 +327,14 @@ export type CadenceAudience = {
   conversations?: { sources: string[]; stages: string[]; tag?: string; silentDays?: number };
   /** Clientes cadastrados que já compraram e estão parados há N dias (viram contatos em Conversas). Ausente = não usa. */
   inactiveCustomersDays?: number;
+  /** Gatilho por evento: clientes cujo pedido foi entregue há N dias (janela de 14 dias, para nunca disparar para pedido antigo). */
+  deliveredOrdersDays?: number;
 };
 
 export const MAX_AUDIENCE_DAYS = 730;
 
 export function normalizeAudience(raw: unknown): CadenceAudience {
-  const input = (raw ?? {}) as { conversations?: Record<string, unknown>; inactiveCustomersDays?: unknown };
+  const input = (raw ?? {}) as { conversations?: Record<string, unknown>; inactiveCustomersDays?: unknown; deliveredOrdersDays?: unknown };
   const audience: CadenceAudience = {};
   const sources = ["entrada", "prospeccao", "cliente"];
   const stages = ["novo", "contato", "interessado", "proposta", "ganho", "perdido"];
@@ -307,11 +351,13 @@ export function normalizeAudience(raw: unknown): CadenceAudience {
   }
   const inactive = Number(input.inactiveCustomersDays);
   if (Number.isInteger(inactive) && inactive > 0 && inactive <= MAX_AUDIENCE_DAYS) audience.inactiveCustomersDays = inactive;
+  const delivered = Number(input.deliveredOrdersDays);
+  if (Number.isInteger(delivered) && delivered > 0 && delivered <= MAX_AUDIENCE_DAYS) audience.deliveredOrdersDays = delivered;
   return audience;
 }
 
 export function hasAudience(audience: CadenceAudience) {
-  return Boolean(audience.conversations) || audience.inactiveCustomersDays !== undefined;
+  return Boolean(audience.conversations) || audience.inactiveCustomersDays !== undefined || audience.deliveredOrdersDays !== undefined;
 }
 
 /** Resumo em português do público: "Contatos em Interessado e Proposta enviada, sem resposta há 5 dias". */
@@ -327,6 +373,7 @@ export function describeAudience(audience: CadenceAudience, labels: { source: (k
     parts.push(bits.length ? `Contatos ${bits.join(", ")}` : "Todos os contatos das conversas");
   }
   if (audience.inactiveCustomersDays) parts.push(`Clientes que não compram há ${audience.inactiveCustomersDays} dias`);
+  if (audience.deliveredOrdersDays) parts.push(`Pedido entregue há ${audience.deliveredOrdersDays} dias`);
   return parts.join(" + ") || "Ninguém (só entra quem você colocar)";
 }
 

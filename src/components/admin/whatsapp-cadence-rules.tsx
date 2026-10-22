@@ -21,6 +21,8 @@ export type RulesState = {
   silentDays: string;
   useInactive: boolean;
   inactiveDays: string;
+  useDelivered: boolean;
+  deliveredDays: string;
   repeat: boolean;
   repeatDays: string;
 };
@@ -45,6 +47,8 @@ export function initialRules(
     silentDays: c?.silentDays ? String(c.silentDays) : "",
     useInactive: initial.audience.inactiveCustomersDays !== undefined,
     inactiveDays: String(initial.audience.inactiveCustomersDays ?? 120),
+    useDelivered: initial.audience.deliveredOrdersDays !== undefined,
+    deliveredDays: String(initial.audience.deliveredOrdersDays ?? 3),
     repeat: initial.repeatAfterDays !== null,
     repeatDays: String(initial.repeatAfterDays ?? 30),
   };
@@ -61,6 +65,7 @@ export function rulesToAudience(rules: RulesState): CadenceAudience {
       ? { conversations: { sources: rules.sources, stages: rules.stages, ...(rules.tag.trim() ? { tag: rules.tag.trim().toLowerCase() } : {}), ...(toInt(rules.silentDays) ? { silentDays: toInt(rules.silentDays) } : {}) } }
       : {}),
     ...(rules.useInactive && toInt(rules.inactiveDays) ? { inactiveCustomersDays: toInt(rules.inactiveDays) } : {}),
+    ...(rules.useDelivered && toInt(rules.deliveredDays) ? { deliveredOrdersDays: toInt(rules.deliveredDays) } : {}),
   };
 }
 
@@ -119,7 +124,7 @@ export function WhatsAppCadenceRules({
     onChange({ ...rules, ...patch });
   };
   const audience = rulesToAudience(rules);
-  const hasAudience = Boolean(audience.conversations) || audience.inactiveCustomersDays !== undefined;
+  const hasAudience = Boolean(audience.conversations) || audience.inactiveCustomersDays !== undefined || audience.deliveredOrdersDays !== undefined;
 
   const check = async () => {
     setBusy(true);
@@ -246,6 +251,22 @@ export function WhatsAppCadenceRules({
               dias
             </label>
             <p className="mt-1 pl-6 text-xs text-graphite">Só quem já comprou e tem telefone válido. Quem foi lembrado nos últimos 30 dias fica de fora.</p>
+          </div>
+
+          <div className="rounded-lg border border-mist p-3">
+            <label className="flex items-center gap-2 text-sm font-medium">
+              <input type="checkbox" checked={rules.useDelivered} onChange={(e) => set({ useDelivered: e.target.checked })} className="h-4 w-4 accent-[#b6ff00]" />
+              Clientes cujo pedido foi entregue há
+              <input
+                value={rules.deliveredDays}
+                onChange={(e) => set({ deliveredDays: e.target.value.replace(/\D/g, ""), useDelivered: true })}
+                inputMode="numeric"
+                className={`${FIELD} w-20 py-1`}
+                aria-label="Dias desde a entrega"
+              />
+              dias
+            </label>
+            <p className="mt-1 pl-6 text-xs text-graphite">Gatilho de pós-venda: vale para pedidos marcados como “Entregue” de agora em diante (só os últimos 14 dias a partir desse prazo, nunca pedidos antigos).</p>
           </div>
         </div>
 

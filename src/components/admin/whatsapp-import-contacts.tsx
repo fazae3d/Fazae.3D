@@ -123,6 +123,7 @@ export function WhatsAppImportContacts({ cadences }: { cadences: { id: string; n
                 <strong className="text-petrol">{prepared.valid.length}</strong> contatos válidos
               </span>
               <span className="text-graphite">{prepared.invalid.length} telefones inválidos</span>
+              {prepared.landlines > 0 ? <span className="text-graphite" title="Telefone fixo normalmente não tem WhatsApp">{prepared.landlines} fixos (pulados)</span> : null}
               <span className="text-graphite">{prepared.duplicates} repetidos no arquivo</span>
             </div>
             {prepared.valid.length > 0 ? (
@@ -218,6 +219,7 @@ export function WhatsAppImportContacts({ cadences }: { cadences: { id: string; n
             {result.alreadyHadConversation > 0 ? <li className="text-graphite">{result.alreadyHadConversation} já tinham conversa{result.optedOut > 0 ? ` (${result.optedOut} pediram para sair)` : ""}</li> : null}
             {result.skippedCustomers > 0 ? <li className="text-graphite">{result.skippedCustomers} já são clientes e foram pulados</li> : null}
             {result.invalid > 0 ? <li className="text-graphite">{result.invalid} telefones inválidos</li> : null}
+            {result.landlines > 0 ? <li className="text-graphite">{result.landlines} telefones fixos pulados (sem WhatsApp)</li> : null}
             {result.duplicates > 0 ? <li className="text-graphite">{result.duplicates} repetidos</li> : null}
           </ul>
           <p className="mt-3 flex gap-4">

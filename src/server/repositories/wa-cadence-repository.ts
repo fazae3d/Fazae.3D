@@ -1,15 +1,18 @@
 import { db } from "../db";
 import { sendConversationText } from "./whatsapp-repository";
+import { getWhatsAppProvider } from "../whatsapp/provider";
+import { buildMessageVars } from "../whatsapp/context";
 import { getAllCustomers, getCustomersWithMetrics, markCustomerReminded } from "./customer-repository";
 import { isInactive, phoneKey, wasRecentlyReminded } from "@/lib/customer-insights";
 import { storeDayKey } from "@/lib/store-time";
-import { normalizePhone } from "@/lib/whatsapp";
+import { isMobilePhone, normalizePhone, withOptOutNotice } from "@/lib/whatsapp";
 import {
   CADENCE_KINDS,
   canRepeat,
   effectiveDailyLimit,
   hasAudience,
   isWithinSchedule,
+  missingVariables,
   normalizeAudience,
   normalizeSendDays,
   normalizeSteps,
@@ -21,25 +24,77 @@ import {
 
 /* ---------- configuração do envio automático ---------- */
 
-export type WaConfigView = { autoSendEnabled: boolean; dailyLimit: number; windowStartHour: number; windowEndHour: number };
-const DEFAULT_CONFIG: WaConfigView = { autoSendEnabled: false, dailyLimit: 100, windowStartHour: 8, windowEndHour: 18 };
+export type WaConfigView = {
+  autoSendEnabled: boolean;
+  dailyLimit: number;
+  windowStartHour: number;
+  windowEndHour: number;
+  /** Preenchidos quando o envio foi desligado sozinho por falhas seguidas (disjuntor). */
+  pausedReason: string | null;
+  pausedAt: string | null;
+  lastWebhookAt: string | null;
+};
+export const DEFAULT_WA_CONFIG: WaConfigView = {
+  autoSendEnabled: false,
+  dailyLimit: 100,
+  windowStartHour: 8,
+  windowEndHour: 18,
+  pausedReason: null,
+  pausedAt: null,
+  lastWebhookAt: null,
+};
 
 export async function getWaConfig(): Promise<WaConfigView> {
   const row = await db.waConfig.findUnique({ where: { id: 1 } });
   return row
-    ? { autoSendEnabled: row.autoSendEnabled, dailyLimit: row.dailyLimit, windowStartHour: row.windowStartHour, windowEndHour: row.windowEndHour }
-    : DEFAULT_CONFIG;
+    ? {
+        autoSendEnabled: row.autoSendEnabled,
+        dailyLimit: row.dailyLimit,
+        windowStartHour: row.windowStartHour,
+        windowEndHour: row.windowEndHour,
+        pausedReason: row.pausedReason,
+        pausedAt: row.pausedAt?.toISOString() ?? null,
+        lastWebhookAt: row.lastWebhookAt?.toISOString() ?? null,
+      }
+    : DEFAULT_WA_CONFIG;
 }
 
-export async function saveWaConfig(input: Partial<WaConfigView>): Promise<WaConfigView> {
+/** Anota que chegou um evento do WhatsApp (para avisar quando o webhook para de chegar). */
+export async function touchWebhook(now = new Date()): Promise<void> {
+  await db.waConfig.upsert({ where: { id: 1 }, create: { id: 1, lastWebhookAt: now }, update: { lastWebhookAt: now } });
+}
+
+export async function saveWaConfig(input: Partial<Pick<WaConfigView, "autoSendEnabled" | "dailyLimit" | "windowStartHour" | "windowEndHour">>): Promise<WaConfigView> {
   const current = await getWaConfig();
   const next = { ...current, ...input };
   if (!Number.isInteger(next.dailyLimit) || next.dailyLimit < 1 || next.dailyLimit > 500) throw new Error("O limite diário deve ficar entre 1 e 500.");
   if (!Number.isInteger(next.windowStartHour) || !Number.isInteger(next.windowEndHour) || next.windowStartHour < 0 || next.windowEndHour > 24 || next.windowStartHour >= next.windowEndHour) {
     throw new Error("A janela de envio é inválida: o início precisa ser antes do fim.");
   }
-  await db.waConfig.upsert({ where: { id: 1 }, create: { id: 1, ...next }, update: next });
-  return next;
+  const data = {
+    autoSendEnabled: next.autoSendEnabled,
+    dailyLimit: next.dailyLimit,
+    windowStartHour: next.windowStartHour,
+    windowEndHour: next.windowEndHour,
+    // Ligar de novo apaga o aviso de pausa automática.
+    ...(input.autoSendEnabled === true ? { pausedReason: null, pausedAt: null } : {}),
+  };
+  await db.waConfig.upsert({ where: { id: 1 }, create: { id: 1, ...data }, update: data });
+  return { ...next, ...(input.autoSendEnabled === true ? { pausedReason: null, pausedAt: null } : {}) };
+}
+
+const BREAKER_FAILURES = 5;
+const BREAKER_WINDOW_MS = 30 * 60_000;
+
+/** Disjuntor: falhas de envio demais em pouco tempo (queda de conexão, bloqueio) desligam o envio automático e deixam o motivo à vista. */
+async function tripBreakerIfNeeded(now: Date): Promise<string | null> {
+  const failures = await db.waMessage.count({
+    where: { direction: "out", origin: { in: ["cadencia", "campanha"] }, status: "failed", createdAt: { gte: new Date(now.getTime() - BREAKER_WINDOW_MS) } },
+  });
+  if (failures < BREAKER_FAILURES) return null;
+  const reason = `${failures} falhas de envio em 30 minutos`;
+  await db.waConfig.update({ where: { id: 1 }, data: { autoSendEnabled: false, pausedReason: reason, pausedAt: now } });
+  return reason;
 }
 
 function startOfStoreDay(now: Date) {
@@ -275,6 +330,8 @@ export type ImportResult = {
   received: number;
   invalid: number;
   duplicates: number;
+  /** Telefones fixos (sem WhatsApp), pulados. */
+  landlines: number;
   created: number;
   alreadyHadConversation: number;
   skippedCustomers: number;
@@ -285,7 +342,7 @@ export type ImportResult = {
 export const MAX_IMPORT_ROWS = 3000;
 
 export async function importContacts(input: ImportInput, now = new Date()): Promise<ImportResult> {
-  const result: ImportResult = { received: input.rows.length, invalid: 0, duplicates: 0, created: 0, alreadyHadConversation: 0, skippedCustomers: 0, optedOut: 0, enrolled: 0 };
+  const result: ImportResult = { received: input.rows.length, invalid: 0, duplicates: 0, landlines: 0, created: 0, alreadyHadConversation: 0, skippedCustomers: 0, optedOut: 0, enrolled: 0 };
 
   // Nunca confiamos no que veio do navegador: telefones são normalizados e repetidos removidos aqui também.
   const unique = new Map<string, string>();
@@ -297,6 +354,10 @@ export async function importContacts(input: ImportInput, now = new Date()): Prom
     }
     if (unique.has(phone)) {
       result.duplicates += 1;
+      continue;
+    }
+    if (!isMobilePhone(phone)) {
+      result.landlines += 1;
       continue;
     }
     unique.set(phone, String(row.name ?? "").trim().slice(0, 120));
@@ -364,6 +425,14 @@ export async function runCadenceTick(now = new Date()): Promise<TickResult> {
   const config = await getWaConfig();
   if (!config.autoSendEnabled) return { ran: false, reason: "O envio automático está desligado.", ...empty };
 
+  const tripped = await tripBreakerIfNeeded(now);
+  if (tripped) return { ran: false, reason: `Envio desligado automaticamente: ${tripped}. Confira a conexão do WhatsApp e ligue de novo.`, ...empty };
+  const provider = getWhatsAppProvider();
+  if (provider.name === "uazapi") {
+    const status = await provider.connectionStatus();
+    if (status.known && !status.connected) return { ran: false, reason: "O WhatsApp está desconectado: reconecte o número na uazapi.", ...empty };
+  }
+
   // Quem combina com as regras de "para quem" entra na cadência sozinho (mesmo fora do horário: entrar não envia nada).
   const enrolled = await runAutoEnroll(now);
 
@@ -401,7 +470,7 @@ export type ProcessOutcome = "sent" | "failed" | "stopped" | "concluded" | "skip
  * `force` ignora o horário agendado (o "Enviar agora"); as travas de segurança do contato valem sempre.
  */
 export async function processEnrollment(
-  enrollment: { id: string; conversationId: string; stepIndex: number; attempts: number; createdAt: Date; cadence: { steps: unknown } },
+  enrollment: { id: string; cadenceId: string; conversationId: string; stepIndex: number; attempts: number; createdAt: Date; cadence: { steps: unknown } },
   now: Date,
   options: { force: boolean },
 ): Promise<ProcessOutcome> {
@@ -427,8 +496,32 @@ export async function processEnrollment(
     return "concluded";
   }
 
-  const text = renderMessage(step.text, conversation);
-  const sent = await sendConversationText(conversation.id, text, { origin: "cadencia", delayMs: 1500 + Math.floor(Math.random() * 2500) });
+  // Variáveis que dependem de dados (produto, link do orçamento...): sem o dado, não manda um texto quebrado.
+  const vars = await buildMessageVars(conversation.phone);
+  const missing = missingVariables(step.text, vars);
+  if (missing.length > 0) return stop(`faltou dado: ${missing.join(", ")}`);
+
+  // O número tem WhatsApp? Conferimos uma vez, antes da primeira mensagem (mandar para quem não tem manca a reputação do número).
+  if (conversation.hasWhatsapp === null) {
+    const has = await getWhatsAppProvider().checkNumber(conversation.phone);
+    if (has !== null) await db.waConversation.update({ where: { id: conversation.id }, data: { hasWhatsapp: has, ...(has ? {} : { tags: [...new Set([...conversation.tags, "sem-whatsapp"])] }) } });
+    if (has === false) return stop("sem WhatsApp");
+  } else if (conversation.hasWhatsapp === false) {
+    return stop("sem WhatsApp");
+  }
+
+  let text = renderMessage(step.text, conversation, Math.random, vars);
+  // Primeiro contato frio: o aviso "responda SAIR" entra sempre (LGPD e menos denúncia), mesmo que o texto não o traga.
+  if (conversation.source === "prospeccao") {
+    const previous = await db.waMessage.count({ where: { conversationId: conversation.id, direction: "out", status: { not: "failed" } } });
+    if (previous === 0) text = withOptOutNotice(text);
+  }
+  const sent = await sendConversationText(conversation.id, text, {
+    origin: "cadencia",
+    cadenceId: enrollment.cadenceId,
+    stepIndex: enrollment.stepIndex,
+    delayMs: 1500 + Math.floor(Math.random() * 2500),
+  });
   if (!sent.success) {
     const attempts = enrollment.attempts + 1;
     if (attempts >= MAX_ATTEMPTS) await stop("falha no envio");
@@ -653,6 +746,18 @@ export async function collectAudience(cadence: AudienceCadence, now = new Date()
   const audience = normalizeAudience(cadence.audience);
   const found = new Map<string, AudienceCandidate>();
 
+  // Contatos que vêm do cadastro de clientes/pedidos (e ainda podem não ter conversa): entram na lista pelo telefone.
+  const addPhones = async (list: { phone: string; name: string | null; customerId?: string }[]) => {
+    if (list.length === 0) return;
+    const existing = await db.waConversation.findMany({ where: { phone: { in: list.map((i) => i.phone) } }, select: { id: true, phone: true, optedOut: true } });
+    const byPhone = new Map(existing.map((e) => [e.phone, e]));
+    for (const i of list) {
+      const conv = byPhone.get(i.phone);
+      if (conv?.optedOut) continue;
+      found.set(i.phone, { ...(found.get(i.phone) ?? {}), conversationId: conv?.id, phone: i.phone, name: i.name, customerId: i.customerId });
+    }
+  };
+
   const c = audience.conversations;
   if (c) {
     const cutoff = c.silentDays ? new Date(now.getTime() - c.silentDays * 86_400_000) : null;
@@ -676,15 +781,22 @@ export async function collectAudience(cadence: AudienceCadence, now = new Date()
       const phone = normalizePhone(cu.phone);
       return phone && isInactive(cu.metrics, now, audience.inactiveCustomersDays) && !wasRecentlyReminded(cu.lastReminderAt, now) ? [{ phone, name: cu.name, customerId: cu.id }] : [];
     });
-    if (inactive.length > 0) {
-      const existing = await db.waConversation.findMany({ where: { phone: { in: inactive.map((i) => i.phone) } }, select: { id: true, phone: true, optedOut: true } });
-      const byPhone = new Map(existing.map((e) => [e.phone, e]));
-      for (const i of inactive) {
-        const conv = byPhone.get(i.phone);
-        if (conv?.optedOut) continue;
-        found.set(i.phone, { ...(found.get(i.phone) ?? {}), conversationId: conv?.id, phone: i.phone, name: i.name, customerId: i.customerId });
-      }
-    }
+    await addPhones(inactive);
+  }
+
+  if (audience.deliveredOrdersDays) {
+    const n = audience.deliveredOrdersDays;
+    const orders = await db.order.findMany({
+      where: { customerPhone: { not: null }, deliveredAt: { gte: new Date(now.getTime() - (n + 14) * 86_400_000), lte: new Date(now.getTime() - n * 86_400_000) } },
+      select: { customerPhone: true, customerName: true },
+      take: 500,
+    });
+    await addPhones(
+      orders.flatMap((o) => {
+        const phone = normalizePhone(o.customerPhone);
+        return phone && isMobilePhone(phone) ? [{ phone, name: o.customerName }] : [];
+      }),
+    );
   }
 
   const withConversation = [...found.values()].filter((f) => f.conversationId);

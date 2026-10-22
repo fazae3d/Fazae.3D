@@ -35,6 +35,7 @@ function toOrder(row: OrderRow): Order {
     productionDeadline: row.productionDeadline?.toISOString() ?? undefined,
     depositAmount: row.depositAmount,
     stockReserved: row.stockReserved,
+    deliveredAt: row.deliveredAt?.toISOString(),
   };
 }
 
@@ -191,7 +192,12 @@ export async function updateOrderStatus(
   if (!existing) return { success: false, error: "Pedido não encontrado." };
   const updated = await db.order.update({
     where: { id },
-    data: { status, ...(tracking !== undefined ? { tracking: tracking || null } : {}) },
+    data: {
+      status,
+      ...(tracking !== undefined ? { tracking: tracking || null } : {}),
+      // Quando virou "Entregue" (uma vez só): base do pós-venda automático.
+      ...(status === "Entregue" && !existing.deliveredAt ? { deliveredAt: new Date() } : {}),
+    },
   });
   // Cancelar um pedido que tinha estoque reservado devolve as peças e os insumos (uma vez só).
   if (status === "Cancelado" && existing.status !== "Cancelado") await releaseReservation(id);

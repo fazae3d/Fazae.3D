@@ -7,7 +7,7 @@ import { withReadFallback } from "@/lib/db-fallback";
 import { CADENCE_KINDS, CADENCE_PRESETS, type CadenceKind } from "@/lib/wa-cadence";
 import { formatPhone } from "@/lib/whatsapp";
 import { DEFAULT_SEND_DAYS } from "@/lib/wa-cadence";
-import { getCadence, getWaConfig, listCadenceEnrollments, type EnrollmentView } from "@/server/repositories/wa-cadence-repository";
+import { DEFAULT_WA_CONFIG, getCadence, getWaConfig, listCadenceEnrollments, type EnrollmentView } from "@/server/repositories/wa-cadence-repository";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +27,7 @@ function when(iso: string | null) {
 export default async function CadenciaPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tipo?: string }> }) {
   const { id } = await params;
   const { tipo } = await searchParams;
-  const config = await withReadFallback(() => getWaConfig(), { autoSendEnabled: false, dailyLimit: 100, windowStartHour: 8, windowEndHour: 18 });
+  const config = await withReadFallback(() => getWaConfig(), DEFAULT_WA_CONFIG);
   const defaults = { windowStartHour: config.windowStartHour, windowEndHour: config.windowEndHour };
 
   if (id === "nova") {
@@ -44,9 +44,9 @@ export default async function CadenciaPage({ params, searchParams }: { params: P
             active: true,
             steps: preset.steps,
             schedule: { sendDays: DEFAULT_SEND_DAYS, windowStartHour: null, windowEndHour: null },
-            autoEnroll: false,
-            audience: {},
-            repeatAfterDays: null,
+            autoEnroll: preset.autoEnroll ?? false,
+            audience: preset.audience ?? {},
+            repeatAfterDays: preset.repeatAfterDays ?? null,
           }}
           defaults={defaults}
         />

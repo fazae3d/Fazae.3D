@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { canRepeat, describeAudience, describeDays, detectColumns, effectiveDailyLimit, hasAudience, isWithinSchedule, isWithinSendWindow, normalizeAudience, normalizeSendDays, normalizeSteps, normalizeWindow, parseCsv, prepareImportRows, relativeFromNow, renderMessage } from "./wa-cadence";
-import { formatPhone, isOptOutText, nextStatus, normalizePhone, parseUazapiMessage, parseUazapiStatusUpdate, phoneFromJid } from "./whatsapp";
+import { canRepeat, missingVariables, usedVariables, describeAudience, describeDays, detectColumns, effectiveDailyLimit, hasAudience, isWithinSchedule, isWithinSendWindow, normalizeAudience, normalizeSendDays, normalizeSteps, normalizeWindow, parseCsv, prepareImportRows, relativeFromNow, renderMessage } from "./wa-cadence";
+import { formatPhone, isMobilePhone, isOptOutText, nextStatus, normalizePhone, parseUazapiMessage, parseUazapiStatusUpdate, phoneFromJid, slugifyShortcut, withOptOutNotice } from "./whatsapp";
+import { analyzeResults, formatDuration } from "./wa-results";
 import { cashPosition } from "./cash";
 import { applyManualPayment } from "./payment";
 import { pixPrice, resolveOrderDiscount, round2 } from "./money";
@@ -522,5 +523,90 @@ describe("regras de envio: agenda, público e repetição", () => {
     expect(canRepeat(null, done, now)).toBe(false);
     expect(canRepeat(30, { status: "parada", finishedAt: done.finishedAt }, now)).toBe(false);
     expect(canRepeat(30, { status: "concluida", finishedAt: null }, now)).toBe(false);
+  });
+});
+
+describe("telefone: nono dígito, fixo e aviso de saída", () => {
+  it("unifica celular com e sem o nono dígito", () => {
+    expect(normalizePhone("558499998888")).toBe("5584999998888");
+    expect(normalizePhone("(84) 9999-8888")).toBe("5584999998888");
+    expect(phoneFromJid("558499998888@s.whatsapp.net")).toBe("5584999998888");
+    expect(phoneFromJid("5584999998888@s.whatsapp.net")).toBe("5584999998888");
+  });
+  it("não mexe em telefone fixo e reconhece o que é celular", () => {
+    expect(normalizePhone("(84) 3333-4444")).toBe("558433334444");
+    expect(isMobilePhone("(84) 3333-4444")).toBe(false);
+    expect(isMobilePhone("(84) 99999-8888")).toBe(true);
+    expect(isMobilePhone("8499998888")).toBe(true);
+    expect(normalizePhone("(00) 99999-8888")).toBeNull();
+  });
+  it("a chave de comparação ignora DDI e nono dígito", () => {
+    expect(phoneKey("558499998888")).toBe(phoneKey("5584999998888"));
+    expect(phoneKey("(84) 9999-8888")).toBe(phoneKey("+55 84 99999-8888"));
+    expect(phoneKey("84 3333-4444")).not.toBe(phoneKey("84 99999-8888"));
+  });
+  it("acrescenta o aviso de saída uma única vez", () => {
+    expect(withOptOutNotice("Oi!")).toBe("Oi!\n\nSe não quiser receber mais mensagens, responda SAIR.");
+    expect(withOptOutNotice("Oi! Responda SAIR para parar.")).toBe("Oi! Responda SAIR para parar.");
+  });
+  it("atalho da resposta rápida", () => {
+    expect(slugifyShortcut("Prazo de entrega!")).toBe("prazo-de-entrega");
+    expect(slugifyShortcut("  Endereço / Retirada ")).toBe("endereco-retirada");
+  });
+  it("importação pula telefones fixos", () => {
+    const rows = [["Nome", "Telefone"], ["Ana", "(84) 99999-8888"], ["Loja", "(84) 3333-4444"]];
+    const r = prepareImportRows(rows, detectColumns(rows));
+    expect(r.valid).toEqual([{ name: "Ana", phone: "5584999998888" }]);
+    expect(r.landlines).toBe(1);
+  });
+});
+
+describe("variáveis nas mensagens", () => {
+  const vars = { produto: "Chaveiro Coração", pedido: "FAZ-1" };
+  it("preenche as variáveis e some com as vazias", () => {
+    expect(renderMessage("Oi {{nome}}, seu {{produto}} ({{pedido}}) chegou?", { name: "Ana Paula" }, () => 0, vars)).toBe("Oi Ana, seu Chaveiro Coração (FAZ-1) chegou?");
+    expect(renderMessage("Veja: {{link_orcamento}}", { name: "Ana" }, () => 0, {})).toBe("Veja:");
+  });
+  it("detecta o que falta para o contato", () => {
+    expect(missingVariables("Oi {{nome}}, {{produto}} e {{link_orcamento}}", vars)).toEqual(["link_orcamento"]);
+    expect(missingVariables("Oi {{nome}}", {})).toEqual([]);
+    expect(usedVariables("{{Nome}} {{produto}} {{produto}}")).toEqual(["nome", "produto"]);
+  });
+  it("aceita o gatilho de pedido entregue no público", () => {
+    const a = normalizeAudience({ deliveredOrdersDays: 3 });
+    expect(a).toEqual({ deliveredOrdersDays: 3 });
+    expect(hasAudience(a)).toBe(true);
+    expect(describeAudience(a, { source: (k) => k, stage: (k) => k })).toBe("Pedido entregue há 3 dias");
+  });
+});
+
+describe("resultados do WhatsApp", () => {
+  const d = (iso: string) => new Date(iso);
+  it("calcula funil, origem, cadência e tempo de resposta", () => {
+    const conversations = [
+      { id: "a", stage: "ganho", source: "prospeccao", lastInboundAt: d("2026-10-02T12:00:00Z"), optedOut: false },
+      { id: "b", stage: "novo", source: "prospeccao", lastInboundAt: null, optedOut: false },
+      { id: "c", stage: "perdido", source: "entrada", lastInboundAt: d("2026-10-03T12:00:00Z"), optedOut: true },
+    ];
+    const messages = [
+      { conversationId: "a", direction: "out" as const, origin: "cadencia", status: "read", cadenceId: "k1", stepIndex: 0, createdAt: d("2026-10-01T12:00:00Z") },
+      { conversationId: "a", direction: "in" as const, origin: "cliente", status: "delivered", cadenceId: null, stepIndex: null, createdAt: d("2026-10-02T12:00:00Z") },
+      { conversationId: "a", direction: "out" as const, origin: "manual", status: "sent", cadenceId: null, stepIndex: null, createdAt: d("2026-10-02T12:30:00Z") },
+      { conversationId: "b", direction: "out" as const, origin: "cadencia", status: "delivered", cadenceId: "k1", stepIndex: 0, createdAt: d("2026-10-01T12:00:00Z") },
+      { conversationId: "b", direction: "out" as const, origin: "cadencia", status: "failed", cadenceId: "k1", stepIndex: 1, createdAt: d("2026-10-02T12:00:00Z") },
+    ];
+    const r = analyzeResults(conversations, messages, ["novo", "ganho", "perdido"]);
+    expect(r.total).toBe(3);
+    expect(r.replied).toBe(2);
+    expect(r.won).toBe(1);
+    expect(r.optedOut).toBe(1);
+    expect(r.byStage).toEqual([{ key: "novo", count: 1 }, { key: "ganho", count: 1 }, { key: "perdido", count: 1 }]);
+    expect(r.bySource.find((s) => s.key === "prospeccao")).toEqual({ key: "prospeccao", total: 2, replied: 1, won: 1 });
+    const k1 = r.byCadence[0];
+    expect(k1).toMatchObject({ cadenceId: "k1", sent: 2, delivered: 2, read: 1, replied: 1 }); // a respondeu em 24h, b não; a falha não conta
+    expect(r.response.medianMinutes).toBe(30);
+    expect(formatDuration(30)).toBe("30 min");
+    expect(formatDuration(90)).toBe("1,5 h");
+    expect(formatDuration(null)).toBe("—");
   });
 });

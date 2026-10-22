@@ -9,6 +9,7 @@ import { useToast } from "@/components/admin/toast";
 import {
   convertQuoteToOrderAction,
   sendQuoteViaConversationAction,
+  sendQuotePdfViaConversationAction,
   deleteQuoteAction,
   duplicateQuoteAction,
   emailQuoteAction,
@@ -89,6 +90,18 @@ export function QuoteActions({
     });
   };
 
+  const sendPdfViaConversations = () => {
+    startTransition(async () => {
+      const result = await sendQuotePdfViaConversationAction(quote.id);
+      if (!result.success) {
+        toast(result.error, "error");
+        return;
+      }
+      toast("PDF enviado pelo Conversas");
+      router.push(`/admin/conversas?c=${result.conversationId}`);
+    });
+  };
+
   const copyLink = async () => {
     try {
       await navigator.clipboard.writeText(link);
@@ -114,6 +127,15 @@ export function QuoteActions({
           className={BTN}
         >
           <AdminIcon name="send" className="h-4 w-4" /> Enviar pelo Conversas
+        </button>
+        <button
+          type="button"
+          disabled={pending || !whatsappDigits(quote.customerPhone)}
+          title="Envia o arquivo PDF do orçamento pelo número da loja"
+          onClick={sendPdfViaConversations}
+          className={BTN}
+        >
+          <AdminIcon name="send" className="h-4 w-4" /> Enviar PDF pelo Conversas
         </button>
         <button type="button" onClick={sendWhatsApp} className={BTN}>
           <AdminIcon name="send" className="h-4 w-4" /> Abrir no WhatsApp

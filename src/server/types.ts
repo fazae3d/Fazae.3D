@@ -103,6 +103,8 @@ export type Order = {
   productionDeadline?: string;
   /** Sinal já recebido — saldo a receber é calculado (total - depositAmount), não armazenado. Defaults to 0. */
   depositAmount?: number;
+  /** Quando foi marcado como entregue (preenchido a partir da entrega automática do pós-venda). */
+  deliveredAt?: string;
   /** True when checkout already deducted stock for this order, so cancelling it must give the stock back. */
   stockReserved?: boolean;
   /** Taxa do Mercado Pago deste pedido (valor pago menos o líquido recebido). Ausente em pedidos antigos e vendas manuais. */

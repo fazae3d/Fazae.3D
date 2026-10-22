@@ -267,6 +267,8 @@ model Order {
   paymentFee         Float?
   /** Quando o lembrete "seu Pix vence hoje" foi enviado (um só por pedido). */
   pixReminderSentAt  DateTime?
+  /** Quando foi marcado como "Entregue" (base do pós-venda automático). */
+  deliveredAt        DateTime?
   reviews            Review[]
   payments           OrderPayment[]
 
@@ -656,6 +658,15 @@ model WaConversation {
   lastMessageAt DateTime?
   lastPreview   String?
   lastInboundAt DateTime?
+  /** Quem mandou a última mensagem: "in" (cliente, aguardando resposta nossa) ou "out". */
+  lastDirection String?
+  /** O número tem WhatsApp? Vazio = ainda não conferido. */
+  hasWhatsapp   Boolean?
+  /** Próxima ação combinada (ex.: "ligar quinta") e quando. */
+  nextActionAt   DateTime?
+  nextActionNote String?
+  /** Última resposta automática (saudação/fora do horário), para não repetir. */
+  lastAutoReplyAt DateTime?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   messages      WaMessage[]
@@ -663,6 +674,8 @@ model WaConversation {
 
   @@index([lastMessageAt])
   @@index([stage])
+  @@index([lastDirection])
+  @@index([nextActionAt])
 }
 
 model WaMessage {
@@ -674,6 +687,13 @@ model WaMessage {
   body           String
   /** image | audio | video | document... quando não é só texto (o painel mostra um aviso no lugar do arquivo). */
   mediaType      String?
+  /** Endereço do arquivo recebido (imagem, áudio, documento) quando o provedor informa. */
+  mediaUrl       String?
+  /** Cadência e passo que originaram a mensagem (para medir resultado por cadência). */
+  cadenceId      String?
+  stepIndex      Int?
+  /** Chave de idempotência de avisos automáticos (ex.: "pedido:FAZ-1:pago"): nunca manda o mesmo aviso duas vezes. */
+  ref            String?        @unique
   /** Id da mensagem no WhatsApp/provedor: evita registrar a mesma mensagem duas vezes. */
   providerId     String?        @unique
   /** queued | sent | delivered | read | failed */
@@ -685,6 +705,7 @@ model WaMessage {
 
   @@index([conversationId, createdAt])
   @@index([createdAt])
+  @@index([cadenceId])
 }
 
 /** Sequência de mensagens automáticas. steps = [{ delayHours, text }]: o 1º passo sai ao entrar; os demais depois de delayHours do anterior. */
@@ -741,4 +762,28 @@ model WaConfig {
   /** Janela de envio, em horas do fuso da loja (segunda a sábado). */
   windowStartHour Int     @default(8)
   windowEndHour   Int     @default(18)
+  /** Pausa automática (disjuntor): preenchido quando o envio foi desligado por falhas seguidas. */
+  pausedReason    String?
+  pausedAt        DateTime?
+  /** Último evento recebido do WhatsApp (para avisar quando o webhook para de chegar). */
+  lastWebhookAt   DateTime?
+  /** Respostas automáticas ao cliente: fora do horário de atendimento e saudação de contato novo. */
+  awayEnabled     Boolean @default(false)
+  awayText        String?
+  greetingEnabled Boolean @default(false)
+  greetingText    String?
+  /** Avisos de pedido por WhatsApp (pagamento aprovado, enviado, Pix vencendo). */
+  orderNotifyEnabled Boolean @default(false)
+  orderTemplates     Json?
+}
+
+/** Resposta rápida do atendimento: digite "/atalho" no chat e o texto entra no campo de mensagem. */
+model WaQuickReply {
+  id        String   @id @default(cuid())
+  title     String
+  /** Sem barra, minúsculo, sem acento (ex.: "prazo"). */
+  shortcut  String   @unique
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

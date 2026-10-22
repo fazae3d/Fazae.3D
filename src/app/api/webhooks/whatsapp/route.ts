@@ -2,6 +2,8 @@ import { timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { parseUazapiMessage, parseUazapiStatusUpdate } from "@/lib/whatsapp";
 import { applyStatusUpdate, recordInboundMessage } from "@/server/repositories/whatsapp-repository";
+import { touchWebhook } from "@/server/repositories/wa-cadence-repository";
+import { maybeAutoReply } from "@/server/whatsapp/automation";
 
 export const dynamic = "force-dynamic";
 
@@ -34,9 +36,13 @@ export async function POST(request: NextRequest) {
   if (!authorized(request, payload)) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
 
   try {
+    await touchWebhook();
     const message = parseUazapiMessage(payload);
     if (message) {
-      await recordInboundMessage(message);
+      const recorded = await recordInboundMessage(message);
+      if (!message.fromMe && !recorded.duplicate && recorded.conversationId) {
+        await maybeAutoReply({ conversationId: recorded.conversationId, created: Boolean(recorded.created), text: message.text, at: message.at });
+      }
     } else {
       const update = parseUazapiStatusUpdate(payload);
       if (update) await applyStatusUpdate(update.providerIds, update.status);

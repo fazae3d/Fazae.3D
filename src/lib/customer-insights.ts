@@ -10,8 +10,11 @@ const DAY_MS = 86_400_000;
 
 /** Chave para comparar telefones escritos de formas diferentes: "(84) 99999-8888" e "5584999998888" dão a mesma. */
 export function phoneKey(phone?: string | null) {
-  const digits = (phone ?? "").replace(/\D/g, "");
-  return digits.length >= 10 ? digits.slice(-10) : digits;
+  let digits = (phone ?? "").replace(/\D/g, "");
+  if (digits.length >= 12 && digits.startsWith("55")) digits = digits.slice(2);
+  // Celular antigo sem o nono dígito (DDD + 8 números começando em 6 a 9) vira a forma com 9, igual ao WhatsApp atual.
+  if (digits.length === 10 && /^[6-9]/.test(digits.slice(2))) digits = `${digits.slice(0, 2)}9${digits.slice(2)}`;
+  return digits;
 }
 
 /** Compra de verdade: não cancelada e, no site, já paga (pedido online só "recebido" ainda não foi pago). */

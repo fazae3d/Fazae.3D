@@ -13,6 +13,7 @@ import { findCoupon } from "@/server/repositories/coupon-repository";
 import { findPixOrdersAwaitingReminder, markPixReminderSent } from "@/server/repositories/order-repository";
 import { getProduct } from "@/server/repositories/product-repository";
 import { createSignedToken } from "@/server/signed-token";
+import { notifyPixWhatsApp } from "@/server/whatsapp/automation";
 import { UNSUBSCRIBE_PURPOSE } from "@/lib/reminder-unsubscribe";
 
 /** How long a cart sits untouched before it's considered abandoned. */
@@ -125,6 +126,12 @@ export async function GET(request: NextRequest) {
   const pixOrders = await findPixOrdersAwaitingReminder(new Date(now - 30 * 60 * 60 * 1000), new Date(now - 6 * 60 * 60 * 1000));
   for (const order of pixOrders) {
     const instructions = order.mpPaymentId ? await getPendingPaymentInstructions(order.mpPaymentId) : null;
+    // Se o WhatsApp de avisos estiver ligado e o aviso sair por lá, o e-mail não repete.
+    if (instructions?.qrCode && (await notifyPixWhatsApp(order, instructions.qrCode))) {
+      pixSent += 1;
+      await markPixReminderSent(order.id);
+      continue;
+    }
     // Sem código (já pago, vencido ou erro do Mercado Pago): não incomoda a pessoa.
     if (!instructions?.qrCode || !order.userEmail || (await isEmailOptedOut(order.userEmail))) {
       await markPixReminderSent(order.id);

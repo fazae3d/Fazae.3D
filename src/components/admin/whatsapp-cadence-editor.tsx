@@ -6,7 +6,7 @@ import { deleteCadenceAction, saveCadenceAction } from "@/app/admin/conversas/ca
 import { Select } from "@/components/select";
 import { useToast } from "@/components/admin/toast";
 import { WhatsAppCadenceRules, initialRules, rulesToPayload, type RulesState } from "@/components/admin/whatsapp-cadence-rules";
-import { CADENCE_KINDS, MAX_STEPS, MAX_STEP_TEXT, renderMessage, type CadenceAudience, type CadenceSchedule, type CadenceStep } from "@/lib/wa-cadence";
+import { CADENCE_KINDS, MAX_STEPS, MAX_STEP_TEXT, MESSAGE_VARIABLES, renderMessage, type CadenceAudience, type CadenceSchedule, type CadenceStep } from "@/lib/wa-cadence";
 
 type Draft = { text: string; amount: string; unit: "h" | "d" };
 
@@ -133,13 +133,18 @@ export function WhatsAppCadenceEditor({
           <li>
             <code className="rounded bg-mist px-1">{"{Oi|Olá|E aí}"}</code> sorteia uma das opções a cada envio. Variar o texto reduz o risco de o WhatsApp tratar como spam.
           </li>
+          <li>
+            Outras variáveis puxam dados do contato: <code className="rounded bg-mist px-1">{"{{produto}}"}</code>, <code className="rounded bg-mist px-1">{"{{pedido}}"}</code>, <code className="rounded bg-mist px-1">{"{{ultima_compra}}"}</code>,{" "}
+            <code className="rounded bg-mist px-1">{"{{link_orcamento}}"}</code> e <code className="rounded bg-mist px-1">{"{{link_avaliacao}}"}</code>. Se um contato não tiver o dado (por exemplo, nunca recebeu orçamento), a mensagem não é enviada e a cadência para com o motivo.
+          </li>
           <li>Quando o contato responde, a cadência para sozinha. Quem escreve “sair” ou “parar” nunca mais recebe nada.</li>
+          <li>Na primeira mensagem para um contato frio (prospecção), o painel acrescenta sozinho “Se não quiser receber mais mensagens, responda SAIR.”, caso o texto não traga.</li>
         </ul>
       </div>
 
       {steps.map((step, index) => {
         const hours = toHours(step);
-        const preview = renderMessage(step.text, { name: "Maria" }, () => 0);
+        const preview = renderMessage(step.text, { name: "Maria" }, () => 0, Object.fromEntries(MESSAGE_VARIABLES.map((v) => [v.key, v.example])));
         return (
           <div key={index} className="admin-card rounded-xl border border-mist p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -198,9 +203,11 @@ export function WhatsAppCadenceEditor({
               className={`${FIELD} mt-3`}
             />
             <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
-              <button type="button" onClick={() => insert(index, "{{nome}}")} className="rounded-full border border-mist px-2.5 py-1 hover:border-petrol">
-                + Nome
-              </button>
+              {MESSAGE_VARIABLES.map((v) => (
+                <button key={v.key} type="button" onClick={() => insert(index, `{{${v.key}}}`)} title={v.label} className="rounded-full border border-mist px-2.5 py-1 hover:border-petrol">
+                  + {v.label.split(" ").slice(0, 2).join(" ")}
+                </button>
+              ))}
               <button type="button" onClick={() => insert(index, "{Oi|Olá|E aí}")} className="rounded-full border border-mist px-2.5 py-1 hover:border-petrol">
                 + Variação de saudação
               </button>

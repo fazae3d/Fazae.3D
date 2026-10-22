@@ -11,7 +11,7 @@ import { formatPrice } from "@/lib/format";
 import { round2 } from "@/lib/money";
 import { computeQuoteTotals, formatStoreDate, quoteNumberLabel, quoteSavings, quoteWhatsAppMessage, validityEndOfDay, type Quote, type QuoteStatus } from "@/lib/quote";
 import { normalizePhone } from "@/lib/whatsapp";
-import { registerQuoteSent, sendConversationText, startConversation, syncStageFromQuote } from "@/server/repositories/whatsapp-repository";
+import { registerQuoteSent, sendConversationMedia, sendConversationText, startConversation, syncStageFromQuote } from "@/server/repositories/whatsapp-repository";
 import { SITE_URL } from "@/lib/site-config";
 import { logAdminAction } from "@/server/audit";
 import {
@@ -202,6 +202,36 @@ export async function sendQuoteViaConversationAction(id: string): Promise<{ succ
     await registerQuoteSent(opened.id);
     if (quote.status === "rascunho") await setQuoteStatus(id, "enviado");
     await logAdminAction("orcamento.enviar", "Quote", id, { number: quote.number, via: "conversas" });
+    return { success: true, conversationId: opened.id };
+  });
+  if (result.success) {
+    revalidateQuotes(id);
+    revalidatePath("/admin/conversas");
+  }
+  return result;
+}
+
+/** Envia o PDF do orçamento como documento pela conversa (o cliente abre direto no WhatsApp). */
+export async function sendQuotePdfViaConversationAction(id: string): Promise<{ success: true; conversationId: string } | { success: false; error: string }> {
+  if (!(await requireAdmin())) return DENIED;
+  const quote = await getQuote(id);
+  if (!quote) return { success: false, error: "Orçamento não encontrado." };
+  const phone = normalizePhone(quote.customerPhone);
+  if (!phone) return { success: false, error: "O telefone do cliente está vazio ou inválido. Corrija no orçamento e tente de novo." };
+  const label = quoteNumberLabel(quote.number);
+  const result = await withMutationFallback(async (): Promise<{ success: true; conversationId: string } | { success: false; error: string }> => {
+    const opened = await startConversation({ phone, name: quote.customerName, source: "entrada" });
+    if (!opened.success) return opened;
+    const sent = await sendConversationMedia(opened.id, {
+      url: `${SITE_URL}/orcamento/${quote.token}/pdf`,
+      kind: "document",
+      caption: `Segue o PDF do orçamento ${label} da Fazaê 3D.`,
+      fileName: `Orcamento-${label}.pdf`,
+    });
+    if (!sent.success) return sent;
+    await registerQuoteSent(opened.id);
+    if (quote.status === "rascunho") await setQuoteStatus(id, "enviado");
+    await logAdminAction("orcamento.enviar", "Quote", id, { number: quote.number, via: "conversas-pdf" });
     return { success: true, conversationId: opened.id };
   });
   if (result.success) {

@@ -39,6 +39,7 @@ function toOrder(row: Prisma.OrderGetPayload<object>): Order {
     productionStage: row.productionStage as Order["productionStage"],
     productionDeadline: row.productionDeadline?.toISOString() ?? undefined,
     depositAmount: row.depositAmount,
+    deliveredAt: row.deliveredAt?.toISOString(),
   };
 }
 

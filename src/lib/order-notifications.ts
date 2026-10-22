@@ -3,6 +3,7 @@ import { getEmailContactUrl, renderEmailLayout, type EmailAction } from "@/lib/e
 import { firstName } from "@/lib/format";
 import { SITE_URL } from "@/lib/site-config";
 import { createReviewUrl } from "@/server/review-link";
+import { notifyOrderWhatsApp } from "@/server/whatsapp/automation";
 import type { Order, OrderStatus } from "@/server/types";
 
 const TRACKING_ACTION: EmailAction = { label: "Rastrear pedido", url: `${SITE_URL}/rastreamento` };
@@ -89,7 +90,10 @@ function contentForStatus(order: Order): StatusEmailContent | null {
  * (e.g. editing just the tracking code) never re-sends it.
  */
 export async function notifyOrderStatusChange(order: Order, previousStatus: OrderStatus): Promise<void> {
-  if (!order.userEmail || order.status === previousStatus) return;
+  if (order.status === previousStatus) return;
+  // Aviso por WhatsApp (se estiver ligado em Conversas > Ajustes); nunca lança.
+  await notifyOrderWhatsApp(order, previousStatus);
+  if (!order.userEmail) return;
 
   const content = contentForStatus(order);
   if (!content) return;
