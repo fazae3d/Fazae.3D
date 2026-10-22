@@ -104,17 +104,17 @@ export function OrderPaymentControls({ id, total, received }: { id: string; tota
       ) : (
         <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
           {!paid && (
-            <button type="button" onClick={() => open("add")} className="font-medium text-petrol hover:underline">
+            <button type="button" onClick={() => open("add")} className="-my-1.5 py-1.5 font-medium text-petrol hover:underline">
               Registrar pagamento
             </button>
           )}
           {received > 0 && (
-            <button type="button" onClick={() => open("set")} className="text-graphite hover:text-ink hover:underline">
+            <button type="button" onClick={() => open("set")} className="-my-1.5 py-1.5 text-graphite hover:text-ink hover:underline">
               Corrigir valor
             </button>
           )}
           {received > 0 && (
-            <button type="button" onClick={() => submit({ mode: "set", amount: 0 })} disabled={pending} className="text-graphite hover:text-red-400 hover:underline disabled:opacity-60">
+            <button type="button" onClick={() => submit({ mode: "set", amount: 0 })} disabled={pending} className="-my-1.5 py-1.5 text-graphite hover:text-red-400 hover:underline disabled:opacity-60">
               Desfazer pagamento
             </button>
           )}

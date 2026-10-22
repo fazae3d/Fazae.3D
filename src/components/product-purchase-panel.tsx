@@ -23,7 +23,7 @@ export function ProductPurchasePanel({ product, reviewStats }: { product: Produc
     <div>
       <Link
         href={`/categorias/${product.categorySlug}`}
-        className="label-caps text-xs text-petrol hover:underline"
+        className="label-caps -my-1.5 inline-block py-1.5 text-xs text-petrol hover:underline"
       >
         {product.categoryName}
       </Link>
@@ -34,7 +34,7 @@ export function ProductPurchasePanel({ product, reviewStats }: { product: Produc
             <span className="text-petrol">★ {reviewStats.average.toFixed(1)}</span>({reviewStats.count} avaliações)
           </a>
         ) : (
-          <a href="#avaliacoes" className="text-xs text-graphite hover:text-petrol">
+          <a href="#avaliacoes" className="-my-1.5 py-1.5 text-xs text-graphite hover:text-petrol">
             Ainda sem avaliações
           </a>
         )}

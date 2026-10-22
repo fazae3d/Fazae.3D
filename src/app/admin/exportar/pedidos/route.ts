@@ -1,3 +1,4 @@
+import { itemSpecsInline } from "@/lib/order-item";
 import { isAdminRequest } from "@/lib/admin-guard";
 import { csvResponse, toCsv } from "@/lib/csv";
 import { storeDayKey } from "@/lib/store-time";
@@ -15,7 +16,7 @@ export async function GET() {
     o.customerName ?? o.address?.recipient ?? "",
     o.userEmail ?? "",
     o.customerPhone ?? "",
-    o.items.map((i) => `${i.quantity}x ${i.name} (${i.material}, ${i.color}${i.scale ? `, ${i.scale}` : ""})`).join(" | "),
+    o.items.map((i) => `${i.quantity}x ${i.name}${itemSpecsInline(i) ? ` (${itemSpecsInline(i)})` : ""}`).join(" | "),
     o.subtotal,
     o.shipping,
     o.discount,

@@ -160,8 +160,8 @@ export async function launchProductionItemAsSaleAction(
           productSlug: product.slug,
           name: product.name,
           categoryName: product.categoryName,
-          material: material || "Sob medida",
-          color: color || "A combinar",
+          material: material || "",
+          color: color || "",
           quantity,
           price: unitPrice,
         }
@@ -169,8 +169,8 @@ export async function launchProductionItemAsSaleAction(
           productSlug: `avulso-${slugify(item.description) || "item"}`,
           name: item.description,
           categoryName: "Avulso",
-          material: "Sob medida",
-          color: "A combinar",
+          material: "",
+          color: "",
           quantity,
           price: unitPrice,
         };

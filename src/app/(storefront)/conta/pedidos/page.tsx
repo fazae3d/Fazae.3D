@@ -1,3 +1,4 @@
+import { itemSpecs } from "@/lib/order-item";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { auth } from "@/auth";
@@ -99,7 +100,7 @@ export default async function PedidosPage() {
                           {item.name}
                         </Link>
                         <p className="text-xs text-graphite">
-                          {item.categoryName} · {item.material} · {item.color}{item.scale ? ` · ${item.scale}` : ""} · Qtd {item.quantity}
+                          {itemSpecs(item)} · Qtd {item.quantity}
                         </p>
                       </div>
                       <span>{formatPrice(item.price * item.quantity)}</span>

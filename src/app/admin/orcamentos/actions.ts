@@ -304,8 +304,8 @@ export async function convertQuoteToOrderAction(id: string, paymentMethod: Order
         productSlug: product ? product.slug : `avulso-${slugify(item.description) || "item"}`,
         name: item.description,
         categoryName: product?.categoryName ?? "Avulso",
-        material: item.details || "Sob medida",
-        color: "A combinar",
+        material: item.details || "",
+        color: "",
         quantity: item.quantity,
         price: item.unitPrice,
       });

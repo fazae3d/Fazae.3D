@@ -11,8 +11,8 @@ const TONE_CLASSES: Record<NonNullable<BadgeProps["tone"]>, string> = {
 
 export function Badge({ children, tone = "ink" }: BadgeProps) {
   return (
-    <span className={`label-caps inline-flex items-center px-2.5 py-1 text-[10px] ${TONE_CLASSES[tone]}`}>
-      {children}
+    <span className={`label-caps inline-flex max-w-full items-center px-2.5 py-1 text-[10px] ${TONE_CLASSES[tone]}`}>
+      <span className="truncate">{children}</span>
     </span>
   );
 }

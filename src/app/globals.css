@@ -403,3 +403,24 @@ summary:focus-visible,
   background-color: var(--admin-surface);
   color: var(--color-ink);
 }
+
+/* Celular: campos com 16px em todo o site (o iPhone dá zoom automático ao tocar num campo com fonte menor). */
+@media (max-width: 639px) {
+  input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="hidden"], [type="submit"], [type="button"]),
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
+/* Celular: links e botões de texto pequeno (Editar, Excluir, Remover...) ganham uma área de toque maior, invisível, sem mudar o desenho. */
+@media (max-width: 639px) {
+  :is(#admin-shell, main) :is(a, button):is([class*="text-[11px]"], [class*="text-xs"]):not([class*="px-"], [class*="py-"], [class*="p-1"], [class*="p-2"], [class*="absolute"], [class*="fixed"], [class*="sticky"]) {
+    position: relative;
+  }
+  :is(#admin-shell, main) :is(a, button):is([class*="text-[11px]"], [class*="text-xs"]):not([class*="px-"], [class*="py-"], [class*="p-1"], [class*="p-2"], [class*="absolute"], [class*="fixed"], [class*="sticky"])::after {
+    content: "";
+    position: absolute;
+    inset: -9px -6px;
+  }
+}

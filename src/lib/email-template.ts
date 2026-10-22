@@ -1,3 +1,4 @@
+import { itemSpecsInline } from "@/lib/order-item";
 import { escapeHtml } from "@/lib/email";
 import { DEFAULT_WHATSAPP_NUMBER, INSTAGRAM_URL, SITE_NAME, SITE_TAGLINE, SITE_URL, getWhatsAppLink } from "@/lib/site-config";
 import { getSettings } from "@/server/repositories/settings-repository";
@@ -154,7 +155,7 @@ export function renderOrderItemsTable(
       <tr>
         <td style="padding:12px 16px;${i > 0 ? `border-top:1px solid ${COLORS.border};` : ""}font-size:14px;color:${COLORS.ink};">
           ${item.quantity}× ${escapeHtml(item.name)}
-          <span style="color:${COLORS.graphite};">(${escapeHtml(item.material)}, ${escapeHtml(item.color)}${item.scale ? `, ${escapeHtml(item.scale)}` : ""})</span>
+          ${itemSpecsInline(item) ? `<span style="color:${COLORS.graphite};">(${escapeHtml(itemSpecsInline(item))})</span>` : ""}
         </td>
         <td style="padding:12px 16px;${i > 0 ? `border-top:1px solid ${COLORS.border};` : ""}font-size:14px;color:${COLORS.ink};text-align:right;white-space:nowrap;">
           ${escapeHtml(formatPrice(item.price * item.quantity))}

@@ -53,7 +53,7 @@ export function ProductCard({ product }: { product: Product }) {
         </div>
 
         {badge && (
-          <div className="absolute left-3 top-3">
+          <div className="absolute left-3 top-3 max-w-[calc(100%-4rem)]">
             <Badge tone={badge.tone}>{badge.label}</Badge>
           </div>
         )}

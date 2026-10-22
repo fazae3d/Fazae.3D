@@ -1,3 +1,4 @@
+import { itemSpecs } from "@/lib/order-item";
 import { EmptyState } from "@/components/admin/empty-state";
 import Link from "next/link";
 import { getAllOrders } from "@/server/repositories/order-repository";
@@ -314,8 +315,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
                         <div className="min-w-0">
                           <p className="truncate text-sm text-ink">{item.name}</p>
                           <p className="text-xs text-graphite">
-                            {item.categoryName} · {item.material} · {item.color}
-                            {item.scale ? ` · ${item.scale}` : ""} · Qtd {item.quantity}
+                            {itemSpecs(item)} · Qtd {item.quantity}
                           </p>
                         </div>
                       </div>

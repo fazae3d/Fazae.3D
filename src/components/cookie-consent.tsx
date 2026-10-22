@@ -62,9 +62,9 @@ gtag('config', '${GA_ID}', { anonymize_ip: true });`}
         <div
           role="dialog"
           aria-label="Aviso de cookies"
-          className="fixed inset-x-0 bottom-0 z-[60] border-t border-paper/15 bg-ink p-4 shadow-[0_-8px_24px_rgba(0,0,0,0.5)] sm:p-5"
+          className="fixed inset-x-0 bottom-0 z-[60] border-t border-paper/15 bg-ink p-3 shadow-[0_-8px_24px_rgba(0,0,0,0.5)] sm:p-5"
         >
-          <div className="mx-auto flex max-w-5xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mx-auto flex max-w-5xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <p className="text-xs text-graphite sm:text-sm">
               Usamos cookies de medição (Google Analytics) para entender como o site é usado e melhorar a sua experiência. Você pode
               recusar sem perder nada. Saiba mais na{" "}

@@ -127,13 +127,13 @@ export function CartDrawer() {
                       </div>
                       <div className="mt-1 flex gap-3 text-[11px]">
                         <button
-                          className="label-caps text-graphite underline-offset-2 hover:text-petrol hover:underline"
+                          className="label-caps -my-2 py-2 text-graphite underline-offset-2 hover:text-petrol hover:underline"
                           onClick={() => removeLine(line.productSlug, line.material, line.color, line.scale)}
                         >
                           Remover
                         </button>
                         <button
-                          className="label-caps text-graphite underline-offset-2 hover:text-petrol hover:underline"
+                          className="label-caps -my-2 py-2 text-graphite underline-offset-2 hover:text-petrol hover:underline"
                           onClick={() => toggle(line.productSlug)}
                         >
                           Favoritar

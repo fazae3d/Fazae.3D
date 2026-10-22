@@ -102,7 +102,7 @@ export async function Footer() {
               <ul className="space-y-2.5">
                 {col.links.map((link) => (
                   <li key={link.label}>
-                    <Link href={link.href} className="text-sm text-paper/85 transition-colors hover:text-petrol">
+                    <Link href={link.href} className="inline-block py-1 text-sm text-paper/85 transition-colors hover:text-petrol sm:py-0">
                       {link.label}
                     </Link>
                   </li>
@@ -118,7 +118,7 @@ export async function Footer() {
                   href={getWhatsAppLink(whatsappNumber)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm text-paper/85 transition-colors hover:text-petrol"
+                  className="flex items-center gap-2 py-1 text-sm text-paper/85 transition-colors hover:text-petrol sm:py-0"
                 >
                   <WhatsAppIcon className="h-4 w-4 shrink-0" />
                   WhatsApp

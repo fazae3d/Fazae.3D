@@ -212,7 +212,7 @@ export function WhatsAppChat({
                   }
                 }}
                 rows={2}
-                placeholder="Escreva uma mensagem. Digite / para usar uma resposta rápida (Enter envia, Shift+Enter quebra a linha)"
+                placeholder="Mensagem (digite / para respostas rápidas)"
                 className="min-h-[44px] flex-1 resize-none rounded-xl border border-mist bg-transparent px-3 py-2 text-sm outline-none focus:border-petrol"
               />
               <button

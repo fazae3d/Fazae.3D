@@ -1,5 +1,6 @@
 "use client";
 
+import { itemSpecs } from "@/lib/order-item";
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -130,7 +131,7 @@ export function TrackingForm({ initialOrderId = "" }: { initialOrderId?: string 
                       {item.name}
                     </Link>
                     <p className="text-xs text-graphite">
-                      {item.categoryName} · {item.material} · {item.color} · Qtd {item.quantity}
+                      {itemSpecs(item)} · Qtd {item.quantity}
                     </p>
                   </div>
                   <span className="text-paper">{formatPrice(item.price * item.quantity)}</span>

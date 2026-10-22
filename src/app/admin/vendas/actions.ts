@@ -45,8 +45,8 @@ export async function createManualSaleAction(input: ManualSaleFormInput): Promis
           productSlug: `avulso-${slugify(name).slice(0, 60) || "item"}`,
           name,
           categoryName: "Avulso",
-          material: line.material || "Sob medida",
-          color: line.color || "A combinar",
+          material: line.material || "",
+          color: line.color || "",
           quantity: line.quantity,
           price: line.price,
         });
@@ -66,8 +66,8 @@ export async function createManualSaleAction(input: ManualSaleFormInput): Promis
         productSlug: product.slug,
         name: product.name,
         categoryName: product.categoryName,
-        material: line.material ?? "Sob medida",
-        color: line.color ?? "A combinar",
+        material: line.material ?? "",
+        color: line.color ?? "",
         quantity: line.quantity,
         price: line.price,
       });
