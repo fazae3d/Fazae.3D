@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/admin/page-header";
 import { WhatsAppChat } from "@/components/admin/whatsapp-chat";
-import { WhatsAppLeadPanel, type LinkedCustomer } from "@/components/admin/whatsapp-lead-panel";
+import { WhatsAppLeadPanel, type ContactQuote, type LinkedCustomer } from "@/components/admin/whatsapp-lead-panel";
 import { WhatsAppNewConversation } from "@/components/admin/whatsapp-new-conversation";
 import { withReadFallback } from "@/lib/db-fallback";
 import { phoneKey } from "@/lib/customer-insights";
 import { LEAD_STAGES, formatPhone, sourceLabel, stageLabel } from "@/lib/whatsapp";
 import { getWhatsAppProvider } from "@/server/whatsapp/provider";
 import { getAllCustomersWithStats } from "@/server/repositories/customer-repository";
+import { getAllQuotes } from "@/server/repositories/quote-repository";
+import { QUOTE_STATUS_LABELS, quoteDisplayStatus, quoteNumberLabel } from "@/lib/quote";
 import { listCadences, listConversationEnrollments, type EnrollmentView } from "@/server/repositories/wa-cadence-repository";
 import {
   getConversation,
@@ -58,6 +60,12 @@ export default async function ConversasPage({ searchParams }: { searchParams: Pr
     if (match) customer = { id: match.id, name: match.name, orderCount: match.orderCount, totalSpent: match.totalSpent };
   }
 
+  const contactQuotes: ContactQuote[] = selected
+    ? (await withReadFallback(() => getAllQuotes(), []))
+        .filter((q) => phoneKey(q.customerPhone) === phoneKey(selected.phone))
+        .slice(0, 8)
+        .map((q) => ({ id: q.id, label: `${quoteNumberLabel(q.number)}${q.title ? ` · ${q.title}` : ""}`, status: QUOTE_STATUS_LABELS[quoteDisplayStatus(q)], total: q.total, validUntil: q.validUntil }))
+    : [];
   const simulated = provider.name === "simulador";
   const unreadTotal = conversations.reduce((sum, cv) => sum + (cv.unreadCount > 0 ? 1 : 0), 0);
 
@@ -134,7 +142,7 @@ export default async function ConversasPage({ searchParams }: { searchParams: Pr
         {/* Ficha do lead */}
         <div className={`admin-card min-h-0 overflow-y-auto rounded-xl border border-mist ${selected ? "block" : "hidden lg:block"}`}>
           {selected ? (
-            <WhatsAppLeadPanel key={selected.id + selected.stage + selected.optedOut} conversation={selected} customer={customer} simulated={simulated} cadences={activeCadences} enrollments={enrollments} />
+            <WhatsAppLeadPanel key={selected.id + selected.stage + selected.optedOut} conversation={selected} customer={customer} simulated={simulated} cadences={activeCadences} enrollments={enrollments} quotes={contactQuotes} />
           ) : (
             <p className="p-6 text-center text-sm text-graphite">Aqui aparecem etapa, etiquetas e observações do contato.</p>
           )}

@@ -11,7 +11,7 @@ import { formatPrice } from "@/lib/format";
 import { round2 } from "@/lib/money";
 import { computeQuoteTotals, formatStoreDate, quoteNumberLabel, quoteSavings, quoteWhatsAppMessage, validityEndOfDay, type Quote, type QuoteStatus } from "@/lib/quote";
 import { normalizePhone } from "@/lib/whatsapp";
-import { registerQuoteSent, sendConversationText, startConversation } from "@/server/repositories/whatsapp-repository";
+import { registerQuoteSent, sendConversationText, startConversation, syncStageFromQuote } from "@/server/repositories/whatsapp-repository";
 import { SITE_URL } from "@/lib/site-config";
 import { logAdminAction } from "@/server/audit";
 import {
@@ -112,6 +112,7 @@ export async function setQuoteStatusAction(id: string, status: QuoteStatus): Pro
     const updated = await setQuoteStatus(id, status);
     if (!updated) return { success: false, error: "Orçamento não encontrado." };
     await logAdminAction("orcamento.status", "Quote", id, { number: updated.number, status });
+    if (status === "recusado") await syncStageFromQuote(updated.customerPhone, "perdido").catch(() => null);
     revalidateQuotes(id);
     return { success: true };
   });
@@ -303,6 +304,7 @@ export async function convertQuoteToOrderAction(id: string, paymentMethod: Order
       revalidatePath("/admin/encomendas");
     }
     await logAdminAction("orcamento.converter", "Quote", id, { number: quote.number, orderId: created.id });
+    await syncStageFromQuote(quote.customerPhone, "ganho").catch(() => null);
     revalidateQuotes(id);
     revalidatePath("/admin/pedidos");
     revalidatePath("/admin/producao");

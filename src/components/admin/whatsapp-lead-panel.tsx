@@ -12,6 +12,8 @@ import { CONVERSATION_SOURCES, LEAD_STAGES } from "@/lib/whatsapp";
 import type { WaConversationView } from "@/server/repositories/whatsapp-repository";
 import type { EnrollmentView } from "@/server/repositories/wa-cadence-repository";
 
+export type ContactQuote = { id: string; label: string; status: string; total: number; validUntil: string };
+
 export type LinkedCustomer = { id: string; name: string; orderCount: number; totalSpent: number } | null;
 
 const field = "w-full rounded-lg border border-mist bg-transparent px-2.5 py-2 text-sm outline-none focus:border-petrol";
@@ -23,12 +25,14 @@ export function WhatsAppLeadPanel({
   simulated,
   cadences,
   enrollments,
+  quotes,
 }: {
   conversation: WaConversationView;
   customer: LinkedCustomer;
   simulated: boolean;
   cadences: { id: string; name: string }[];
   enrollments: EnrollmentView[];
+  quotes: ContactQuote[];
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -130,6 +134,31 @@ export function WhatsAppLeadPanel({
       <button type="button" onClick={save} disabled={!dirty || pending} className="w-full rounded-lg bg-petrol px-4 py-2 font-semibold text-[#111] disabled:opacity-40">
         {pending ? "Salvando…" : "Salvar"}
       </button>
+
+      <div className="border-t border-mist pt-4">
+        <div className="mb-2 flex items-center justify-between">
+          <p className="text-xs font-medium">Orçamentos</p>
+          <Link href={`/admin/orcamentos/novo?conversa=${conversation.id}`} className="text-xs text-petrol hover:underline">
+            + Novo orçamento
+          </Link>
+        </div>
+        {quotes.length === 0 ? (
+          <p className="text-xs text-graphite">Nenhum orçamento para esse contato ainda.</p>
+        ) : (
+          <ul className="space-y-1.5">
+            {quotes.map((q) => (
+              <li key={q.id} className="flex items-center justify-between gap-2 text-xs">
+                <Link href={`/admin/orcamentos/${q.id}`} className="min-w-0 truncate hover:text-petrol">
+                  {q.label}
+                </Link>
+                <span className="shrink-0 text-graphite">
+                  {formatPrice(q.total)} · {q.status}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       <div className="border-t border-mist pt-4">
         <p className="mb-2 text-xs font-medium">Cadências</p>

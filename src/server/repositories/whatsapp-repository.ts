@@ -264,3 +264,18 @@ export async function registerQuoteSent(conversationId: string): Promise<void> {
     },
   });
 }
+
+/** Aprovou/recusou um orçamento: se esse telefone tem conversa, o lead vai para "Ganho" ou "Perdido" sozinho. */
+export async function syncStageFromQuote(phone: string | null | undefined, stage: "ganho" | "perdido"): Promise<void> {
+  const normalized = normalizePhone(phone);
+  if (!normalized) return;
+  await db.waConversation.updateMany({ where: { phone: normalized }, data: { stage } });
+}
+
+/** Id da conversa de um telefone (para ligar o orçamento à conversa), se existir. */
+export async function findConversationIdByPhone(phone: string | null | undefined): Promise<string | null> {
+  const normalized = normalizePhone(phone);
+  if (!normalized) return null;
+  const row = await db.waConversation.findUnique({ where: { phone: normalized }, select: { id: true } });
+  return row?.id ?? null;
+}

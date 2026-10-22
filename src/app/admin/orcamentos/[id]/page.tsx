@@ -7,6 +7,8 @@ import { QUOTE_STATUS_LABELS, formatStoreDate, quoteDisplayStatus, quoteNumberLa
 import { SITE_URL } from "@/lib/site-config";
 import { QUOTE_TONES } from "../quote-tones";
 import { getQuote } from "@/server/repositories/quote-repository";
+import { findConversationIdByPhone } from "@/server/repositories/whatsapp-repository";
+import { withReadFallback } from "@/lib/db-fallback";
 
 export default async function QuoteDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -16,6 +18,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
   const status = quoteDisplayStatus(quote);
   const label = quoteNumberLabel(quote.number);
   const savings = quoteSavings(quote);
+  const conversationId = await withReadFallback(() => findConversationIdByPhone(quote.customerPhone), null);
 
   return (
     <div>
@@ -31,9 +34,16 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
           </span>
         }
         actions={
-          <Link href="/admin/orcamentos" className="text-sm text-graphite transition-colors hover:text-ink">
-            ← Todos os orçamentos
-          </Link>
+          <>
+            {conversationId ? (
+              <Link href={`/admin/conversas?c=${conversationId}`} className="rounded-lg border border-mist px-3.5 py-2 text-sm transition-colors hover:border-petrol">
+                Abrir conversa
+              </Link>
+            ) : null}
+            <Link href="/admin/orcamentos" className="text-sm text-graphite transition-colors hover:text-ink">
+              ← Todos os orçamentos
+            </Link>
+          </>
         }
       />
 

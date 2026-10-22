@@ -82,6 +82,9 @@ export function WhatsAppChat({ conversation, messages }: { conversation: WaConve
           <p className="truncate font-medium">{conversation.name ?? formatPhone(conversation.phone)}</p>
           <p className="truncate text-xs text-graphite">{formatPhone(conversation.phone)}</p>
         </div>
+        <Link href={`/admin/orcamentos/novo?conversa=${conversation.id}`} className="shrink-0 rounded-lg border border-mist px-3 py-1.5 text-xs font-medium transition-colors hover:border-petrol">
+          + Orçamento
+        </Link>
         <StatusBadge tone={conversation.stage === "ganho" ? "success" : conversation.stage === "perdido" ? "danger" : "info"}>{stageLabel(conversation.stage)}</StatusBadge>
         {conversation.optedOut ? <StatusBadge tone="danger">Pediu para sair</StatusBadge> : null}
       </div>
