@@ -35,7 +35,7 @@ export async function createMaterialAction(input: MaterialFormInput): Promise<Ma
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
-  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco — hoje a escrita real falharia sem Supabase configurado.
+  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco, hoje a escrita real falharia sem Supabase configurado.
   return withMutationFallback(async () => {
     if (await getMaterial(parsed.data.slug)) {
       return { success: false, error: "Já existe um material com esse slug." };
@@ -55,7 +55,7 @@ export async function updateMaterialAction(slug: string, input: MaterialFormInpu
     return { success: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
 
-  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco — hoje a escrita real falharia sem Supabase configurado.
+  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco, hoje a escrita real falharia sem Supabase configurado.
   return withMutationFallback(async () => {
     const material = await updateMaterial(slug, { name: parsed.data.name, colors: parsed.data.colors });
     if (!material) {
@@ -70,7 +70,7 @@ export async function deleteMaterialAction(slug: string): Promise<DeleteMaterial
   if (!(await requireAdmin())) {
     return { success: false, error: "Acesso restrito ao administrador." };
   }
-  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco — hoje a escrita real falharia sem Supabase configurado.
+  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco, hoje a escrita real falharia sem Supabase configurado.
   const result = await withMutationFallback(async () => {
     await deleteMaterial(slug);
     return { success: true } as DeleteMaterialResult;

@@ -1,5 +1,5 @@
 /**
- * Stand-in product photos — crops from a single AI-generated mood shot
+ * Stand-in product photos, crops from a single AI-generated mood shot
  * (public/hero-collection.webp), not real photography of actual Fazaê
  * inventory yet. Good enough to stop the catalog looking empty; swap for
  * real photos per product as they're shot.

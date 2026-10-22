@@ -96,7 +96,7 @@ async function releaseReservation(orderId: string): Promise<void> {
 
 /**
  * Decrements RawMaterial stock per the BOM of each item sold. A negative
- * resulting stock is allowed on purpose — it's a useful "you're out of
+ * resulting stock is allowed on purpose, it's a useful "you're out of
  * material" signal for the admin, never a reason to block the sale.
  */
 async function consumeRawMaterialsForOrder(order: Order): Promise<void> {
@@ -178,7 +178,7 @@ export async function findOrderById(id: string): Promise<Order | undefined> {
 
 export type UpdateOrderResult = { success: true; order: Order } | { success: false; error: string };
 
-/** Like UpdateOrderResult, plus the status the order had right before this update — lets callers tell whether it's worth notifying the customer. */
+/** Like UpdateOrderResult, plus the status the order had right before this update, lets callers tell whether it's worth notifying the customer. */
 export type OrderStatusUpdateResult =
   | { success: true; order: Order; previousStatus: OrderStatus }
   | { success: false; error: string };
@@ -276,7 +276,7 @@ export type PaymentUpdateResult =
   | { success: false; reason: "not_found" | "amount_mismatch"; error: string };
 
 /**
- * Reconciles a Mercado Pago payment with its order — found by `mpPaymentId`, or by the
+ * Reconciles a Mercado Pago payment with its order, found by `mpPaymentId`, or by the
  * `external_reference` (our order id) when the order was saved before the payment id was
  * recorded. Never trusts the webhook body: the caller passes what it re-fetched from the gateway.
  *

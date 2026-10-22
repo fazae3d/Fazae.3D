@@ -112,7 +112,7 @@ export const NAV_GROUPS: NavGroup[] = [
   },
 ];
 
-/** Todos os destinos, na ordem do menu — usado pela busca (Ctrl+K). */
+/** Todos os destinos, na ordem do menu, usado pela busca (Ctrl+K). */
 export const NAV_LINKS: NavLink[] = NAV_GROUPS.flatMap((group) =>
   group.links.length > 0 ? group.links : [{ href: group.href, label: group.label }],
 );

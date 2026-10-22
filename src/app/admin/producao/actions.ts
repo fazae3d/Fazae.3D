@@ -44,7 +44,7 @@ export async function updateProductionAction(
   if (!(await requireAdmin())) {
     return { success: false, error: "Acesso restrito ao administrador." };
   }
-  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco — hoje a escrita real falharia sem Supabase configurado.
+  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco, hoje a escrita real falharia sem Supabase configurado.
   const result = await withMutationFallback(() =>
     updateOrderProduction(orderId, {
       stage: data.stage,
@@ -131,7 +131,7 @@ type LaunchSaleResult = { success: true; order: Order } | { success: false; erro
  * Turns an internal production item into a real sale: the Order takes over
  * the item's production stage and deadline (so it keeps its place on the
  * board, now as a "Pedido"), and the item itself is removed so it isn't
- * counted twice. Stock is deliberately untouched — the piece was made for
+ * counted twice. Stock is deliberately untouched, the piece was made for
  * this sale, it never went through the catalog stock to begin with.
  */
 export async function launchProductionItemAsSaleAction(
@@ -160,8 +160,8 @@ export async function launchProductionItemAsSaleAction(
           productSlug: product.slug,
           name: product.name,
           categoryName: product.categoryName,
-          material: material || "—",
-          color: color || "—",
+          material: material || "Sob medida",
+          color: color || "A combinar",
           quantity,
           price: unitPrice,
         }
@@ -169,8 +169,8 @@ export async function launchProductionItemAsSaleAction(
           productSlug: `avulso-${slugify(item.description) || "item"}`,
           name: item.description,
           categoryName: "Avulso",
-          material: "—",
-          color: "—",
+          material: "Sob medida",
+          color: "A combinar",
           quantity,
           price: unitPrice,
         };

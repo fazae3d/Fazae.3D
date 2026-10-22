@@ -20,7 +20,7 @@ export function PixInstructions({ qrCode, qrCodeBase64 }: { qrCode?: string; qrC
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Clipboard API can be unavailable (permissions, non-secure context) — the code is still selectable/visible below.
+      // Clipboard API can be unavailable (permissions, non-secure context), the code is still selectable/visible below.
     }
   };
 

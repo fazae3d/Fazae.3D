@@ -30,7 +30,7 @@ export function PersonalDataForm({ name, email }: { name: string; email: string 
     setCurrentName(result.name);
     setEditing(false);
     // Keeps the header avatar/initial and any other session-derived display
-    // in sync — the JWT still has the old name until the token itself
+    // in sync, the JWT still has the old name until the token itself
     // refreshes, which this triggers explicitly.
     await update({ name: result.name });
   };

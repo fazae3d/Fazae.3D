@@ -2,7 +2,7 @@
  * Hand-drawn low-poly icons standing in for real product photography.
  * Deliberately faceted/geometric (paper + lime + gray planes) so they read
  * as "white/lime 3D-printed plastic on a dark backdrop" rather than trying
- * to fake a photo — see ProductArt, which wraps these with the studio
+ * to fake a photo, see ProductArt, which wraps these with the studio
  * backdrop when no real photo crop exists for a slug yet.
  */
 const PAPER = "#F4F4F0";

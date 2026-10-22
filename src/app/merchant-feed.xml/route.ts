@@ -49,7 +49,7 @@ export async function GET() {
         .join("");
       return `<item>
 <g:id>${xml(p.slug)}</g:id>
-<g:title>${xml(`${p.name} - impressão 3D`.slice(0, 150))}</g:title>
+<g:title>${xml(`${p.name}, impressão 3D`.slice(0, 150))}</g:title>
 <g:description>${xml(description || p.name)}</g:description>
 <g:link>${xml(`${SITE_URL}/produto/${p.slug}`)}</g:link>
 <g:image_link>${xml(absolute(p.images![0]))}</g:image_link>${extra}

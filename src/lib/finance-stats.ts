@@ -61,7 +61,7 @@ function lastNMonths(count: number): MonthBucket[] {
 export type CashFlowMonth = { key: string; label: string; inflow: number; outflow: number; net: number; cumulative: number };
 
 /**
- * Fluxo de caixa real: TODA despesa conta como saída (inclusive equipamento —
+ * Fluxo de caixa real: TODA despesa conta como saída (inclusive equipamento
  * é dinheiro que saiu de verdade), diferente do DRE, que trata equipamento
  * como investimento e não como despesa operacional.
  */
@@ -106,7 +106,7 @@ export type SimplifiedDRE = {
 };
 
 /**
- * DRE simplificado, regime de caixa. Equipamento fica de fora de propósito —
+ * DRE simplificado, regime de caixa. Equipamento fica de fora de propósito
  * é investimento (capex), tratado no payback, não aqui. Sem isso, comprar uma
  * impressora nova faria a margem operacional do mês parecer péssima mesmo
  * com a operação saudável.
@@ -190,7 +190,7 @@ export type GrowthGoal = {
 
 /**
  * Baseline = receita média dos meses mais antigos disponíveis ("no início").
- * Com pouco histórico (loja nova), início ≈ agora — o indicador só fica mais
+ * Com pouco histórico (loja nova), início ≈ agora, o indicador só fica mais
  * preciso conforme mais meses de dados reais se acumulam.
  */
 export function growthGoal(orders: Order[], multiplier = 5, months = 12): GrowthGoal {

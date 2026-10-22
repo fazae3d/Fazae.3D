@@ -1,7 +1,7 @@
 const BASE_URL =
   process.env.MELHOR_ENVIO_SANDBOX === "true" ? "https://sandbox.melhorenvio.com.br" : "https://melhorenvio.com.br";
 
-/** Correios' own package minimums — applied per item so a product missing weight/dimensions never breaks the quote. */
+/** Correios' own package minimums, applied per item so a product missing weight/dimensions never breaks the quote. */
 const MIN_WEIGHT_KG = 0.3;
 const MIN_DIMENSION_CM = 16;
 const MIN_HEIGHT_CM = 2;
@@ -56,7 +56,7 @@ export async function calculateShipping({
 }): Promise<ShippingQuoteResult> {
   const token = process.env.MELHOR_ENVIO_TOKEN;
   if (!token) {
-    console.warn("[melhor-envio] MELHOR_ENVIO_TOKEN não configurado — cotação de frete não realizada.");
+    console.warn("[melhor-envio] MELHOR_ENVIO_TOKEN não configurado, cotação de frete não realizada.");
     return { success: false, error: "Cotação de frete não configurada." };
   }
 

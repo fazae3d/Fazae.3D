@@ -45,7 +45,7 @@ export async function updateSettingsAction(input: SettingsFormInput): Promise<Se
     return { success: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
 
-  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco — hoje a escrita real falharia sem Supabase configurado.
+  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco, hoje a escrita real falharia sem Supabase configurado.
   const result = await withMutationFallback(async () => {
     const settings = await updateSettings({
       ...parsed.data,

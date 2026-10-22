@@ -372,7 +372,7 @@ export function ProductForm({
       <div>
         <p className={labelClass() + " mb-1.5"}>Dimensões da embalagem (cm, opcional)</p>
         <p className="mb-2 text-xs text-graphite">
-          Tamanho da caixa/pacote de envio — usado para cotar o frete real (Melhor Envio). Diferente do campo
+          Tamanho da caixa/pacote de envio, usado para cotar o frete real (Melhor Envio). Diferente do campo
           &quot;Dimensões&quot; acima, que é a medida da peça mostrada ao cliente.
         </p>
         <div className="grid grid-cols-3 gap-4">

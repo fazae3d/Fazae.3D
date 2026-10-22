@@ -10,7 +10,7 @@ import { checkLocalDeliveryAction, quoteShippingAction } from "@/app/actions/shi
 import { LOCAL_DELIVERY_LABEL, getLocalDeliveryRules, localDeliveryCost } from "@/lib/local-delivery";
 import type { ShippingQuote } from "@/lib/melhor-envio";
 
-/** Shown on the PDP — the point where the purchase decision actually happens, not just at cart/checkout. */
+/** Shown on the PDP, the point where the purchase decision actually happens, not just at cart/checkout. */
 export function ShippingEstimate({
   productSlug,
   price,

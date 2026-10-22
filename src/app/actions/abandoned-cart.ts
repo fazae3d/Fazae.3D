@@ -31,7 +31,7 @@ const captureSchema = z.object({
 
 /**
  * Fire-and-forget from the checkout page once the customer's e-mail is
- * known (right after the identification step) — never awaited for its
+ * known (right after the identification step), never awaited for its
  * result in the UI, so a failure here must never block checkout itself.
  */
 export async function captureAbandonedCartAction(input: unknown): Promise<void> {
@@ -52,24 +52,24 @@ export async function captureAbandonedCartAction(input: unknown): Promise<void> 
     if (await isEmailOptedOut(parsed.data.email)) return;
     await upsertAbandonedCart({ email: parsed.data.email, name: parsed.data.name, items, subtotal });
   } catch {
-    // Best-effort — never surfaces to the checkout UI, which doesn't await this action.
+    // Best-effort, never surfaces to the checkout UI, which doesn't await this action.
   }
 }
 
-/** Called right when a checkout succeeds — the cart that was just bought is no longer "abandoned". */
+/** Called right when a checkout succeeds, the cart that was just bought is no longer "abandoned". */
 export async function clearAbandonedCartAction(email: string): Promise<void> {
   if (!email) return;
   try {
     await deleteAbandonedCart(email);
   } catch {
-    // Best-effort — never surfaces to the checkout UI, which doesn't await this action.
+    // Best-effort, never surfaces to the checkout UI, which doesn't await this action.
   }
 }
 
 export type AbandonedCartLine = { productSlug: string; material: string; color: string; quantity: number };
 
 /**
- * Powers the e-mail's recovery link (`/carrinho?recuperar=<id>`) — reads by
+ * Powers the e-mail's recovery link (`/carrinho?recuperar=<id>`), reads by
  * id only, no ownership check, since the id itself (a cuid, unguessable) is
  * the link's only secret, same trust model as a password-reset token.
  */

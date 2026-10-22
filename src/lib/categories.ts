@@ -5,7 +5,7 @@ export type CategoryDef = {
 };
 
 /**
- * Static category taxonomy from the Fazaê brand reference — not the real
+ * Static category taxonomy from the Fazaê brand reference, not the real
  * Category model yet (that lands with the database/catalog phase, see
  * TODO(fase DB) notes elsewhere).
  */

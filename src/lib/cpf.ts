@@ -1,4 +1,4 @@
-/** Standard mod-11 CPF checksum — the two verification digits are derived from the first 9. */
+/** Standard mod-11 CPF checksum, the two verification digits are derived from the first 9. */
 function calcCheckDigit(digits: number[]): number {
   let sum = 0;
   let weight = digits.length + 1;
@@ -12,7 +12,7 @@ function calcCheckDigit(digits: number[]): number {
 
 export function isValidCPF(raw: string): boolean {
   const cpf = raw.replace(/\D/g, "");
-  // Reject sequences like "000.000.000-00" — they pass the checksum
+  // Reject sequences like "000.000.000-00", they pass the checksum
   // (all-same-digit CPFs are a well-known degenerate case) but aren't real.
   if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
 
@@ -61,7 +61,7 @@ export function formatCNPJ(raw: string): string {
     .replace(/(\d{4})(\d{1,2})$/, "$1-$2");
 }
 
-/** Formats as CPF while the digits still fit (≤11), then switches to CNPJ formatting — for a single "documento" field accepting either. */
+/** Formats as CPF while the digits still fit (≤11), then switches to CNPJ formatting, for a single "documento" field accepting either. */
 export function formatDocument(raw: string): string {
   const digits = raw.replace(/\D/g, "");
   return digits.length > 11 ? formatCNPJ(raw) : formatCPF(raw);

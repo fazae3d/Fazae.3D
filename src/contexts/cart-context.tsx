@@ -38,7 +38,7 @@ type CartContextValue = {
   freeShippingFromCoupon: boolean;
   /** false enquanto o catálogo ainda carrega: os valores (subtotal, frete) ainda não são confiáveis e não devem ser exibidos. */
   ready: boolean;
-  /** Resolves a cart line's product against the live catalog snapshot — never a frozen client-bundled copy. */
+  /** Resolves a cart line's product against the live catalog snapshot, never a frozen client-bundled copy. */
   getCartProduct: (slug: string) => Product | undefined;
 };
 
@@ -60,7 +60,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const { loaded, getProduct, refresh } = useProductSnapshot({ enabled: rawLines.length > 0 || isOpen });
 
   // Defensive: a line whose product no longer resolves (discontinued demo
-  // item), or whose price is unset ("sob consulta" — a sob_encomenda piece
+  // item), or whose price is unset ("sob consulta", a sob_encomenda piece
   // without a fixed price shouldn't reach checkout math), is dropped from
   // every view rather than rendered broken. Skipped until the snapshot
   // loads once, so the cart doesn't flash empty first.
@@ -137,7 +137,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       isOpen,
       openCart: () => {
         // The cart is opened far less often than it's read from, so this
-        // is where a refetch is cheap and actually matters — the user is
+        // is where a refetch is cheap and actually matters, the user is
         // about to look at totals.
         refresh();
         setIsOpen(true);

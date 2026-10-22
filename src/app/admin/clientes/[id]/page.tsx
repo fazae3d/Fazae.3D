@@ -74,7 +74,7 @@ export default async function AdminCustomerDetailPage({ params }: { params: Prom
     { label: "Ticket médio", value: formatPrice(metrics.averageTicket), sub: "por compra" },
     {
       label: "Última compra",
-      value: metrics.lastOrderAt ? formatStoreDate(metrics.lastOrderAt) : "—",
+      value: metrics.lastOrderAt ? formatStoreDate(metrics.lastOrderAt) : "Sem compras",
       sub: metrics.lastOrderAt ? `há ${daysSince(metrics.lastOrderAt, now)} dias` : "ainda não comprou",
     },
     { label: "A receber", value: formatPrice(totalReceivable), sub: "saldo de vendas lançadas" },

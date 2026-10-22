@@ -111,7 +111,7 @@ export function WhatsAppCadenceEditor({
       <div className="admin-card grid gap-4 rounded-xl border border-mist p-5 sm:grid-cols-[1fr_240px]">
         <div>
           <label className="mb-1 block text-xs text-graphite">Nome da cadência</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex.: Prospecção de brindes — 3 contatos" className={FIELD} />
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex.: Prospecção de brindes em 3 contatos" className={FIELD} />
         </div>
         <div>
           <label className="mb-1 block text-xs text-graphite">Tipo</label>

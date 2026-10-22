@@ -22,7 +22,7 @@ export type UpsertAbandonedCartInput = {
   subtotal: number;
 };
 
-/** Overwrites any previous snapshot for this e-mail and clears remindedAt — a fresh abandonment is reminder-eligible again. */
+/** Overwrites any previous snapshot for this e-mail and clears remindedAt, a fresh abandonment is reminder-eligible again. */
 export async function upsertAbandonedCart(input: UpsertAbandonedCartInput): Promise<AbandonedCart> {
   const row = await db.abandonedCart.upsert({
     where: { email: input.email },
@@ -44,7 +44,7 @@ export async function optOutOfReminders(email: string): Promise<void> {
   await db.abandonedCart.deleteMany({ where: { email: { equals: email, mode: "insensitive" } } });
 }
 
-/** No-ops when there's nothing to clear — called on every successful checkout, most of which never had a snapshot. */
+/** No-ops when there's nothing to clear, called on every successful checkout, most of which never had a snapshot. */
 export async function deleteAbandonedCart(email: string): Promise<void> {
   await db.abandonedCart.deleteMany({ where: { email } });
 }

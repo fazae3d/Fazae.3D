@@ -98,10 +98,10 @@ export async function createUser({
 }
 
 /**
- * First-time OAuth sign-in (Google, etc.) has no password to verify — this
+ * First-time OAuth sign-in (Google, etc.) has no password to verify, this
  * provisions a DemoUser record on the fly so the account still gets order
  * history, saved addresses, and admin/customer role like any other user.
- * The random password hash is unusable — this account only ever signs in
+ * The random password hash is unusable, this account only ever signs in
  * through the OAuth provider.
  */
 export async function findOrCreateOAuthUser({ name, email }: { name: string; email: string }): Promise<DemoUser> {

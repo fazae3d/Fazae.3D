@@ -58,21 +58,21 @@ const checkoutInputSchema = z.object({
   guestEmail: z.string().email().optional(),
 });
 
-/** What the customer still needs to actually pay — present only for Pix/boleto, never for an already-approved card payment. */
+/** What the customer still needs to actually pay, present only for Pix/boleto, never for an already-approved card payment. */
 export type PendingPaymentInstructions = { qrCode?: string; qrCodeBase64?: string; ticketUrl?: string };
 
 export type CreateOrderResult =
   | { success: true; order: Order; paymentInstructions?: PendingPaymentInstructions }
   | { success: false; error: string };
 
-/** A payment left "pending"/"in_process" by Mercado Pago (Pix, boleto, some cards) isn't a failure — the order is still created, awaiting the webhook to confirm it. */
+/** A payment left "pending"/"in_process" by Mercado Pago (Pix, boleto, some cards) isn't a failure, the order is still created, awaiting the webhook to confirm it. */
 function statusForPayment(paymentStatus: string): OrderStatus {
   return paymentStatus === "approved" ? "Pagamento aprovado" : "Pedido recebido";
 }
 
 /**
  * Prices, category names and shipping cost are all re-resolved server-side
- * from the product slugs rather than trusted from the client payload —
+ * from the product slugs rather than trusted from the client payload
  * the checkout UI sends only slug/material/color/quantity plus the chosen
  * shipping method and coupon code.
  */
@@ -80,7 +80,7 @@ export async function processCheckoutPaymentAction(
   input: unknown,
   brickFormData: unknown,
 ): Promise<CreateOrderResult> {
-  // Every call — success or failure — counts, so a script can't retry its
+  // Every call, success or failure, counts, so a script can't retry its
   // way past a declined card by hammering this action.
   const ip = await getClientIp();
   const limited = await rateLimit(`checkout:${ip}`, CHECKOUT_LIMIT, CHECKOUT_WINDOW_MS);
@@ -97,7 +97,7 @@ export async function processCheckoutPaymentAction(
   }
   const { items, address, shipping: shippingChoice, couponCode, guestEmail } = parsed.data;
 
-  // Guests can check out with just an e-mail — no account required. When a
+  // Guests can check out with just an e-mail, no account required. When a
   // session exists it always wins, so a logged-in user can't be spoofed
   // into a guest order via a stale client-side guestEmail value.
   const session = await auth();
@@ -113,7 +113,7 @@ export async function processCheckoutPaymentAction(
     return { success: false, error: "Carrinho vazio ou produtos inválidos." };
   }
 
-  // Stock is re-checked here too — the "Esgotado" state on the product
+  // Stock is re-checked here too, the "Esgotado" state on the product
   // page is a UI courtesy, not the enforcement point.
   const wantedBySlug = new Map<string, number>();
   for (const item of resolvedItems) wantedBySlug.set(item.productSlug, (wantedBySlug.get(item.productSlug) ?? 0) + item.quantity);
@@ -162,7 +162,7 @@ export async function processCheckoutPaymentAction(
   );
   const { freeShippingThreshold, originCep } = settings;
 
-  // Pix never stacks with a coupon — whichever discount is larger wins. When
+  // Pix never stacks with a coupon, whichever discount is larger wins. When
   // Pix wins, the coupon isn't recorded as used (the customer didn't get it).
   const isPix = (brickFormData as Record<string, unknown>).payment_method_id === "pix";
   const orderDiscount = resolveOrderDiscount({
@@ -174,7 +174,7 @@ export async function processCheckoutPaymentAction(
   discount = orderDiscount.discount;
   if (orderDiscount.pixWins && couponIsPriceDiscount) appliedCouponCode = undefined;
 
-  // Never trust the price the client echoes back — only which service it
+  // Never trust the price the client echoes back, only which service it
   // picked. A flat method is recomputed from the (subtotal, threshold) pure
   // function as before; a live quote is re-fetched from Melhor Envio and
   // only that service's own returned price is used.

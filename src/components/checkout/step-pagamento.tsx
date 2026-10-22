@@ -26,7 +26,7 @@ export function StepPagamento({
   /** What a Pix payment will actually be billed (already net of the Pix discount / coupon rule). */
   pixTotal: number;
   pixPct: number;
-  /** Shape expected by processCheckoutPaymentAction's first argument — items/address/shippingMethod/couponCode/guestEmail. */
+  /** Shape expected by processCheckoutPaymentAction's first argument, items/address/shippingMethod/couponCode/guestEmail. */
   checkoutInput: unknown;
   payerEmail: string;
   onSuccess: (order: Order, paymentInstructions?: PendingPaymentInstructions) => void;

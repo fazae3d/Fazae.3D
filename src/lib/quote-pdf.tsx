@@ -79,7 +79,7 @@ export function QuotePdf({ quote, context }: { quote: Quote; context: QuotePdfCo
     .join(" · ");
 
   return (
-    <Document title={`Orçamento ${label} — ${quote.customerName}`} author="Fazaê 3D" subject="Orçamento">
+    <Document title={`Orçamento ${label} para ${quote.customerName}`} author="Fazaê 3D" subject="Orçamento">
       <Page size="A4" style={s.page}>
         <View style={s.header}>
           {/* eslint-disable-next-line jsx-a11y/alt-text */}

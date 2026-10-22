@@ -1,5 +1,5 @@
 /**
- * TODO(fase DB): remove este arquivo quando a Fazaê tiver o próprio banco —
+ * TODO(fase DB): remove este arquivo quando a Fazaê tiver o próprio banco
  * hoje toda leitura/escrita real falharia sem Supabase configurado.
  */
 export async function withReadFallback<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
@@ -12,7 +12,7 @@ export async function withReadFallback<T>(fn: () => Promise<T>, fallback: T): Pr
 
 /**
  * Same as withReadFallback, but also reports whether the fallback was
- * actually used — for screens (like the admin dashboard) that should warn
+ * actually used, for screens (like the admin dashboard) that should warn
  * when they're showing seed data instead of erroring silently.
  */
 export async function readWithStatus<T>(fn: () => Promise<T>, fallback: T): Promise<{ data: T; usedFallback: boolean }> {

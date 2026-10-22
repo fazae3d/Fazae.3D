@@ -42,7 +42,7 @@ function verifyWebhookSignature(request: NextRequest): "valid" | "invalid" | "un
 }
 
 /**
- * Mercado Pago calls this whenever a payment's status changes — the only
+ * Mercado Pago calls this whenever a payment's status changes, the only
  * way Pix/boleto ever move from "pending" to "approved", since those
  * happen well after the checkout page's own request has finished.
  *
@@ -51,15 +51,15 @@ function verifyWebhookSignature(request: NextRequest): "valid" | "invalid" | "un
 export async function POST(request: NextRequest) {
   const signatureStatus = verifyWebhookSignature(request);
   if (signatureStatus === "invalid") {
-    console.warn("[mercadopago webhook] assinatura x-signature inválida — requisição rejeitada");
+    console.warn("[mercadopago webhook] assinatura x-signature inválida, requisição rejeitada");
     return NextResponse.json({ error: "invalid signature" }, { status: 401 });
   }
   if (signatureStatus === "unconfigured") {
     if (process.env.NODE_ENV === "production") {
-      console.error("[mercadopago webhook] MERCADOPAGO_WEBHOOK_SECRET não configurado em produção — recusando");
+      console.error("[mercadopago webhook] MERCADOPAGO_WEBHOOK_SECRET não configurado em produção, recusando");
       return NextResponse.json({ error: "webhook not configured" }, { status: 503 });
     }
-    console.warn("[mercadopago webhook] MERCADOPAGO_WEBHOOK_SECRET não configurado — pulando validação de assinatura (dev)");
+    console.warn("[mercadopago webhook] MERCADOPAGO_WEBHOOK_SECRET não configurado, pulando validação de assinatura (dev)");
   }
 
   let body: unknown = null;
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ received: true });
   }
 
-  // Never trust the notification body's own status — always re-fetch from
+  // Never trust the notification body's own status, always re-fetch from
   // Mercado Pago directly, exactly as their integration guide recommends.
   const payment = await getMercadoPagoPayment(String(paymentId));
   if (!payment.success) {

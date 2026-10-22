@@ -56,7 +56,7 @@ export async function deleteRawMaterial(id: string): Promise<DeleteRawMaterialRe
 }
 
 /**
- * A negative resulting stock is allowed on purpose — it's a useful "you're
+ * A negative resulting stock is allowed on purpose, it's a useful "you're
  * out of material" signal for the admin, not an error condition to block.
  */
 export async function adjustRawMaterialStock(id: string, delta: number): Promise<RawMaterial | null> {

@@ -1,6 +1,6 @@
 import type { Product } from "@/lib/types";
 
-/** What's actually held in the store — categoryName is never persisted, only joined in at read time (see product-repository.ts). */
+/** What's actually held in the store, categoryName is never persisted, only joined in at read time (see product-repository.ts). */
 export type StoredProduct = Omit<Product, "categoryName">;
 
 export type Address = {
@@ -43,7 +43,7 @@ export type OrderStatus =
 
 export type PaymentMethod = "pix" | "cartao" | "boleto";
 
-/** Raw Mercado Pago payment status — "pending"/"in_process" until a webhook (Pix/boleto) or the initial response (cartão) confirms it. */
+/** Raw Mercado Pago payment status, "pending"/"in_process" until a webhook (Pix/boleto) or the initial response (cartão) confirms it. */
 export type PaymentStatus =
   | "pending"
   | "approved"
@@ -92,16 +92,16 @@ export type Order = {
   paymentMethod: PaymentMethod;
   /** Raw gateway status, distinct from `status` (the order's own fulfillment status). Defaults to "pending". */
   paymentStatus?: PaymentStatus;
-  /** Mercado Pago payment id — set for online orders, used to reconcile the webhook with this order. */
+  /** Mercado Pago payment id, set for online orders, used to reconcile the webhook with this order. */
   mpPaymentId?: string;
   /** Only online orders (delivered) have a shipping address; manual sales don't. */
   address?: Address;
   status: OrderStatus;
   tracking?: string;
-  /** Defaults to "nao_aplicavel" — always set explicitly by addOrder(), never trusted from the caller. */
+  /** Defaults to "nao_aplicavel", always set explicitly by addOrder(), never trusted from the caller. */
   productionStage?: ProductionStage;
   productionDeadline?: string;
-  /** Sinal já recebido — saldo a receber é calculado (total - depositAmount), não armazenado. Defaults to 0. */
+  /** Sinal já recebido, saldo a receber é calculado (total - depositAmount), não armazenado. Defaults to 0. */
   depositAmount?: number;
   /** Quando foi marcado como entregue (preenchido a partir da entrega automática do pós-venda). */
   deliveredAt?: string;
@@ -128,9 +128,9 @@ export type StoreSettings = {
   whatsappNumber: string;
   whatsappMessageTemplate?: string;
   customOrderIntroText?: string;
-  /** CEP de onde a loja envia — usado como origem na cotação de frete real (Melhor Envio). */
+  /** CEP de onde a loja envia, usado como origem na cotação de frete real (Melhor Envio). */
   originCep?: string;
-  /** Pré-preenchem a calculadora de precificação — nunca gravados automaticamente no produto. */
+  /** Pré-preenchem a calculadora de precificação, nunca gravados automaticamente no produto. */
   defaultProfitMarginPct?: number;
   averageFailureRatePct?: number;
   printerCostPerHour?: number;
@@ -150,7 +150,7 @@ export type StoreSettings = {
   cashBalanceDate?: string;
 };
 
-/** Custo extra nomeado e reutilizável (argola, ímã, embalagem...) — somado ad-hoc na calculadora de precificação. */
+/** Custo extra nomeado e reutilizável (argola, ímã, embalagem...), somado ad-hoc na calculadora de precificação. */
 export type AdditionalCost = {
   id: string;
   name: string;
@@ -158,12 +158,12 @@ export type AdditionalCost = {
 };
 
 /**
- * "equipamento" é investimento (capex) — entra no payback, não no DRE operacional.
+ * "equipamento" é investimento (capex), entra no payback, não no DRE operacional.
  * "material" cobre insumos/matéria-prima; "embalagem" e "operacional" são despesa recorrente.
  */
 export type ExpenseCategory = "equipamento" | "material" | "embalagem" | "operacional";
 
-/** Registro de compra/gasto real — base do módulo Finanças. */
+/** Registro de compra/gasto real, base do módulo Finanças. */
 export type Expense = {
   id: string;
   description: string;
@@ -176,7 +176,7 @@ export type Expense = {
   createdAt: string;
 };
 
-/** "Insumo" — raw material/supply consumed to produce pieces. */
+/** "Insumo", raw material/supply consumed to produce pieces. */
 export type RawMaterial = {
   id: string;
   name: string;
@@ -201,7 +201,7 @@ export type ProductMaterialUsageWithMaterial = ProductMaterialUsage & {
   rawMaterialCostPerUnit: number;
 };
 
-/** CRM record, independent of login (User) — covers WhatsApp/presencial customers too. */
+/** CRM record, independent of login (User), covers WhatsApp/presencial customers too. */
 export type Customer = {
   id: string;
   name: string;
@@ -214,10 +214,10 @@ export type Customer = {
   lastReminderAt?: string;
 };
 
-/** Customer plus aggregates computed in one pass over Order — avoids N+1 queries on the list page. */
+/** Customer plus aggregates computed in one pass over Order, avoids N+1 queries on the list page. */
 export type CustomerWithStats = Customer & { orderCount: number; totalSpent: number };
 
-/** Product review — only created by someone with a delivered order containing that product. */
+/** Product review, only created by someone with a delivered order containing that product. */
 export type Review = {
   id: string;
   productSlug: string;
@@ -250,14 +250,14 @@ export type Consignee = {
   createdAt: string;
 };
 
-/** Consignee plus aggregates over its ConsignmentItem rows — avoids N+1 queries on the list page. */
+/** Consignee plus aggregates over its ConsignmentItem rows, avoids N+1 queries on the list page. */
 export type ConsigneeWithSummary = Consignee & {
   totalItems: number;
   totalValueOpen: number;
   nextVisitDate?: string;
 };
 
-/** Saldo atual de um produto com um lojista — quantidade e preço combinados, atualizados a cada entrega/venda/devolução. */
+/** Saldo atual de um produto com um lojista, quantidade e preço combinados, atualizados a cada entrega/venda/devolução. */
 export type ConsignmentItem = {
   id: string;
   consigneeId: string;
@@ -270,7 +270,7 @@ export type ConsignmentItem = {
 
 export type ConsignmentItemWithProduct = ConsignmentItem & { productName: string };
 
-/** Registro de visita ao lojista — histórico de acerto e agenda. */
+/** Registro de visita ao lojista, histórico de acerto e agenda. */
 export type ConsignmentVisit = {
   id: string;
   consigneeId: string;
@@ -287,7 +287,7 @@ export type ConsigneeDetail = {
   visits: ConsignmentVisit[];
 };
 
-/** Snapshot of a cart someone left without finishing checkout — see AbandonedCart in schema.prisma. */
+/** Snapshot of a cart someone left without finishing checkout, see AbandonedCart in schema.prisma. */
 export type AbandonedCart = {
   id: string;
   email: string;
@@ -301,7 +301,7 @@ export type AbandonedCart = {
   reminderCount?: number;
 };
 
-/** Item de produção sem pedido associado — ver ProductionItem em schema.prisma. */
+/** Item de produção sem pedido associado, ver ProductionItem em schema.prisma. */
 export type ProductionItem = {
   /** Unidades já somadas ao estoque do produto quando o item foi finalizado. */
   stockAddedQty: number;

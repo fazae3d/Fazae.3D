@@ -36,7 +36,7 @@ export async function createCategoryAction(input: CategoryFormInput): Promise<Ca
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
-  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco — hoje a escrita real falharia sem Supabase configurado.
+  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco, hoje a escrita real falharia sem Supabase configurado.
   return withMutationFallback(async () => {
     if (await getCategory(parsed.data.slug)) {
       return { success: false, error: "Já existe uma categoria com esse slug." };
@@ -56,7 +56,7 @@ export async function updateCategoryAction(slug: string, input: CategoryFormInpu
     return { success: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
 
-  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco — hoje a escrita real falharia sem Supabase configurado.
+  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco, hoje a escrita real falharia sem Supabase configurado.
   return withMutationFallback(async () => {
     const category = await updateCategory(slug, {
       name: parsed.data.name,
@@ -75,7 +75,7 @@ export async function deleteCategoryAction(slug: string): Promise<DeleteCategory
   if (!(await requireAdmin())) {
     return { success: false, error: "Acesso restrito ao administrador." };
   }
-  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco — hoje a escrita real falharia sem Supabase configurado.
+  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco, hoje a escrita real falharia sem Supabase configurado.
   const result = await withMutationFallback(() => deleteCategory(slug));
   if (result.success) revalidateCategoryPaths(slug);
   return result;

@@ -34,11 +34,11 @@ export default async function BestCustomersPage({ searchParams }: { searchParams
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[
           { label: "Clientes que já compraram", value: String(buyers.length), sub: `de ${customers.length} cadastrados` },
-          { label: "Compraram mais de uma vez", value: String(repeatBuyers), sub: buyers.length ? `${Math.round((repeatBuyers / buyers.length) * 100)}% voltaram` : "—" },
+          { label: "Compraram mais de uma vez", value: String(repeatBuyers), sub: buyers.length ? `${Math.round((repeatBuyers / buyers.length) * 100)}% voltaram` : "sem compradores" },
           { label: "Total vendido a eles", value: formatPrice(totalRevenue), sub: "soma de todas as compras" },
           {
             label: "10 melhores clientes",
-            value: totalRevenue > 0 ? `${Math.round((topTenRevenue / totalRevenue) * 100)}%` : "—",
+            value: totalRevenue > 0 ? `${Math.round((topTenRevenue / totalRevenue) * 100)}%` : "0%",
             sub: `${formatPrice(topTenRevenue)} do total`,
           },
         ].map((kpi) => (
@@ -103,7 +103,7 @@ export default async function BestCustomersPage({ searchParams }: { searchParams
                     <td className={`px-3 py-3 text-right ${by === "quantidade" ? "font-semibold" : ""}`}>{customer.metrics.orderCount}</td>
                     <td className={`px-3 py-3 text-right ${by === "valor" ? "font-semibold" : ""}`}>{formatPrice(customer.metrics.totalSpent)}</td>
                     <td className="px-3 py-3 text-right text-graphite">{formatPrice(customer.metrics.averageTicket)}</td>
-                    <td className="px-3 py-3 text-graphite">{customer.metrics.lastOrderAt ? formatStoreDate(customer.metrics.lastOrderAt) : "—"}</td>
+                    <td className="px-3 py-3 text-graphite">{customer.metrics.lastOrderAt ? formatStoreDate(customer.metrics.lastOrderAt) : "Sem compras"}</td>
                     <td className="px-4 py-3">
                       {inactive ? <StatusBadge tone="warning">Parado</StatusBadge> : <StatusBadge tone="success">Ativo</StatusBadge>}
                     </td>

@@ -13,7 +13,7 @@ export const metadata: Metadata = pageMeta({
 });
 
 export default async function ContatoPage() {
-  // TODO(fase DB): remove o fallback quando a Fazaê tiver o próprio banco — hoje a leitura real falharia sem Supabase configurado.
+  // TODO(fase DB): remove o fallback quando a Fazaê tiver o próprio banco, hoje a leitura real falharia sem Supabase configurado.
   const { whatsappNumber } = await withReadFallback(() => getSettings(), {
     freeShippingThreshold: 299.9,
     whatsappNumber: DEFAULT_WHATSAPP_NUMBER,

@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 
 export default async function ContaPage() {
   const session = await auth();
-  // TODO(fase DB): remove o fallback quando a Fazaê tiver o próprio banco — hoje a leitura real falharia sem Supabase configurado.
+  // TODO(fase DB): remove o fallback quando a Fazaê tiver o próprio banco, hoje a leitura real falharia sem Supabase configurado.
   const user = session?.user?.email
     ? await withReadFallback(() => findUserByEmail(session.user!.email!), undefined)
     : undefined;

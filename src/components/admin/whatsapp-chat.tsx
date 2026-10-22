@@ -32,7 +32,7 @@ const MEDIA_TEXT: Record<string, string> = {
 };
 
 function MediaBlock({ type, url }: { type: string; url: string | null }) {
-  if (!url) return <p className="mb-1 text-xs italic text-graphite">[{MEDIA_TEXT[type] ?? "arquivo"} — abra no WhatsApp para ver]</p>;
+  if (!url) return <p className="mb-1 text-xs italic text-graphite">[{MEDIA_TEXT[type] ?? "arquivo"}: abra no WhatsApp para ver]</p>;
   if (type === "image" || type === "sticker") {
     return (
       <a href={url} target="_blank" rel="noopener noreferrer" className="mb-1 block">

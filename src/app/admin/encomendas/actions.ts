@@ -34,7 +34,7 @@ export async function updateCustomOrderRequestAction(
     return { success: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
 
-  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco — hoje a escrita real falharia sem Supabase configurado.
+  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco, hoje a escrita real falharia sem Supabase configurado.
   return withMutationFallback(async () => {
     const updated = await updateCustomOrderRequest(id, {
       status: parsed.data.status,
@@ -107,8 +107,8 @@ export async function createManualEncomendaAction(input: ManualEncomendaInput): 
           productSlug: `avulso-${slugify(data.description).slice(0, 60) || "item"}`,
           name: data.description,
           categoryName: "Avulso",
-          material: "—",
-          color: "—",
+          material: "Sob medida",
+          color: "A combinar",
           quantity: data.quantity,
           price: data.unitPrice,
         },

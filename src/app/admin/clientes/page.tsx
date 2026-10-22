@@ -102,7 +102,7 @@ export default async function AdminCustomersPage({
                   </td>
                   <td className="px-4 py-3">
                     {customer.tags.length === 0 ? (
-                      <span className="text-graphite">—</span>
+                      <span className="text-graphite">Sem etiquetas</span>
                     ) : (
                       <div className="flex flex-wrap gap-1.5">
                         {customer.tags.map((tag) => (
@@ -113,7 +113,7 @@ export default async function AdminCustomersPage({
                   </td>
                   <td className="px-4 py-3 text-right">{customer.metrics.orderCount}</td>
                   <td className="px-4 py-3 text-right">{formatPrice(customer.metrics.totalSpent)}</td>
-                  <td className="px-4 py-3 text-graphite">{customer.metrics.lastOrderAt ? formatStoreDate(customer.metrics.lastOrderAt) : "—"}</td>
+                  <td className="px-4 py-3 text-graphite">{customer.metrics.lastOrderAt ? formatStoreDate(customer.metrics.lastOrderAt) : "Sem compras"}</td>
                   <td className="px-4 py-3">
                     {customer.metrics.orderCount === 0 ? (
                       <StatusBadge>Ainda não comprou</StatusBadge>

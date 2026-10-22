@@ -83,7 +83,7 @@ function contentForStatus(order: Order): StatusEmailContent | null {
 }
 
 /**
- * Sends a "seu pedido mudou de status" e-mail — only for statuses a customer
+ * Sends a "seu pedido mudou de status" e-mail, only for statuses a customer
  * actually needs to hear about (see contentForStatus), only for online
  * orders (manual/presencial/whatsapp sales have no userEmail), and only when
  * the status actually changed, so re-saving the same status in the admin

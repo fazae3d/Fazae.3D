@@ -15,7 +15,7 @@ export function CouponForm() {
     if (!code.trim()) return;
     setLoading(true);
     setMessage(null);
-    // Always clears the loading state, even if the action itself throws —
+    // Always clears the loading state, even if the action itself throws
     // without this, an unexpected error left the button disabled forever.
     try {
       const result = await applyCouponAction(code.trim(), subtotal);

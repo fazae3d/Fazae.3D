@@ -2,10 +2,13 @@
 
 import { useEffect } from "react";
 
+/** Textos que o painel mostra no lugar de um valor que não existe: na ordenação, ficam sempre no começo. */
+const EMPTY_CELLS = new Set(["Sem compras", "Sem data", "Sem horário", "Sem etiquetas", "Sem taxa", "Sem dados", "Sem saldo", "Sem texto", "Não informada", "Não informado"]);
+
 /** Valor comparável de uma célula: dinheiro, número pt-BR, data dd/mm/aaaa ou texto. */
 function cellValue(text: string): number | string {
   const t = text.trim();
-  if (!t || t === "—") return Number.NEGATIVE_INFINITY;
+  if (!t || EMPTY_CELLS.has(t)) return Number.NEGATIVE_INFINITY;
   const money = t.match(/^-?\s?R\$\s?(-?[\d.]+,\d{2})/);
   if (money) return Number(money[1].replace(/\./g, "").replace(",", "."));
   if (/^-?[\d.]+(,\d+)?%?$/.test(t)) return Number(t.replace("%", "").replace(/\./g, "").replace(",", "."));

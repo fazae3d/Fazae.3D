@@ -22,7 +22,7 @@ import { fallbackProducts } from "@/server/demo-fallback";
 import { getPublishedReviews, getReviewStats } from "@/server/repositories/review-repository";
 
 export async function generateStaticParams() {
-  // TODO(fase DB): remove o fallback quando a Fazaê tiver o próprio banco — hoje a leitura real falharia sem Supabase configurado.
+  // TODO(fase DB): remove o fallback quando a Fazaê tiver o próprio banco, hoje a leitura real falharia sem Supabase configurado.
   const products = await withReadFallback(() => getAllProducts(), fallbackProducts);
   return products.map((product) => ({ slug: product.slug }));
 }
@@ -42,7 +42,7 @@ export async function generateMetadata({
   if (flat.length > 155) {
     const cut = flat.slice(0, 155);
     const sentenceEnd = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("! "), cut.lastIndexOf("? "));
-    description = sentenceEnd > 70 ? cut.slice(0, sentenceEnd + 1) : `${cut.slice(0, cut.lastIndexOf(" ")).replace(/[,;:\-–]$/, "")}.`;
+    description = sentenceEnd > 70 ? cut.slice(0, sentenceEnd + 1) : `${cut.slice(0, cut.lastIndexOf(" ")).replace(/[,;:\-]$/, "")}.`;
   }
   const image = product.images?.[0];
   return {

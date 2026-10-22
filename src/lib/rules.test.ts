@@ -475,7 +475,7 @@ describe("cadências de WhatsApp", () => {
 describe("tempo relativo da fila", () => {
   const now = new Date("2026-10-22T12:00:00Z");
   it("descreve quanto falta", () => {
-    expect(relativeFromNow(null, now)).toBe("—");
+    expect(relativeFromNow(null, now)).toBe("Sem horário");
     expect(relativeFromNow("2026-10-22T11:00:00Z", now)).toBe("agora");
     expect(relativeFromNow("2026-10-22T12:25:00Z", now)).toBe("em 25 min");
     expect(relativeFromNow("2026-10-22T15:00:00Z", now)).toBe("em 3 h");
@@ -489,7 +489,7 @@ describe("regras de envio: agenda, público e repetição", () => {
     const seg = { sendDays: [1, 3, 5], windowStartHour: null, windowEndHour: null };
     expect(isWithinSchedule(new Date("2026-10-21T13:00:00Z"), seg, defaults)).toBe(true); // quarta 10h
     expect(isWithinSchedule(new Date("2026-10-20T13:00:00Z"), seg, defaults)).toBe(false); // terça
-    expect(isWithinSchedule(new Date("2026-10-21T13:00:00Z"), { ...seg, windowStartHour: 14, windowEndHour: 16 }, defaults)).toBe(false); // 10h fora de 14–16
+    expect(isWithinSchedule(new Date("2026-10-21T13:00:00Z"), { ...seg, windowStartHour: 14, windowEndHour: 16 }, defaults)).toBe(false); // 10h fora de 14 a 16
     expect(isWithinSchedule(new Date("2026-10-25T15:00:00Z"), { sendDays: [0], windowStartHour: null, windowEndHour: null }, defaults)).toBe(true); // domingo liberado
   });
   it("normaliza dias e horário", () => {
@@ -607,6 +607,6 @@ describe("resultados do WhatsApp", () => {
     expect(r.response.medianMinutes).toBe(30);
     expect(formatDuration(30)).toBe("30 min");
     expect(formatDuration(90)).toBe("1,5 h");
-    expect(formatDuration(null)).toBe("—");
+    expect(formatDuration(null)).toBe("Sem dados");
   });
 });

@@ -21,7 +21,7 @@ function inputClass(hasError?: boolean) {
   return `border bg-transparent px-3 py-2 text-base outline-none focus:border-petrol sm:text-sm ${hasError ? "border-red-500" : "border-mist"}`;
 }
 
-/** "Lançar como venda" — same data the manual sale form asks for, but the single sale line comes from the production item. */
+/** "Lançar como venda", same data the manual sale form asks for, but the single sale line comes from the production item. */
 export function ProductionSaleDialog({
   item,
   product,

@@ -18,10 +18,10 @@ export async function checkLocalDeliveryAction(destinationCep: string): Promise<
 }
 
 /**
- * Shared by the PDP shipping widget and the checkout delivery step — resolves
+ * Shared by the PDP shipping widget and the checkout delivery step, resolves
  * origin CEP + product weight/dimensions/price server-side (never trusted
  * from the client) and asks Melhor Envio for real quotes. An empty array
- * means "fall back to the flat rate table", not an error — callers decide
+ * means "fall back to the flat rate table", not an error, callers decide
  * what to render, this action never throws.
  */
 export async function quoteShippingAction(

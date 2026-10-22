@@ -4,7 +4,7 @@ import { getSettings } from "@/server/repositories/settings-repository";
 import { withReadFallback } from "@/lib/db-fallback";
 
 /**
- * Brand colors mirrored from src/app/globals.css (@theme tokens) — email
+ * Brand colors mirrored from src/app/globals.css (@theme tokens), email
  * HTML can't reference CSS custom properties reliably across clients, so
  * these are the same hex values copy-pasted, not re-derived.
  */
@@ -21,7 +21,7 @@ const COLORS = {
 export type EmailAction = { label: string; url: string };
 
 /**
- * WhatsApp link for the "Fale conosco" header button — reads the real
+ * WhatsApp link for the "Fale conosco" header button, reads the real
  * number from Settings (same source /admin/configuracoes edits), same
  * fallback pattern as footer.tsx/whatsapp-float-button.tsx. Call once per
  * e-mail send and pass the result in as `contactUrl`.
@@ -53,12 +53,12 @@ export function renderEmailLayout({
   /** Hidden preview text shown in the inbox list, before the e-mail is opened. */
   preheader: string;
   eyebrow: string;
-  /** Friendly opening line, e.g. "E aí, Marina!" — rendered above the heading. */
+  /** Friendly opening line, e.g. "E aí, Marina!", rendered above the heading. */
   greeting: string;
   heading: string;
   bodyHtml: string;
   action?: EmailAction;
-  /** WhatsApp link for the header's "Fale conosco" button — get it from getEmailContactUrl(). */
+  /** WhatsApp link for the header's "Fale conosco" button, get it from getEmailContactUrl(). */
   contactUrl: string;
 }): string {
   const actionHtml = action
@@ -166,7 +166,7 @@ export function renderOrderItemsTable(
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:18px 0;background-color:${COLORS.card};border-radius:10px;overflow:hidden;">${rows}</table>`;
 }
 
-/** Highlighted total row — a small colored strip that makes the number the first thing the eye lands on. */
+/** Highlighted total row, a small colored strip that makes the number the first thing the eye lands on. */
 export function renderTotalHighlight(label: string, value: string): string {
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:4px 0 0;background-color:${COLORS.paper};border-radius:10px;border-left:4px solid ${COLORS.petrol};">
     <tr>

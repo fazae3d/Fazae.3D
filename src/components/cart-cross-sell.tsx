@@ -5,7 +5,7 @@ import { useCart } from "@/contexts/cart-context";
 import { useProductSnapshot } from "@/hooks/use-product-snapshot";
 import { ProductGrid } from "./product-grid";
 
-/** Suggests products from the same category as what's already in the cart — shown at the moment of highest purchase intent, not only when the cart is empty. */
+/** Suggests products from the same category as what's already in the cart, shown at the moment of highest purchase intent, not only when the cart is empty. */
 export function CartCrossSell({ limit = 4 }: { limit?: number }) {
   const { lines, getCartProduct } = useCart();
   const { products, loaded } = useProductSnapshot();

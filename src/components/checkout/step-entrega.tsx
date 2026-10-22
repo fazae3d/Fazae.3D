@@ -81,7 +81,7 @@ export function StepEntrega({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [destinationCep]);
 
-  // `option.cost` always holds the true price — a free-shipping coupon only
+  // `option.cost` always holds the true price, a free-shipping coupon only
   // changes what's *displayed*/charged at the top level (checkout/page.tsx),
   // never gets baked into the option itself. That way toggling the coupon
   // after a quote was already picked can't leave a stale zeroed-out price behind.

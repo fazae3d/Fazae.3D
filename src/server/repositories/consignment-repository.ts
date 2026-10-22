@@ -149,7 +149,7 @@ export async function deliverConsignmentItem(input: {
   return toConsignmentItem(upserted);
 }
 
-/** Baixa do saldo atual (venda confirmada e/ou devolução) — `delta` deve ser negativo. */
+/** Baixa do saldo atual (venda confirmada e/ou devolução), `delta` deve ser negativo. */
 export async function adjustConsignmentItemQuantity(
   consigneeId: string,
   productSlug: string,

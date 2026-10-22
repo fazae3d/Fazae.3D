@@ -24,7 +24,7 @@ const ITEMS = [
   },
 ];
 
-/** Generic, non-trademarked glyphs — a stand-in for real payment-brand logos. */
+/** Generic, non-trademarked glyphs, a stand-in for real payment-brand logos. */
 export function PaymentIcons({ className = "" }: { className?: string }) {
   return (
     <div className={`flex items-center gap-3 ${className}`}>

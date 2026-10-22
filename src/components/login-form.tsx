@@ -25,7 +25,7 @@ export function LoginForm({ callbackUrl: rawCallbackUrl }: { callbackUrl: string
   const onSubmit = async (data: LoginInput) => {
     setFormError(null);
     // signIn() can reject outright (network hiccup, etc.) instead of resolving
-    // with { error } — without this catch, a failed login left the form
+    // with { error }, without this catch, a failed login left the form
     // showing nothing at all instead of a message.
     try {
       const result = await signIn("credentials", { ...data, redirect: false });

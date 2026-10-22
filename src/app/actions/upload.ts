@@ -47,7 +47,7 @@ export async function uploadImageAction(formData: FormData): Promise<UploadImage
   const filename = `${randomUUID()}.${extension}`;
   const buffer = Buffer.from(await file.arrayBuffer());
 
-  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco — hoje o upload real falharia sem Supabase configurado.
+  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco, hoje o upload real falharia sem Supabase configurado.
   return withMutationFallback(async () => {
     const { error } = await supabase.storage.from(BUCKET).upload(filename, buffer, {
       contentType: file.type,

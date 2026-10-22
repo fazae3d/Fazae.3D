@@ -59,7 +59,7 @@ export default async function CadenciasPage() {
               <ol className="mt-3 space-y-1 text-xs text-graphite">
                 {c.steps.map((s, i) => (
                   <li key={i} className="truncate">
-                    <span className="text-ink">{i + 1}.</span> {describeDelay(s.delayHours, i === 0)} — {s.text}
+                    <span className="text-ink">{i + 1}.</span> {describeDelay(s.delayHours, i === 0)}: {s.text}
                   </li>
                 ))}
               </ol>

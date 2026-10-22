@@ -174,7 +174,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
                     <td className="px-4 py-3 font-medium">{CHANNEL_LABELS[row.channel]}</td>
                     <td className="px-4 py-3 text-right">{row.count}</td>
                     <td className="px-4 py-3 text-right">{formatPrice(row.revenue)}</td>
-                    <td className="px-4 py-3 text-right text-graphite">{row.fees > 0 ? formatPrice(row.fees) : "—"}</td>
+                    <td className="px-4 py-3 text-right text-graphite">{row.fees > 0 ? formatPrice(row.fees) : "Sem taxa"}</td>
                     <td className="px-4 py-3 text-right font-medium">{formatPrice(row.net)}</td>
                     <td className="px-4 py-3 text-right text-graphite">{formatPrice(row.averageTicket)}</td>
                   </tr>

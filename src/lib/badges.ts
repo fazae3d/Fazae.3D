@@ -14,7 +14,7 @@ export function isMadeToOrder(product: Product) {
 }
 
 /**
- * A card shows at most one badge — stacking "Novo" + "Best Seller" +
+ * A card shows at most one badge, stacking "Novo" + "Best Seller" +
  * "Oferta" on the same corner reads as noise, not signal. Priority order:
  * esgotado > best seller > novidade > oferta > estoque baixo > sob encomenda.
  */

@@ -5,13 +5,13 @@
  * near-black with a lime accent), so unlike the Fluxo FLX original this
  * flips ink/paper to be the DEFAULT background/foreground, not just an
  * accent-section pairing. Contrast is still checked against WCAG 2.1's
- * 4.5:1 (normal text) / 3:1 (large text) minimums — re-check this table
+ * 4.5:1 (normal text) / 3:1 (large text) minimums, re-check this table
  * if any of the six tokens below changes.
  *
  *   paper   (#F4F4F0) on ink    (#111111)  → 17.9:1  (default body text/headings)
  *   graphite(#A6A6A0) on ink    (#111111)  →  8.6:1  (labels, secondary text)
  *   petrol  (#B6FF00) on ink    (#111111)  → 16.0:1  (links, eyebrow labels)
- *   ink     (#111111) on petrol (#B6FF00)  → 16.0:1  (primary buttons — dark text on lime)
+ *   ink     (#111111) on petrol (#B6FF00)  → 16.0:1  (primary buttons, dark text on lime)
  *   ink     (#111111) on paper  (#F4F4F0)  → 17.9:1  (light-surface cards/inputs)
  *   sand    (#4D6B32) on paper  (#F4F4F0)  →  4.6:1  (olive accent on light surfaces)
  *
@@ -32,7 +32,7 @@
    * The site is dark-first end to end, but without this, native form
    * controls (select's own dropdown popup, date/time pickers, checkboxes)
    * ignore all of the above and render with the browser's light-mode
-   * chrome regardless — white popup, black text — clashing with the dark
+   * chrome regardless, white popup, black text, clashing with the dark
    * page around it. The admin panel's own light/dark toggle re-declares
    * this locally (see [data-admin-theme] below) to override it per-mode.
    */
@@ -138,7 +138,7 @@ body {
   font-weight: 500;
 }
 
-/* Cantos arredondados em tudo que tem moldura completa — dentro de @layer components para que
+/* Cantos arredondados em tudo que tem moldura completa, dentro de @layer components para que
    utilitários explícitos (rounded-full, rounded-lg...) continuem mandando. */
 @layer components {
   #admin-shell .border:not(table, tr, td, th, hr) {
@@ -204,7 +204,7 @@ body {
 
 /*
  * Without this, some mobile browsers wait ~300ms after a tap on interactive
- * elements to rule out a double-tap-to-zoom gesture before firing the click —
+ * elements to rule out a double-tap-to-zoom gesture before firing the click
  * on a flaky connection or mid-hydration that delay can make a tap feel like
  * it didn't register at all.
  */

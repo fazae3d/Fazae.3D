@@ -188,7 +188,7 @@ export function WhatsAppLeadPanel({
                 <span className="min-w-0 truncate">
                   {e.cadenceName}{" "}
                   <span className="text-graphite">
-                    {e.status === "ativa" ? `· ${e.stepIndex}/${e.totalSteps}` : e.status === "concluida" ? "· concluída" : `· parada (${e.stopReason ?? "—"})`}
+                    {e.status === "ativa" ? `· ${e.stepIndex}/${e.totalSteps}` : e.status === "concluida" ? "· concluída" : `· parada (${e.stopReason ?? "sem motivo"})`}
                   </span>
                 </span>
                 {e.status === "ativa" ? (

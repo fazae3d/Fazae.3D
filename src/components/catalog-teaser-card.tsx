@@ -13,7 +13,7 @@ type CatalogTeaserCardProps = {
 };
 
 /**
- * Static teaser card for the homepage catálogo section — not backed by the
+ * Static teaser card for the homepage catálogo section, not backed by the
  * Product model yet (that lands with the real Fazaê database/catalog).
  */
 export function CatalogTeaserCard({ href, slug, category, title, tone, photo }: CatalogTeaserCardProps) {

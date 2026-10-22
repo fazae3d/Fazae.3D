@@ -40,7 +40,7 @@ export async function getReviewStats(productSlug: string): Promise<ReviewStats> 
   };
 }
 
-/** Used to tell a "already reviewed" state apart from a fresh form — regardless of hidden. */
+/** Used to tell a "already reviewed" state apart from a fresh form, regardless of hidden. */
 export async function getReviewForOrderProduct(orderId: string, productSlug: string): Promise<Review | undefined> {
   const row = await db.review.findUnique({ where: { orderId_productSlug: { orderId, productSlug } } });
   return row ? toReview(row) : undefined;
@@ -69,7 +69,7 @@ export async function createReview(input: CreateReviewInput): Promise<CreateRevi
     });
     return { success: true, review: toReview(created) };
   } catch (error) {
-    // Unique constraint on (orderId, productSlug) — the customer already reviewed this item.
+    // Unique constraint on (orderId, productSlug), the customer already reviewed this item.
     if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
       return { success: false, error: "Você já avaliou este produto." };
     }

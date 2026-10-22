@@ -6,7 +6,7 @@ import { formatDocument } from "@/lib/cpf";
 import { withReadFallback } from "@/lib/db-fallback";
 
 function formatDate(iso?: string) {
-  if (!iso) return "—";
+  if (!iso) return "Sem data";
   return new Date(iso).toLocaleDateString("pt-BR", { timeZone: "UTC" });
 }
 
@@ -78,7 +78,7 @@ export default async function AdminConsignmentPage() {
                     </td>
                     <td className="px-4 py-3 text-graphite">{formatDocument(c.document)}</td>
                     <td className="px-4 py-3 text-graphite">{c.phone}</td>
-                    <td className="px-4 py-3 text-graphite">{c.city ?? "—"}</td>
+                    <td className="px-4 py-3 text-graphite">{c.city ?? "Não informada"}</td>
                     <td className="px-4 py-3">{c.totalItems}</td>
                     <td className="px-4 py-3">{formatPrice(c.totalValueOpen)}</td>
                     <td className={`px-4 py-3 ${overdue ? "font-medium text-red-600" : "text-graphite"}`}>

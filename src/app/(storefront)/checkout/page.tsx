@@ -44,8 +44,8 @@ export default function CheckoutPage() {
   const [orderError, setOrderError] = useState<string | null>(null);
 
   // Re-applied live (not just captured once on the "entrega" step) so a coupon
-  // applied or removed afterward — the coupon form stays reachable from every
-  // step's sidebar — is reflected immediately, instead of the displayed total
+  // applied or removed afterward, the coupon form stays reachable from every
+  // step's sidebar, is reflected immediately, instead of the displayed total
   // silently drifting from what processCheckoutPaymentAction ends up charging.
   // `shipping.cost` itself is always the true quoted/flat price (never
   // pre-zeroed), so this is the only place the coupon override is applied.

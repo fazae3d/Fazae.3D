@@ -121,7 +121,7 @@ export default async function ResultadosPage() {
                   {c.steps.map((s) => (
                     <li key={s.stepIndex} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
                       <span className="min-w-0 flex-1 truncate">
-                        <span className="text-graphite">Mensagem {s.stepIndex + 1}:</span> {stepText(c.cadenceId, s.stepIndex).slice(0, 70) || "—"}
+                        <span className="text-graphite">Mensagem {s.stepIndex + 1}:</span> {stepText(c.cadenceId, s.stepIndex).slice(0, 70) || "Sem texto"}
                       </span>
                       <span className="shrink-0 text-xs text-graphite">
                         {s.sent} enviadas · lidas {pct(s.read, s.sent)}% · respostas {pct(s.replied, s.sent)}%

@@ -19,7 +19,7 @@ export async function updateProfileAction(input: unknown): Promise<UpdateProfile
     return { success: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
 
-  // TODO(fase DB): remove o fallback quando a Fazaê tiver o próprio banco — hoje a escrita real falharia sem Supabase configurado.
+  // TODO(fase DB): remove o fallback quando a Fazaê tiver o próprio banco, hoje a escrita real falharia sem Supabase configurado.
   const result = await withMutationFallback(async () => {
     const user = await updateUserName(session.user!.email!, parsed.data.name);
     if (!user) return { success: false as const, error: "Usuário não encontrado." };

@@ -16,7 +16,7 @@ export type SubmitReviewResult = { success: true; review: Review } | { success: 
  * Same "prove you own this order" pattern as trackOrderAction: logged-in
  * users are authorized by session, guests must supply the e-mail the order
  * was placed with. On top of that, review submission additionally requires
- * the order to actually contain this product and be marked "Entregue" —
+ * the order to actually contain this product and be marked "Entregue"
  * that's the whole point of a verified-purchase review.
  */
 export async function submitReviewAction(input: {
@@ -73,7 +73,7 @@ export async function submitReviewAction(input: {
 }
 
 /**
- * Read-only — no e-mail check. Whoever renders the CTA that calls this
+ * Read-only, no e-mail check. Whoever renders the CTA that calls this
  * already proved ownership of the order (via trackOrderAction or a logged-in
  * session) before this component ever mounted.
  */

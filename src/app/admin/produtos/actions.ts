@@ -77,7 +77,7 @@ async function persistMaterialUsages(slug: string, usages: ProductFormInput["mat
       (usages ?? []).map((usage) => ({ rawMaterialId: usage.rawMaterialId, quantity: usage.quantity })),
     );
   } catch {
-    // Sem banco configurado (fase de fallback) ou erro pontual — ignorado de propósito.
+    // Sem banco configurado (fase de fallback) ou erro pontual, ignorado de propósito.
   }
 }
 
@@ -90,7 +90,7 @@ export async function createProductAction(input: ProductFormInput): Promise<Prod
     return { success: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
 
-  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco — hoje a escrita real falharia sem Supabase configurado.
+  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco, hoje a escrita real falharia sem Supabase configurado.
   const result = await withMutationFallback(() => createProduct(toStoredProduct(parsed.data)));
   if (result.success) {
     await persistMaterialUsages(result.product.slug, parsed.data.materialUsages);
@@ -114,7 +114,7 @@ export async function updateProductAction(slug: string, input: ProductFormInput)
   }
 
   const stored = toStoredProduct(parsed.data);
-  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco — hoje a escrita real falharia sem Supabase configurado.
+  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco, hoje a escrita real falharia sem Supabase configurado.
   const result = await withMutationFallback(() => updateProduct(slug, {
     name: stored.name,
     categorySlug: stored.categorySlug,
@@ -151,7 +151,7 @@ export async function deleteProductAction(slug: string, categorySlug: string): P
   if (!(await requireAdmin())) {
     return { success: false, error: "Acesso restrito ao administrador." };
   }
-  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco — hoje a escrita real falharia sem Supabase configurado.
+  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco, hoje a escrita real falharia sem Supabase configurado.
   const result = await withMutationFallback(() => deleteProduct(slug));
   if (result.success) await logAdminAction("produto.excluir", "Product", slug);
   if (result.success) revalidateCatalogPaths(slug, categorySlug);

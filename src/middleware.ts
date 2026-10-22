@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import { authConfig } from "@/auth.config";
 
 // Deliberately built from the edge-safe config, not the full one exported
-// by @/auth — that one pulls in the Credentials provider, which pulls in
+// by @/auth, that one pulls in the Credentials provider, which pulls in
 // bcrypt + Prisma, which the Edge Runtime middleware runs in can't load.
 const { auth } = NextAuth(authConfig);
 
@@ -22,7 +22,7 @@ export default auth((req) => {
     return Response.redirect(loginUrl);
   }
 
-  // Being logged in is necessary but not sufficient for /admin — a
+  // Being logged in is necessary but not sufficient for /admin, a
   // customer session must never reach it, even if they guess the URL.
   if (pathname.startsWith("/admin") && req.auth?.user?.role !== "admin") {
     return Response.redirect(new URL("/", req.nextUrl.origin));

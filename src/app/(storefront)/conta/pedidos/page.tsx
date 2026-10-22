@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 
 export default async function PedidosPage() {
   const session = await auth();
-  // TODO(fase DB): remove o fallback quando a Fazaê tiver o próprio banco — hoje a leitura real falharia sem Supabase configurado.
+  // TODO(fase DB): remove o fallback quando a Fazaê tiver o próprio banco, hoje a leitura real falharia sem Supabase configurado.
   const email = session?.user?.email;
   // Conta sem e-mail confirmado não vê pedidos: quem cadastra o e-mail de outra pessoa não pode ler o histórico dela.
   const verified = email ? await withReadFallback(() => isEmailVerified(email), false) : false;

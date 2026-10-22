@@ -5,7 +5,7 @@ import type { OrderItem } from "@/server/types";
 export type CartItemLine = { productSlug: string; material: string; color: string; quantity: number; scale?: string };
 
 /**
- * Fetches the live catalog product for each cart line, keyed by slug — the
+ * Fetches the live catalog product for each cart line, keyed by slug, the
  * one place both order creation (which also needs stock/weight/dimensions
  * for the out-of-stock check and shipping quote) and abandoned-cart capture
  * (which only needs name/price) go to resolve a cart against the catalog.
@@ -19,7 +19,7 @@ export async function fetchProductsForLines(lines: CartItemLine[]): Promise<Map<
 
 /**
  * Resolves cart lines (slug/material/color/quantity, all the client ever
- * sends) against the live catalog — price and name are never trusted from
+ * sends) against the live catalog, price and name are never trusted from
  * the client. A line whose product no longer exists or has no fixed price
  * ("sob consulta") is silently dropped, same as a discontinued product
  * reaching checkout. Shared by order creation (checkout/actions.ts) and

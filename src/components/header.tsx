@@ -125,11 +125,11 @@ export function Header() {
   const drawerRef = useRef<HTMLDivElement>(null);
 
   // The portal below only exists client-side (document isn't available
-  // during SSR) — gating it on a state flip that happens in an effect,
+  // during SSR), gating it on a state flip that happens in an effect,
   // rather than reading `typeof document` directly during render, keeps
   // the very first client render identical to the server-rendered HTML.
   // Reading `typeof document` inline would make that first client render
-  // already include the portal, which the server never sent — a hydration
+  // already include the portal, which the server never sent, a hydration
   // mismatch (React discards and rebuilds the tree, only a beat slower).
   useEffect(() => {
     setMounted(true);
@@ -266,7 +266,7 @@ export function Header() {
         </div>
       </header>
 
-      {/* Portaled to <body> instead of nested inside <header> — a `position:
+      {/* Portaled to <body> instead of nested inside <header>, a `position:
           sticky` ancestor that has activated (scrolled) can trap `position:
           fixed` descendants inside its own box on mobile Safari instead of
           letting them cover the viewport, which is exactly what made this

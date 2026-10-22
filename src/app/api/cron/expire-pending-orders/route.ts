@@ -14,7 +14,7 @@ function isAuthorized(request: NextRequest): boolean {
 }
 
 /**
- * Cancela pedidos online que ficaram sem pagamento e devolve o estoque reservado — sem isso, um Pix
+ * Cancela pedidos online que ficaram sem pagamento e devolve o estoque reservado, sem isso, um Pix
  * nunca pago seguraria a peça para sempre. Antes de cancelar, confere no Mercado Pago: se o pagamento
  * na verdade foi aprovado (webhook perdido), o pedido é marcado como pago em vez de cancelado.
  */

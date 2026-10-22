@@ -22,7 +22,7 @@ const TRACK_LIMIT = 15;
 const TRACK_WINDOW_MS = 10 * 60 * 1000;
 
 /**
- * Logged-in users (with a confirmed e-mail) are authorized by session alone. Guests (no session —
+ * Logged-in users (with a confirmed e-mail) are authorized by session alone. Guests (no session
  * checkout doesn't require an account) must additionally provide the e-mail the order was placed
  * with, since there's no other credential to check against. Limited per IP so the order code +
  * e-mail pair can't be brute-forced.
@@ -41,7 +41,7 @@ export async function trackOrderAction(orderId: string, email?: string): Promise
   const orderEmail = order.userEmail?.toLowerCase();
 
   // A manual (in-person/WhatsApp) sale has no e-mail on file, so it can
-  // never be matched here — there's no credential a guest or session could
+  // never be matched here, there's no credential a guest or session could
   // supply to prove ownership of it.
   const sessionOwns = Boolean(sessionEmail) && sessionEmail === orderEmail && (await isEmailVerified(sessionEmail!));
   const authorized = Boolean(orderEmail) && (sessionOwns || providedEmail === orderEmail);

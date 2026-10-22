@@ -1,7 +1,7 @@
 import type { Product } from "@/lib/types";
 import { ProductPhoto } from "./product-photo";
 
-/** Small cart/checkout thumbnail — real photo when available, a neutral placeholder otherwise. */
+/** Small cart/checkout thumbnail, real photo when available, a neutral placeholder otherwise. */
 export function ProductThumb({
   product,
   className = "",

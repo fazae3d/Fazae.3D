@@ -17,7 +17,7 @@ export async function contactAction(input: unknown): Promise<ContactResult> {
 
   const storeEmail = process.env.STORE_CONTACT_EMAIL;
   if (!storeEmail) {
-    console.error("[contato] STORE_CONTACT_EMAIL não configurado — mensagem não entregue");
+    console.error("[contato] STORE_CONTACT_EMAIL não configurado, mensagem não entregue");
     return { success: false, error: "Não foi possível enviar sua mensagem agora. Fale com a gente pelo WhatsApp." };
   }
 

@@ -35,7 +35,7 @@ export async function updateCategory(slug: string, input: Partial<Omit<Category,
 export type DeleteCategoryResult = { success: true } | { success: false; error: string };
 
 export async function deleteCategory(slug: string): Promise<DeleteCategoryResult> {
-  // A category backing live products can't just vanish — every product
+  // A category backing live products can't just vanish, every product
   // would point at a slug nothing resolves, breaking every card that
   // reads categoryName. Reassign or remove those products first.
   const linkedCount = await db.product.count({ where: { categorySlug: slug } });

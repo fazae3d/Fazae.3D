@@ -126,7 +126,7 @@ export function analyzeResults(conversations: ResultConversation[], messages: Re
 
 /** "12 min", "3,5 h", "2 dias". */
 export function formatDuration(minutes: number | null) {
-  if (minutes === null) return "—";
+  if (minutes === null) return "Sem dados";
   if (minutes < 60) return `${Math.round(minutes)} min`;
   const hours = minutes / 60;
   if (hours < 24) return `${hours.toFixed(1).replace(".", ",").replace(",0", "")} h`;

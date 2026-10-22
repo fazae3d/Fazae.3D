@@ -45,7 +45,7 @@ export async function createRawMaterialAction(input: RawMaterialFormInput): Prom
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
-  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco — hoje a escrita real falharia sem Supabase configurado.
+  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco, hoje a escrita real falharia sem Supabase configurado.
   return withMutationFallback(async () => {
     const rawMaterial = await createRawMaterial(toRawMaterialInput(parsed.data));
     revalidateRawMaterialPaths();
@@ -64,7 +64,7 @@ export async function updateRawMaterialAction(
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
-  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco — hoje a escrita real falharia sem Supabase configurado.
+  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco, hoje a escrita real falharia sem Supabase configurado.
   return withMutationFallback(async () => {
     const rawMaterial = await updateRawMaterial(id, toRawMaterialInput(parsed.data));
     if (!rawMaterial) {
@@ -79,7 +79,7 @@ export async function deleteRawMaterialAction(id: string): Promise<DeleteRawMate
   if (!(await requireAdmin())) {
     return { success: false, error: "Acesso restrito ao administrador." };
   }
-  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco — hoje a escrita real falharia sem Supabase configurado.
+  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco, hoje a escrita real falharia sem Supabase configurado.
   const result = await withMutationFallback(() => deleteRawMaterial(id));
   if (result.success) revalidateRawMaterialPaths();
   return result;

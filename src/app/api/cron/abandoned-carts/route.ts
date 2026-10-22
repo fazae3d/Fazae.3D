@@ -26,7 +26,7 @@ const ABANDONED_CART_COUPON = process.env.ABANDONED_CART_COUPON ?? "FAZAE10";
 /**
  * Vercel Cron calls this on the schedule in vercel.json, sending
  * `Authorization: Bearer ${CRON_SECRET}` automatically once that env var is
- * set on the project — see https://vercel.com/docs/cron-jobs/manage-cron-jobs#securing-cron-jobs
+ * set on the project, see https://vercel.com/docs/cron-jobs/manage-cron-jobs#securing-cron-jobs
  */
 function isAuthorized(request: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;

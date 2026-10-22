@@ -3,7 +3,7 @@ import { formatPct, pixPrice } from "@/lib/money";
 import { usePixDiscountPct } from "@/contexts/pix-discount-context";
 
 /**
- * The Pix-discounted price is the headline number across the store — matches
+ * The Pix-discounted price is the headline number across the store, matches
  * how most BR streetwear/e-commerce sites price-anchor on Pix since it's the
  * cheapest way to pay. `price` (card/boleto) and `compareAtPrice` (pre-sale)
  * both show smaller, underneath.

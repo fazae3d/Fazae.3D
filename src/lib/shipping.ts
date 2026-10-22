@@ -12,7 +12,7 @@ export const SHIPPING_OPTIONS: {
 ];
 
 /**
- * Single source of truth for shipping cost — used both for client display
+ * Single source of truth for shipping cost, used both for client display
  * and server-side order totals. `freeShippingThreshold` is passed in
  * rather than read from a constant so it always reflects the live value
  * from /admin/configuracoes, not whatever was baked in at build time.

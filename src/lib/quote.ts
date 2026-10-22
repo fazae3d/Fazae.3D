@@ -101,7 +101,7 @@ export function quoteSavings(quote: Pick<Quote, "subtotal" | "discount" | "freeS
   };
 }
 
-/** Fim do dia (fuso da loja) de "YYYY-MM-DD" — o orçamento vale até as 23h59 desse dia. */
+/** Fim do dia (fuso da loja) de "YYYY-MM-DD", o orçamento vale até as 23h59 desse dia. */
 export function validityEndOfDay(day: string) {
   return new Date(`${day}T23:59:59-03:00`);
 }

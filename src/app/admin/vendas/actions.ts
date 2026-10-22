@@ -31,9 +31,9 @@ export async function createManualSaleAction(input: ManualSaleFormInput): Promis
   }
   const { channel, channelFee, customerName, customerPhone, paymentMethod, status, items, productionPending, shipping } = parsed.data;
 
-  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco — hoje a escrita real falharia sem Supabase configurado.
+  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco, hoje a escrita real falharia sem Supabase configurado.
   const result = await withMutationFallback(async () => {
-    // Resolve every line against the live catalog and re-check stock here —
+    // Resolve every line against the live catalog and re-check stock here
     // the form's own copy of price/name is just a starting point for the
     // admin to edit, never trusted as-is.
     const resolvedItems = [];
@@ -45,8 +45,8 @@ export async function createManualSaleAction(input: ManualSaleFormInput): Promis
           productSlug: `avulso-${slugify(name).slice(0, 60) || "item"}`,
           name,
           categoryName: "Avulso",
-          material: line.material || "—",
-          color: line.color || "—",
+          material: line.material || "Sob medida",
+          color: line.color || "A combinar",
           quantity: line.quantity,
           price: line.price,
         });
@@ -66,8 +66,8 @@ export async function createManualSaleAction(input: ManualSaleFormInput): Promis
         productSlug: product.slug,
         name: product.name,
         categoryName: product.categoryName,
-        material: line.material ?? "—",
-        color: line.color ?? "—",
+        material: line.material ?? "Sob medida",
+        color: line.color ?? "A combinar",
         quantity: line.quantity,
         price: line.price,
       });

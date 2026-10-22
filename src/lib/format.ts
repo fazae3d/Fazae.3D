@@ -1,4 +1,4 @@
-/** First name only — never the full name — for greetings, review authorship, etc. */
+/** First name only, never the full name, for greetings, review authorship, etc. */
 export function firstName(name: string) {
   return name.trim().split(/\s+/)[0] ?? name;
 }

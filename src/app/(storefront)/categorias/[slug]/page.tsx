@@ -49,7 +49,7 @@ export default async function CategoryPage({ params }: PageProps<"/categorias/[s
   const category = await findCategory(slug);
   if (!category) notFound();
 
-  // TODO(fase DB): remove o fallback quando a Fazaê tiver o próprio banco — hoje a leitura real falharia sem Supabase configurado.
+  // TODO(fase DB): remove o fallback quando a Fazaê tiver o próprio banco, hoje a leitura real falharia sem Supabase configurado.
   const products = publicProducts(await withReadFallback(() => getAllProducts(), fallbackProducts));
   const hasItems = products.some((p) => p.categorySlug === category.slug);
   const photo = getCategoryPhoto(category.slug);

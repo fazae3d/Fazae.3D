@@ -34,7 +34,7 @@ export async function signupAction(input: unknown): Promise<SignupResult> {
     return { success: false, error: "Já existe uma conta com esse e-mail." };
   }
 
-  // TODO(fase DB): remove o fallback quando a Fazaê tiver o próprio banco — sem
+  // TODO(fase DB): remove o fallback quando a Fazaê tiver o próprio banco, sem
   // Supabase não há como persistir a nova conta, então o cadastro é recusado
   // com uma mensagem clara em vez de travar com um erro 500.
   try {

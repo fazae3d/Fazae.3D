@@ -20,7 +20,7 @@ export async function updateStockAction(slug: string, stock: number): Promise<Pr
     return { success: false, error: "Informe um número inteiro maior ou igual a zero." };
   }
 
-  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco — hoje a escrita real falharia sem Supabase configurado.
+  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco, hoje a escrita real falharia sem Supabase configurado.
   const result = await withMutationFallback(() => updateProduct(slug, { stock }));
   if (result.success) {
     revalidatePath("/admin/estoque");

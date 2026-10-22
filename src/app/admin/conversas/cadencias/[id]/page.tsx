@@ -19,7 +19,7 @@ const STATUS: Record<string, { label: string; tone: BadgeTone }> = {
 };
 
 function when(iso: string | null) {
-  if (!iso) return "—";
+  if (!iso) return "Sem horário";
   const date = new Date(iso);
   return `${date.toLocaleDateString("pt-BR", { timeZone: STORE_TZ, day: "2-digit", month: "2-digit" })} ${date.toLocaleTimeString("pt-BR", { timeZone: STORE_TZ, hour: "2-digit", minute: "2-digit" })}`;
 }
@@ -117,7 +117,7 @@ export default async function CadenciaPage({ params, searchParams }: { params: P
                     <td className="px-4 py-3 text-graphite">
                       {Math.min(e.stepIndex, e.totalSteps)} de {e.totalSteps} enviadas
                     </td>
-                    <td className="px-4 py-3 text-graphite">{e.status === "ativa" ? when(e.nextRunAt) : "—"}</td>
+                    <td className="px-4 py-3 text-graphite">{e.status === "ativa" ? when(e.nextRunAt) : "Sem horário"}</td>
                     <td className="px-4 py-3 text-right">{e.status === "ativa" ? <StopEnrollmentButton id={e.id} /> : null}</td>
                   </tr>
                 );

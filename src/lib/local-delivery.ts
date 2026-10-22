@@ -1,6 +1,6 @@
 import type { StoreSettings } from "@/server/types";
 
-/** Entrega própria (motoboy) — só para estas cidades do RN. Valores abaixo são o padrão; o painel (Configurações) sobrescreve. */
+/** Entrega própria (motoboy), só para estas cidades do RN. Valores abaixo são o padrão; o painel (Configurações) sobrescreve. */
 export const DEFAULT_LOCAL_DELIVERY_THRESHOLD = 49.9;
 export const DEFAULT_LOCAL_DELIVERY_FEE = 12;
 export const LOCAL_DELIVERY_LABEL = "Entrega em Natal e Parnamirim";

@@ -142,7 +142,7 @@ export async function registerSaleReturnAction(
     if (totalBaixa > item.quantity) {
       return {
         success: false,
-        error: `Saldo atual é de ${item.quantity} unidade(s) — não é possível dar baixa em ${totalBaixa}.`,
+        error: `Saldo atual é de ${item.quantity} unidade(s), não é possível dar baixa em ${totalBaixa}.`,
       };
     }
 

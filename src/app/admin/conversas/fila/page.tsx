@@ -26,7 +26,7 @@ const STORE_TZ = "America/Fortaleza";
 type Tab = "fila" | "enviadas" | "encerradas";
 
 function stamp(iso: string | null) {
-  if (!iso) return "—";
+  if (!iso) return "Sem horário";
   const d = new Date(iso);
   return `${d.toLocaleDateString("pt-BR", { timeZone: STORE_TZ, day: "2-digit", month: "2-digit" })} ${d.toLocaleTimeString("pt-BR", { timeZone: STORE_TZ, hour: "2-digit", minute: "2-digit" })}`;
 }
@@ -181,7 +181,7 @@ export default async function FilaPage({ searchParams }: { searchParams: Promise
                             {item.attempts > 0 ? ` · falhou ${item.attempts}x, tenta de novo` : ""}
                           </p>
                           <p className="truncate text-graphite" title={item.nextText}>
-                            {item.nextText || "—"}
+                            {item.nextText || "Sem texto"}
                           </p>
                         </td>
                         <td className="whitespace-nowrap px-4 py-3">

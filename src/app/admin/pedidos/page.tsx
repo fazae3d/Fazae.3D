@@ -332,7 +332,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
                     {order.shippingMethod ? (
                       <strong className="font-medium text-ink">{order.shippingMethod}</strong>
                     ) : (
-                      "—"
+                      "Não informado"
                     )}{" "}
                     · {order.shipping === 0 ? "Grátis" : formatPrice(order.shipping)}
                   </p>

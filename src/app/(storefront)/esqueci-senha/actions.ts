@@ -22,7 +22,7 @@ export type RequestResetResult = { success: true; resetLink?: string };
 
 /**
  * Always returns success (never reveals whether the e-mail has an
- * account — standard practice to avoid enumeration). `resetLink` is only
+ * account, standard practice to avoid enumeration). `resetLink` is only
  * returned in the response when no e-mail provider is configured, so the
  * dev/demo flow keeps working without RESEND_API_KEY set; once a real
  * provider is configured the link is e-mailed instead and withheld here.

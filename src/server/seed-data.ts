@@ -83,7 +83,7 @@ export function seedMaterials(): Material[] {
   ];
 }
 
-/** All products below are DEMO content for development — swap for real catalog data before launch. */
+/** All products below are DEMO content for development, swap for real catalog data before launch. */
 export function seedProducts(): StoredProduct[] {
   return [
     {

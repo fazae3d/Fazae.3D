@@ -31,7 +31,7 @@ export function Select({
   className?: string;
   placeholder?: string;
   disabled?: boolean;
-  /** Background/border/text for the option-list popup — override for surfaces with an inverted color scheme (e.g. the always-dark storefront). */
+  /** Background/border/text for the option-list popup, override for surfaces with an inverted color scheme (e.g. the always-dark storefront). */
   menuClassName?: string;
   hoverClassName?: string;
   selectedOptionClassName?: string;

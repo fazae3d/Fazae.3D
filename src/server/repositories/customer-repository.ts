@@ -72,7 +72,7 @@ export async function getCustomer(id: string): Promise<Customer | undefined> {
 
 /**
  * Same list as getAllCustomers, plus orderCount/totalSpent aggregated from
- * Order in a single query (matched by phone) — avoids an N+1 query per row.
+ * Order in a single query (matched by phone), avoids an N+1 query per row.
  */
 export async function getAllCustomersWithStats(): Promise<CustomerWithStats[]> {
   const [rows, orderRows] = await Promise.all([
@@ -101,7 +101,7 @@ export type UpsertCustomerContactInput = { name: string; phone: string; email?: 
 /**
  * Upsert by phone (the unique CRM key). Existing name/email edited by the
  * admin are never clobbered by blank or lower-quality data coming in from a
- * new order/request — only fills in what's currently empty.
+ * new order/request, only fills in what's currently empty.
  */
 export async function upsertCustomerFromContact(input: UpsertCustomerContactInput): Promise<Customer> {
   const existing = await db.customer.findUnique({ where: { phone: input.phone } });

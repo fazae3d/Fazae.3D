@@ -18,7 +18,7 @@ export type CadencePreset = { name: string; steps: CadenceStep[]; autoEnroll?: b
 
 export const CADENCE_PRESETS: Record<CadenceKind, CadencePreset> = {
   prospeccao: {
-    name: "Prospecção — 3 contatos",
+    name: "Prospecção em 3 contatos",
     steps: [
       { delayHours: 0, text: "{Oi|Olá} {{nome}}! Aqui é da Fazaê 3D, a gente faz peças personalizadas em impressão 3D (chaveiros, brindes, displays e o que você imaginar). Posso te mostrar alguns exemplos?" },
       { delayHours: 48, text: "{Oi|Olá} {{nome}}, passando para ver se você chegou a ver minha mensagem. Se quiser, te mando um orçamento sem compromisso. É só dizer o que você precisa." },
@@ -262,7 +262,7 @@ export function parseCsv(text: string): string[][] {
 
 /** "agora", "em 25 min", "em 3 h", "em 2 dias": quanto falta para um horário. Passado = "agora" (já está na hora). */
 export function relativeFromNow(target: Date | string | null, now = new Date()) {
-  if (!target) return "—";
+  if (!target) return "Sem horário";
   const diff = new Date(target).getTime() - now.getTime();
   if (diff <= 60_000) return "agora";
   const minutes = Math.round(diff / 60_000);

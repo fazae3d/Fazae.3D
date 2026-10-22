@@ -18,7 +18,7 @@ export function OrderSummarySidebar({
   shipping: number | null;
   /**
    * Freezes the coupon form (no apply/remove) once the payment Brick is
-   * mounted — changing `total` there forces the Brick to remount (that's
+   * mounted, changing `total` there forces the Brick to remount (that's
    * MP's own documented way to update the amount), and doing that while
    * the customer is mid-payment left two Brick instances stacked on screen.
    */
@@ -35,7 +35,7 @@ export function OrderSummarySidebar({
     if (!code.trim()) return;
     setLoading(true);
     setMessage(null);
-    // Always clears the loading state, even if the action itself throws —
+    // Always clears the loading state, even if the action itself throws
     // without this, an unexpected error left the button disabled forever.
     try {
       const result = await applyCouponAction(code.trim(), subtotal);

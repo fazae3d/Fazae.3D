@@ -91,7 +91,7 @@ model Material {
   slug   String @id
   name   String
   /**
-   * Available colors for this material — [{ name: "Preto", hex: "#111111" }, ...]
+   * Available colors for this material, [{ name: "Preto", hex: "#111111" }, ...]
    */
   colors Json
 }
@@ -104,19 +104,19 @@ model Product {
   type                    ProductType
   description             String
   /**
-   * Null means "sob consulta" — common for sob_encomenda pieces without a fixed price.
+   * Null means "sob consulta", common for sob_encomenda pieces without a fixed price.
    */
   price                   Float?
   compareAtPrice          Float?
   /**
-   * Material/color options for this product — [{ material: "PLA", colors: ["Preto", "Branco"] }, ...]
+   * Material/color options for this product, [{ material: "PLA", colors: ["Preto", "Branco"] }, ...]
    */
   materials               Json
   scaleOptions            String[]               @default([])
   weightGrams             Int?
   dimensions              String?
   /**
-   * Dimensões da caixa de envio (cm), usadas na cotação de frete — distintas
+   * Dimensões da caixa de envio (cm), usadas na cotação de frete, distintas
    * de `dimensions` (medida da peça em si, mostrada ao cliente).
    */
   packageWidthCm          Float?
@@ -127,7 +127,7 @@ model Product {
    */
   estimatedProductionDays Int?
   /**
-   * Only meaningful for pronta_entrega — sob_encomenda pieces are made to order.
+   * Only meaningful for pronta_entrega, sob_encomenda pieces are made to order.
    */
   stock                   Int                    @default(0)
   images                  String[]               @default([])
@@ -136,7 +136,7 @@ model Product {
   isBestSeller            Boolean                @default(false)
   relatedSlugs            String[]               @default([])
   /**
-   * Mão de obra/custos fixos por peça — usado no cálculo de custo de produção.
+   * Mão de obra/custos fixos por peça, usado no cálculo de custo de produção.
    */
   laborCost               Float?
   /**
@@ -210,7 +210,7 @@ model CustomOrderRequest {
   status               CustomRequestStatus @default(novo)
   adminNotes           String?
   /**
-   * Set once the admin closes the sale from this lead — links to the resulting Order.
+   * Set once the admin closes the sale from this lead, links to the resulting Order.
    */
   linkedOrderId        String?
 
@@ -241,10 +241,10 @@ model Order {
   paymentMethod      String
   /**
    * Status bruto do gateway de pagamento (Mercado Pago): "pending" | "approved" | "in_process" | "rejected".
-   * Distinto de `status` (fluxo do pedido em si) — pedidos via Pix/boleto ficam "pending" até o webhook confirmar.
+   * Distinto de `status` (fluxo do pedido em si), pedidos via Pix/boleto ficam "pending" até o webhook confirmar.
    */
   paymentStatus      String          @default("pending")
-  /** Id do pagamento no Mercado Pago — usado para reconciliar o webhook com o pedido. */
+  /** Id do pagamento no Mercado Pago, usado para reconciliar o webhook com o pedido. */
   mpPaymentId        String?         @unique
   address            Json?
   status             String
@@ -252,12 +252,12 @@ model Order {
   productionStage    ProductionStage @default(nao_aplicavel)
   productionDeadline DateTime?
   /**
-   * Sinal já recebido — saldo a receber é calculado (total - depositAmount), não armazenado.
+   * Sinal já recebido, saldo a receber é calculado (total - depositAmount), não armazenado.
    */
   depositAmount      Float           @default(0)
   /**
    * True quando o checkout já baixou o estoque (e os insumos) deste pedido. Só pedidos com a reserva
-   * ativa devolvem estoque ao cancelar — pedidos antigos, anteriores à baixa automática, não.
+   * ativa devolvem estoque ao cancelar, pedidos antigos, anteriores à baixa automática, não.
    */
   stockReserved      Boolean         @default(false)
   /**
@@ -318,11 +318,11 @@ model Settings {
    */
   customOrderIntroText    String?
   /**
-   * CEP de onde a loja envia — usado como origem na cotação de frete real (Melhor Envio).
+   * CEP de onde a loja envia, usado como origem na cotação de frete real (Melhor Envio).
    */
   originCep               String?
   /**
-   * Pré-preenchem a calculadora de precificação (/admin/precificacao) — nunca gravados
+   * Pré-preenchem a calculadora de precificação (/admin/precificacao), nunca gravados
    * automaticamente no produto, só servem de ponto de partida editável.
    */
   defaultProfitMarginPct     Float @default(30)
@@ -352,7 +352,7 @@ model Settings {
   cashBalanceDate           DateTime?
 }
 
-/** Custo extra nomeado e reutilizável (argola, ímã, embalagem...) — somado ad-hoc na calculadora de precificação. */
+/** Custo extra nomeado e reutilizável (argola, ímã, embalagem...), somado ad-hoc na calculadora de precificação. */
 model AdditionalCost {
   id    String @id @default(cuid())
   name  String
@@ -360,7 +360,7 @@ model AdditionalCost {
 }
 
 /**
- * "equipamento" é investimento (capex) — entra no cálculo de payback, não no DRE operacional.
+ * "equipamento" é investimento (capex), entra no cálculo de payback, não no DRE operacional.
  * "material" cobre insumos/matéria-prima; "embalagem" e "operacional" (aluguel, energia,
  * marketing, assinaturas...) são despesa operacional recorrente.
  */
@@ -371,7 +371,7 @@ enum ExpenseCategory {
   operacional
 }
 
-/** Registro de compras/gastos reais — base do módulo Finanças (/admin/financas). */
+/** Registro de compras/gastos reais, base do módulo Finanças (/admin/financas). */
 model Expense {
   id           String          @id @default(cuid())
   description  String
@@ -387,20 +387,20 @@ model Expense {
   @@index([category])
 }
 
-/** Avaliação de produto — só pode ser criada por quem tem um pedido entregue com aquele produto. */
+/** Avaliação de produto, só pode ser criada por quem tem um pedido entregue com aquele produto. */
 model Review {
   id          String   @id @default(cuid())
   productSlug String
   product     Product  @relation(fields: [productSlug], references: [slug], onDelete: Cascade)
   orderId     String
   order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  /** Primeiro nome do cliente do pedido — nunca o sobrenome inteiro. */
+  /** Primeiro nome do cliente do pedido, nunca o sobrenome inteiro. */
   authorName  String
   rating      Int
   text        String?
   /**
    * Moderação leve: o admin pode ocultar um review pontual, sem fila de
-   * aprovação prévia — a trava de "só quem recebeu o pedido" já filtra spam.
+   * aprovação prévia, a trava de "só quem recebeu o pedido" já filtra spam.
    */
   hidden      Boolean  @default(false)
   createdAt   DateTime @default(now())
@@ -438,7 +438,7 @@ model ConsignmentItem {
   productSlug    String
   product        Product   @relation(fields: [productSlug], references: [slug])
   consignedPrice Float
-  /** Quantidade atualmente com o lojista — entrega soma, venda/devolução subtrai. */
+  /** Quantidade atualmente com o lojista, entrega soma, venda/devolução subtrai. */
   quantity       Int       @default(0)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
@@ -447,7 +447,7 @@ model ConsignmentItem {
   @@index([consigneeId])
 }
 
-/** Log de visitas ao lojista — histórico de acerto e agenda da próxima visita. */
+/** Log de visitas ao lojista, histórico de acerto e agenda da próxima visita. */
 model ConsignmentVisit {
   id              String    @id @default(cuid())
   consigneeId     String
@@ -465,7 +465,7 @@ model ConsignmentVisit {
 /**
  * Snapshot do carrinho de quem passou do passo de identificação do checkout
  * (e-mail já conhecido) mas não finalizou a compra. Sobrescrito (upsert por
- * email) a cada nova tentativa de checkout — zera remindedAt, então um novo
+ * email) a cada nova tentativa de checkout, zera remindedAt, então um novo
  * abandono depois de já ter recebido lembrete é elegível de novo. Apagado
  * quando o checkout é concluído com sucesso.
  */
@@ -473,7 +473,7 @@ model AbandonedCart {
   id         String    @id @default(cuid())
   email      String    @unique
   name       String?
-  /** Mesmo shape de Order.items (OrderItem[]) — preço/nome já resolvidos no momento da captura. */
+  /** Mesmo shape de Order.items (OrderItem[]), preço/nome já resolvidos no momento da captura. */
   items      Json
   subtotal   Float
   createdAt  DateTime  @default(now())
@@ -535,7 +535,7 @@ model Subscriber {
 }
 
 /**
- * Item de produção sem pedido associado — peça feita por conta própria
+ * Item de produção sem pedido associado, peça feita por conta própria
  * (estoque, amostra, teste), fora do fluxo normal onde a produção nasce
  * de um Order. Aparece no mesmo board de /admin/producao, lado a lado
  * com os pedidos reais.
@@ -601,7 +601,7 @@ model Quote {
   id               String      @id @default(cuid())
   /** Número sequencial exibido como ORC-0001. */
   number           Int         @unique @default(autoincrement())
-  /** Segredo do link público (/orcamento/<token>) — quem tem o link vê e baixa o PDF. */
+  /** Segredo do link público (/orcamento/<token>), quem tem o link vê e baixa o PDF. */
   token            String      @unique @default(cuid())
   status           QuoteStatus @default(rascunho)
   customerName     String

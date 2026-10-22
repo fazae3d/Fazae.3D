@@ -44,7 +44,7 @@ export async function updateCustomerNotesAction(
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
-  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco — hoje a escrita real falharia sem Supabase configurado.
+  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco, hoje a escrita real falharia sem Supabase configurado.
   return withMutationFallback(async () => {
     const customer = await updateCustomerCrmInfo(id, {
       notes: parsed.data.notes,
@@ -66,7 +66,7 @@ export async function createCustomerAction(input: CustomerCreateInput): Promise<
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
-  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco — hoje a escrita real falharia sem Supabase configurado.
+  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco, hoje a escrita real falharia sem Supabase configurado.
   return withMutationFallback(async () => {
     const created = await upsertCustomerFromContact({
       name: parsed.data.name,

@@ -7,7 +7,7 @@ import { Select, type SelectOption } from "./select";
  * Drop-in replacement for a native <select name="..."> inside a plain
  * form (GET action or FormData-read onSubmit). Keeps the exact same
  * submit behavior by mirroring the picked value into a hidden native
- * input the form still submits — only the visual control changes.
+ * input the form still submits, only the visual control changes.
  */
 export function SelectField({
   name,

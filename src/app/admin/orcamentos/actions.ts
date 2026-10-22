@@ -262,7 +262,7 @@ ${benefits ? `<p style="margin:0 0 12px;padding:12px 14px;background:#f1ffd0;bor
     action: { label: "Ver orçamento", url: `${SITE_URL}/orcamento/${quote.token}` },
     contactUrl: await getEmailContactUrl(),
   });
-  const sent = await sendEmail({ to: quote.customerEmail, subject: `Orçamento ${label} — Fazaê 3D`, html });
+  const sent = await sendEmail({ to: quote.customerEmail, subject: `Orçamento ${label} | Fazaê 3D`, html });
   if (!sent.success) return { success: false, error: sent.error };
 
   await withMutationFallback(async () => {
@@ -304,8 +304,8 @@ export async function convertQuoteToOrderAction(id: string, paymentMethod: Order
         productSlug: product ? product.slug : `avulso-${slugify(item.description) || "item"}`,
         name: item.description,
         categoryName: product?.categoryName ?? "Avulso",
-        material: item.details || "—",
-        color: "—",
+        material: item.details || "Sob medida",
+        color: "A combinar",
         quantity: item.quantity,
         price: item.unitPrice,
       });

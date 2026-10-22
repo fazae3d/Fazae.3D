@@ -2,7 +2,7 @@ import type { NextAuthConfig, Session } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 
 /**
- * Edge-safe subset of the NextAuth config — no providers here, since the
+ * Edge-safe subset of the NextAuth config, no providers here, since the
  * Credentials provider's `authorize` callback pulls in bcrypt + Prisma
  * (Node-only APIs the Edge Runtime that middleware runs in can't load).
  * Reading an already-issued JWT session doesn't need any provider, so
@@ -20,7 +20,7 @@ export const authConfig = {
   callbacks: {
     // NextAuth v5's inferred callback-parameter types don't reliably pick
     // up the module augmentation in src/types/next-auth.d.ts (a known
-    // rough edge — the SDK's own intersection type for these params
+    // rough edge, the SDK's own intersection type for these params
     // resolves custom fields to `unknown` instead of the augmented type).
     // Annotating the params explicitly sidesteps that inference and gets
     // the real Session/JWT shape, including `role`.
@@ -40,7 +40,7 @@ export const authConfig = {
         token.role = user.role;
       }
       // Lets the client push a fresh name into the token right after an
-      // in-place profile edit, via useSession().update({ name }) — without
+      // in-place profile edit, via useSession().update({ name }), without
       // this, the JWT keeps the name it had at login until the next sign-in.
       if (trigger === "update" && session?.name) {
         token.name = session.name;

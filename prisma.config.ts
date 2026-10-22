@@ -12,7 +12,7 @@ export default defineConfig({
     seed: "tsx prisma/seed.ts",
   },
   // Migrations need a connection that supports prepared statements, which
-  // the transaction-mode pooler (DATABASE_URL) doesn't — the app runtime's
+  // the transaction-mode pooler (DATABASE_URL) doesn't, the app runtime's
   // PrismaClient (src/server/db.ts) points at DATABASE_URL directly instead
   // and never reads this config; this URL is only for CLI commands
   // (migrate, db seed, studio).

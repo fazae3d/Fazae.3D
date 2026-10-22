@@ -29,7 +29,7 @@ export type Product = {
   name: string;
   categorySlug: string;
   /**
-   * Denormalized category name — always populated fresh by the product
+   * Denormalized category name, always populated fresh by the product
    * repository at read time (never trusted from storage/input), so
    * renaming a category shows up on every product immediately without a
    * cascade-update step.
@@ -37,14 +37,14 @@ export type Product = {
   categoryName: string;
   type: ProductType;
   description: string;
-  /** Null/undefined means "sob consulta" — common for sob_encomenda pieces without a fixed price. */
+  /** Null/undefined means "sob consulta", common for sob_encomenda pieces without a fixed price. */
   price?: number;
   compareAtPrice?: number;
   materials: ProductMaterialOption[];
   scaleOptions: string[];
   weightGrams?: number;
   dimensions?: string;
-  /** Dimensões da caixa de envio (cm) — usadas na cotação de frete, distintas de `dimensions`. */
+  /** Dimensões da caixa de envio (cm), usadas na cotação de frete, distintas de `dimensions`. */
   packageWidthCm?: number;
   packageHeightCm?: number;
   packageLengthCm?: number;
@@ -56,13 +56,13 @@ export type Product = {
   hidden?: boolean;
   tags: string[];
   relatedSlugs?: string[];
-  /** Stock level — drives the "Esgotado"/"Últimas peças" badges and purchase gating. Only meaningful for pronta_entrega. */
+  /** Stock level, drives the "Esgotado"/"Últimas peças" badges and purchase gating. Only meaningful for pronta_entrega. */
   stock: number;
   /** Overrides the category-derived placeholder art direction when set. */
   imageTone?: import("@/components/placeholder-photo").PlaceholderTone;
   /** Real photo URLs. Falls back to the generated placeholder when empty. */
   images?: string[];
-  /** Mão de obra/custos fixos por peça — usado no cálculo de custo de produção. */
+  /** Mão de obra/custos fixos por peça, usado no cálculo de custo de produção. */
   laborCost?: number;
 };
 

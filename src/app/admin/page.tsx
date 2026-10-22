@@ -43,7 +43,7 @@ function StatTile({
   label: string;
   value: string;
   sublabel?: string;
-  /** e.g. "+R$ 120,00 em aberto" — shown in amber under the main value. */
+  /** e.g. "+R$ 120,00 em aberto", shown in amber under the main value. */
   secondaryValue?: string;
   trend?: { pct: number | null; hasCurrent: boolean };
 }) {

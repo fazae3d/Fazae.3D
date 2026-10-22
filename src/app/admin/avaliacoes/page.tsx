@@ -22,7 +22,7 @@ export default async function AdminReviewsPage() {
       <div className="mb-8">
         <h1 className="font-display text-2xl sm:text-3xl">Avaliações</h1>
         <p className="mt-1 text-sm text-graphite">
-          {reviews.length} avaliaç{reviews.length === 1 ? "ão" : "ões"} — só clientes com pedido entregue podem
+          {reviews.length} avaliaç{reviews.length === 1 ? "ão" : "ões"}, só clientes com pedido entregue podem
           avaliar.
         </p>
       </div>
@@ -55,7 +55,7 @@ export default async function AdminReviewsPage() {
                   <td className="px-4 py-3 text-graphite">{review.authorName}</td>
                   <td className="px-4 py-3">{"★".repeat(review.rating)}</td>
                   <td className="max-w-[280px] truncate px-4 py-3 text-graphite" title={review.text}>
-                    {review.text ?? "—"}
+                    {review.text ?? "Sem comentário"}
                   </td>
                   <td className="px-4 py-3 text-graphite">
                     <Link href={`/admin/pedidos?q=${review.orderId}`} className="hover:text-petrol">

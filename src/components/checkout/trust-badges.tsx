@@ -1,7 +1,7 @@
 /**
  * The Payment Brick's public key is a NEXT_PUBLIC_ var, so it's safe to read
  * client-side here to tell test (TEST-) credentials apart from live
- * (APP_USR-) ones — showing a "sandbox" disclaimer during a real charge
+ * (APP_USR-) ones, showing a "sandbox" disclaimer during a real charge
  * would be actively misleading, not just inaccurate copy.
  */
 const isTestMode = process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY?.startsWith("TEST-") ?? false;

@@ -16,7 +16,7 @@ export const metadata: Metadata = pageMeta({
 
 // Sem ler searchParams no servidor: a página fica estática (CDN) e o CatalogView lê os filtros da URL no navegador.
 export default async function LojaPage() {
-  // TODO(fase DB): remove o fallback quando a Fazaê tiver o próprio banco — hoje a leitura real falharia sem Supabase configurado.
+  // TODO(fase DB): remove o fallback quando a Fazaê tiver o próprio banco, hoje a leitura real falharia sem Supabase configurado.
   const [allProducts, allCategories] = await Promise.all([
     withReadFallback(() => getAllProducts(), fallbackProducts),
     withReadFallback(() => getAllCategories(), fallbackCategories),

@@ -50,7 +50,7 @@ export function ProductionItemForm({ products }: { products: ProductOption[] }) 
     <div className="mb-6 border border-mist p-5">
       <p className="label-caps mb-4 text-xs text-graphite">Registrar item de produção</p>
       <p className="mb-4 text-xs text-graphite">
-        Pra peças feitas por conta própria (estoque, amostra, teste) — sem venda ou encomenda associada. Não precisa
+        Pra peças feitas por conta própria (estoque, amostra, teste), sem venda ou encomenda associada. Não precisa
         ser um produto do catálogo: dá pra registrar qualquer coisa só com um nome, mesmo que nunca vá pro site.
       </p>
 
@@ -72,7 +72,7 @@ export function ProductionItemForm({ products }: { products: ProductOption[] }) 
           <Select
             value={productSlug}
             onChange={handleProductChange}
-            placeholder="Nenhum — não vai pro site"
+            placeholder="Nenhum, não vai pro site"
             options={products.map((p) => ({ value: p.slug, label: p.name }))}
           />
         </div>

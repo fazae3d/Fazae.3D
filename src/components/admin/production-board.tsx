@@ -33,7 +33,7 @@ const STAGE_LABELS: Record<ProductionStage, string> = {
 };
 
 function formatDate(iso: string) {
-  // Deadlines come from a date input stored as UTC midnight — formatting in the local zone shows the previous day.
+  // Deadlines come from a date input stored as UTC midnight, formatting in the local zone shows the previous day.
   return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
 }
 
@@ -203,7 +203,7 @@ export function ProductionBoard({ cards: initialCards, products }: { cards: Prod
   const [cards, setCards] = useState(initialCards);
   const [sellingId, setSellingId] = useState<string | null>(null);
   // Re-sync whenever the server component hands us a fresh array (e.g. after
-  // router.refresh() following the "novo item" form) — local state otherwise
+  // router.refresh() following the "novo item" form), local state otherwise
   // only reflects props from the initial mount.
   useEffect(() => setCards(initialCards), [initialCards]);
   const [view, setView] = useState<"lista" | "kanban">("lista");
@@ -388,7 +388,7 @@ export function ProductionBoard({ cards: initialCards, products }: { cards: Prod
                       })()}
                     </td>
                     <td className="px-4 py-3">
-                      {card.kind === "order" ? formatPrice(orderBalanceDue(card.order)) : "—"}
+                      {card.kind === "order" ? formatPrice(orderBalanceDue(card.order)) : "Sem saldo"}
                     </td>
                     <td className="px-4 py-3">
                       <Select

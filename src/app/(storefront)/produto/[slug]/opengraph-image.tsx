@@ -7,7 +7,7 @@ import { fallbackProducts } from "@/server/demo-fallback";
 const size = { width: 1200, height: 630 };
 const contentType = "image/png";
 
-// TODO(fase DB): remove o fallback quando a Fazaê tiver o próprio banco — hoje a leitura real falharia sem Supabase configurado.
+// TODO(fase DB): remove o fallback quando a Fazaê tiver o próprio banco, hoje a leitura real falharia sem Supabase configurado.
 async function getProductWithFallback(slug: string) {
   return withReadFallback(() => getProduct(slug), fallbackProducts.find((p) => p.slug === slug));
 }

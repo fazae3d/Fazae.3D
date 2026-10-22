@@ -10,7 +10,7 @@ import type { Consignee } from "@/server/types";
 function addressLine(c: Consignee) {
   const parts = [c.street && c.number ? `${c.street}, ${c.number}` : c.street, c.neighborhood, c.city && c.state ? `${c.city}/${c.state}` : c.city, c.zip]
     .filter(Boolean);
-  return parts.length > 0 ? parts.join(" — ") : "Endereço não informado";
+  return parts.length > 0 ? parts.join(", ") : "Endereço não informado";
 }
 
 export function ConsigneeDetailHeader({ consignee }: { consignee: Consignee }) {

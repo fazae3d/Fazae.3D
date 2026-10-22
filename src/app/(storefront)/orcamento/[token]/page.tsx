@@ -151,7 +151,7 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
           </a>
         ) : (
           <p className="self-center text-sm text-graphite">
-            {QUOTE_STATUS_LABELS[status]} — fale com a gente no WhatsApp se precisar de uma nova proposta.
+            {QUOTE_STATUS_LABELS[status]}. Fale com a gente no WhatsApp se precisar de uma nova proposta.
           </p>
         )}
       </div>

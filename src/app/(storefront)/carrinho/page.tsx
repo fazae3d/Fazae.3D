@@ -36,7 +36,7 @@ function CarrinhoPageInner() {
   const recoverId = searchParams.get("recuperar");
   const recovering = useRef<string | null>(null);
 
-  // "Finalizar compra" no e-mail de carrinho abandonado — repovoa o carrinho local
+  // "Finalizar compra" no e-mail de carrinho abandonado, repovoa o carrinho local
   // a partir do snapshot salvo no servidor, mesmo se aberto num navegador/dispositivo
   // diferente de onde a pessoa comprou (o carrinho em si só existe no localStorage).
   useEffect(() => {

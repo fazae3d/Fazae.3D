@@ -102,7 +102,7 @@ export function WhatsAppImportContacts({ cadences }: { cadences: { id: string; n
       {prepared ? (
         <>
           <div className="admin-card rounded-xl border border-mist p-5">
-            <p className="font-medium">2. Confira as colunas — {fileName}</p>
+            <p className="font-medium">2. Confira as colunas: {fileName}</p>
             <div className="mt-3 grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-1 block text-xs text-graphite">Coluna do nome</label>

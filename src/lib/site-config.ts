@@ -1,9 +1,9 @@
-/** Placeholder production domain — update when the real domain is confirmed. */
+/** Placeholder production domain, update when the real domain is confirmed. */
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.fazae3d.com.br";
 export const SITE_NAME = "Fazaê";
 export const SITE_TAGLINE = "Você imagina. A gente cria.";
 
-/** Temporary static value while the store's Settings model isn't wired to a Fazaê database yet — see /admin/configuracoes once that phase lands. */
+/** Temporary static value while the store's Settings model isn't wired to a Fazaê database yet, see /admin/configuracoes once that phase lands. */
 export const DEFAULT_WHATSAPP_NUMBER = "5584999999999";
 
 /** Aviso mostrado junto do Pix: o recebedor aparece com o nome do titular do MEI, não "Fazaê" (regra do Banco Central, não dá para trocar). */

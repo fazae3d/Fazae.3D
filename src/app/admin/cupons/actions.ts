@@ -38,7 +38,7 @@ export async function createCouponAction(input: CouponFormInput): Promise<Coupon
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
-  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco — hoje a escrita real falharia sem Supabase configurado.
+  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco, hoje a escrita real falharia sem Supabase configurado.
   const result = await withMutationFallback(() => createCoupon(toStoredCoupon(parsed.data)));
   if (result.success) revalidatePath("/admin/cupons");
   return result;
@@ -53,7 +53,7 @@ export async function updateCouponAction(code: string, input: CouponFormInput): 
     return { success: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
   const stored = toStoredCoupon(parsed.data);
-  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco — hoje a escrita real falharia sem Supabase configurado.
+  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco, hoje a escrita real falharia sem Supabase configurado.
   const result = await withMutationFallback(() =>
     updateCoupon(code, {
       type: stored.type,
@@ -72,7 +72,7 @@ export async function deleteCouponAction(code: string): Promise<DeleteCouponResu
   if (!(await requireAdmin())) {
     return { success: false, error: "Acesso restrito ao administrador." };
   }
-  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco — hoje a escrita real falharia sem Supabase configurado.
+  // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco, hoje a escrita real falharia sem Supabase configurado.
   const result = await withMutationFallback(() => deleteCoupon(code));
   if (result.success) revalidatePath("/admin/cupons");
   return result;

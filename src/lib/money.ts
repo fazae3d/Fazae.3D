@@ -1,6 +1,6 @@
 /**
  * Single point of monetary rounding. JS float math produces residues like
- * 27.980000000000004 (e.g. 279.80 * 10 / 100) — round2() is applied at every
+ * 27.980000000000004 (e.g. 279.80 * 10 / 100), round2() is applied at every
  * point a total is computed so those residues never reach storage or a
  * price comparison, only display formatting (which would have hidden them).
  */
@@ -8,7 +8,7 @@ export function round2(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
-/** Default Pix discount (%) — the live value comes from /admin/configuracoes (Settings.pixDiscountPct). */
+/** Default Pix discount (%), the live value comes from /admin/configuracoes (Settings.pixDiscountPct). */
 export const DEFAULT_PIX_DISCOUNT_PCT = 5;
 
 /**
@@ -33,7 +33,7 @@ export function resolveOrderDiscount({
   return { discount: pixWins ? pixDiscount : couponDiscount, pixWins };
 }
 
-/** "5" / "7,5" — integers stay clean, fractions keep one decimal so a 7,5% discount isn't advertised as 8%. */
+/** "5" / "7,5", integers stay clean, fractions keep one decimal so a 7,5% discount isn't advertised as 8%. */
 export function formatPct(pct: number) {
   return (Math.round(pct * 10) / 10).toLocaleString("pt-BR");
 }

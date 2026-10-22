@@ -4,7 +4,7 @@ import { PrismaClient } from "@/generated/prisma/client";
 /**
  * Stashed on globalThis because Next.js (Turbopack, dev mode) gives Server
  * Actions, Route Handlers and Middleware separate module instances per
- * compilation layer — a plain module-level variable would get a fresh
+ * compilation layer, a plain module-level variable would get a fresh
  * PrismaClient (and a fresh connection pool) per layer instead of sharing
  * one, and Fast Refresh would pile up new clients/pools on every edit.
  */

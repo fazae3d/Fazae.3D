@@ -75,7 +75,7 @@ export default async function QuotesPage({ searchParams }: PageProps<"/admin/orc
           { label: "Em aberto", value: String(open.length), sub: formatPrice(round2(open.reduce((s, x) => s + x.quote.total, 0))) },
           { label: "Aguardando resposta", value: String(sent.length), sub: expiringSoon ? `${expiringSoon} vence(m) em até 3 dias` : "Nenhum perto de vencer" },
           { label: "Aprovados", value: String(approved.length), sub: formatPrice(round2(approved.reduce((s, x) => s + x.quote.total, 0))) },
-          { label: "Taxa de aprovação", value: conversion === null ? "—" : `${conversion}%`, sub: "dos orçamentos já decididos" },
+          { label: "Taxa de aprovação", value: conversion === null ? "Sem dados" : `${conversion}%`, sub: "dos orçamentos já decididos" },
         ].map((kpi) => (
           <div key={kpi.label} className="admin-card rounded-xl border border-mist p-4">
             <p className="text-xs text-graphite">{kpi.label}</p>

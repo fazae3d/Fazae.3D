@@ -21,7 +21,7 @@ import {
 } from "./seed-data";
 
 /**
- * TODO(fase DB): remove este arquivo quando a Fazaê tiver o próprio banco —
+ * TODO(fase DB): remove este arquivo quando a Fazaê tiver o próprio banco
  * hoje a leitura real falharia em toda página do admin sem Supabase configurado.
  */
 export const fallbackCategories: Category[] = seedCategories();
@@ -65,7 +65,7 @@ export const fallbackProductMaterialUsages: ProductMaterialUsageWithMaterial[] =
 
 export const fallbackCustomers: Customer[] = seedCustomers();
 
-// fallbackOrders is always [] today, so stats are always zero — kept as a
+// fallbackOrders is always [] today, so stats are always zero, kept as a
 // real map (not a hardcoded 0) so this stays correct once orders are seeded.
 export const fallbackCustomersWithStats: CustomerWithStats[] = fallbackCustomers.map((customer) => {
   const customerOrders = fallbackOrders.filter((o) => o.customerPhone === customer.phone);

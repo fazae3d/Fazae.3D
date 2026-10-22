@@ -45,7 +45,7 @@ export async function sendEmailBatch(emails: BatchEmail[]): Promise<SendEmailRes
 
 /**
  * No-ops (logs and returns success:false) when RESEND_API_KEY isn't set, so
- * every dev/demo environment keeps working without a real provider — set
+ * every dev/demo environment keeps working without a real provider, set
  * the key in production to actually send.
  */
 export async function sendEmail({
@@ -58,7 +58,7 @@ export async function sendEmail({
   html: string;
 }): Promise<SendEmailResult> {
   if (!resend) {
-    console.warn(`[email] RESEND_API_KEY não configurado — e-mail para ${to} ("${subject}") não foi enviado.`);
+    console.warn(`[email] RESEND_API_KEY não configurado, e-mail para ${to} ("${subject}") não foi enviado.`);
     return { success: false, error: "Envio de e-mail não configurado." };
   }
 

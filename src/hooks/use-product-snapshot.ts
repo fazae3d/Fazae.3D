@@ -26,7 +26,7 @@ function loadSnapshot(force: boolean): Promise<Snapshot> {
 
 /**
  * Client-side catalog snapshot, fetched via a Server Action on mount.
- * Every consumer of this hook gets its own copy — call `refresh()` at a
+ * Every consumer of this hook gets its own copy, call `refresh()` at a
  * point where staleness would actually matter (e.g. opening the cart)
  * rather than polling.
  */
@@ -46,7 +46,7 @@ export function useProductSnapshot(options?: { enabled?: boolean }) {
   useEffect(() => {
     // Fetching an async snapshot on mount has no synchronous-external-store
     // equivalent (unlike the localStorage cart/wishlist, there's nothing to
-    // subscribe to here) — the lint rule's heuristic doesn't distinguish
+    // subscribe to here), the lint rule's heuristic doesn't distinguish
     // this from a derived-state anti-pattern, but this genuinely is the
     // documented "fetch in an effect" shape.
     // `enabled: false` adia a busca até ser necessária (ex.: busca do topo só carrega o catálogo quando é aberta).

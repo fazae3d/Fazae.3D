@@ -12,7 +12,7 @@ const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   providers: [
-    // PLACEHOLDER credentials — create a Google Cloud OAuth client and set
+    // PLACEHOLDER credentials, create a Google Cloud OAuth client and set
     // AUTH_GOOGLE_ID / AUTH_GOOGLE_SECRET in .env.local before this works.
     // Until then, clicking "Continuar com Google" fails at Google's side,
     // it doesn't break the rest of auth.
@@ -45,7 +45,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     ...authConfig.callbacks,
-    // Google sign-in has no local account by default — provision (or
+    // Google sign-in has no local account by default, provision (or
     // reuse) a DemoUser record here so an OAuth login gets the same order
     // history / saved addresses / role as a Credentials login. The
     // Credentials provider already resolved a real user in `authorize`,

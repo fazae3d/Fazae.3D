@@ -14,10 +14,10 @@ export type MercadoPagoPaymentResult =
       paymentTypeId: string;
       /** Valor líquido que o Mercado Pago repassa à loja (já sem a taxa). Só é definitivo quando o pagamento está aprovado. */
       netReceived?: number;
-      /** Present for Pix — the customer still needs to actually scan/pay this to complete the purchase. */
+      /** Present for Pix, the customer still needs to actually scan/pay this to complete the purchase. */
       qrCode?: string;
       qrCodeBase64?: string;
-      /** Present for boleto — printable voucher link the customer needs to pay. */
+      /** Present for boleto, printable voucher link the customer needs to pay. */
       ticketUrl?: string;
     }
   | { success: false; error: string };
@@ -26,7 +26,7 @@ export type MercadoPagoPaymentResult =
  * Creates a payment from a Payment Brick's `formData` (already shaped for
  * `POST /v1/payments` by the SDK). `transactionAmount`, `description` and
  * `externalReference` are always taken from the server-computed values
- * passed in here, never from `formData` — the client-reported amount is
+ * passed in here, never from `formData`, the client-reported amount is
  * only ever a display value, the same principle already applied to prices
  * elsewhere in checkout.
  */
@@ -44,7 +44,7 @@ export async function createMercadoPagoPayment({
   formData: Record<string, unknown>;
 }): Promise<MercadoPagoPaymentResult> {
   if (!client) {
-    console.warn("[mercadopago] MERCADOPAGO_ACCESS_TOKEN não configurado — pagamento não processado.");
+    console.warn("[mercadopago] MERCADOPAGO_ACCESS_TOKEN não configurado, pagamento não processado.");
     return { success: false, error: "Pagamento não configurado." };
   }
 
@@ -68,7 +68,7 @@ export async function createMercadoPagoPayment({
           email: payerEmail,
           ...(existingPayer.identification ? { identification: existingPayer.identification } : {}),
         },
-        // Explicit per-payment webhook URL — doesn't depend on the "Notificações"
+        // Explicit per-payment webhook URL, doesn't depend on the "Notificações"
         // panel in the MP dashboard being configured correctly, which is easy to
         // get wrong (or leave unset) and silently stops every status update.
         notification_url: `${SITE_URL}/api/webhooks/mercadopago`,
@@ -102,7 +102,7 @@ export type MercadoPagoPaymentLookupResult =
   | { success: true; id: string; status: string; externalReference: string | null; transactionAmount?: number; netReceived?: number }
   | { success: false; error: string };
 
-/** Used by the webhook route — never trusts the notification payload's own status, always re-fetches from Mercado Pago. */
+/** Used by the webhook route, never trusts the notification payload's own status, always re-fetches from Mercado Pago. */
 export async function getMercadoPagoPayment(id: string): Promise<MercadoPagoPaymentLookupResult> {
   if (!client) {
     return { success: false, error: "Pagamento não configurado." };

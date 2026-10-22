@@ -22,7 +22,7 @@ export const productFormSchema = z.object({
   categorySlug: z.string().min(1, "Selecione uma categoria."),
   type: z.enum(["pronta_entrega", "sob_encomenda"]),
   // Plain z.number() (no z.coerce) so the schema's input and output types
-  // match — react-hook-form's `valueAsNumber` on the inputs does the
+  // match, react-hook-form's `valueAsNumber` on the inputs does the
   // string→number conversion instead. Mixing z.coerce with useForm's
   // single-generic typing makes the resolver's input/output types diverge
   // and breaks inference for every other field in the form, not just this one.
@@ -160,7 +160,7 @@ export const manualSaleFormSchema = z.object({
 
 export type ManualSaleFormInput = z.infer<typeof manualSaleFormSchema>;
 
-/** "Lançar como venda" a partir de um item de produção — mesmos dados do lançar venda manual, mas a linha vem do item. */
+/** "Lançar como venda" a partir de um item de produção, mesmos dados do lançar venda manual, mas a linha vem do item. */
 export const productionItemSaleSchema = manualSaleFormSchema
   .pick({ channel: true, customerName: true, customerPhone: true, paymentMethod: true, status: true })
   .extend({
