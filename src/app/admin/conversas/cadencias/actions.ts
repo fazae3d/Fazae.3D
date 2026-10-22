@@ -12,6 +12,11 @@ import {
   deleteCadence,
   enrollConversations,
   importContacts,
+  postponeEnrollment,
+  resumeEnrollment,
+  sendEnrollmentNow,
+  stopManyEnrollments,
+  type ProcessOutcome,
   runCadenceTick,
   saveCadence,
   saveWaConfig,
@@ -148,6 +153,58 @@ export async function importContactsAction(input: {
       criados: result.result.created,
       inscritos: result.result.enrolled,
     });
+    refresh();
+  }
+  return result;
+}
+
+/** "Enviar agora": manda já a próxima mensagem dessa inscrição, sem esperar o horário (contato que respondeu ou saiu não recebe). */
+export async function sendEnrollmentNowAction(id: string): Promise<{ success: true; outcome: ProcessOutcome } | { success: false; error: string }> {
+  if (!(await requireAdmin())) return DENIED;
+  const result = await withMutationFallback(() => sendEnrollmentNow(id));
+  if (result.success) {
+    await logAdminAction("whatsapp.cadencia.enviar-agora", "WaEnrollment", id, { resultado: result.outcome });
+    refresh();
+  }
+  return result;
+}
+
+export async function postponeEnrollmentAction(id: string, hours: number): Promise<{ success: true } | { success: false; error: string }> {
+  if (!(await requireAdmin())) return DENIED;
+  const safeHours = Math.min(24 * 30, Math.max(1, Math.round(Number(hours) || 24)));
+  const result = await withMutationFallback(async () => {
+    try {
+      await postponeEnrollment(id, safeHours);
+      return { success: true as const };
+    } catch (error) {
+      return { success: false as const, error: error instanceof Error ? error.message : "Não foi possível adiar." };
+    }
+  });
+  if (result.success) refresh();
+  return result;
+}
+
+export async function resumeEnrollmentAction(id: string): Promise<{ success: true } | { success: false; error: string }> {
+  if (!(await requireAdmin())) return DENIED;
+  const result = await withMutationFallback(async () => {
+    try {
+      await resumeEnrollment(id);
+      return { success: true as const };
+    } catch (error) {
+      return { success: false as const, error: error instanceof Error ? error.message : "Não foi possível retomar." };
+    }
+  });
+  if (result.success) refresh();
+  return result;
+}
+
+export async function stopManyEnrollmentsAction(ids: string[]): Promise<{ success: true; stopped: number } | { success: false; error: string }> {
+  if (!(await requireAdmin())) return DENIED;
+  const clean = [...new Set((Array.isArray(ids) ? ids : []).filter((id) => typeof id === "string" && id.length > 0 && id.length < 80))].slice(0, 500);
+  if (clean.length === 0) return { success: false, error: "Nenhuma inscrição selecionada." };
+  const result = await withMutationFallback(async () => ({ success: true as const, stopped: await stopManyEnrollments(clean) }));
+  if (result.success) {
+    await logAdminAction("whatsapp.cadencia.cancelar-varios", "WaEnrollment", "varios", { cancelados: result.stopped });
     refresh();
   }
   return result;

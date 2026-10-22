@@ -45,6 +45,7 @@ export const NAV_GROUPS: NavGroup[] = [
     links: [
       { href: "/admin/conversas", label: "Conversas" },
       { href: "/admin/conversas/cadencias", label: "Cadências" },
+      { href: "/admin/conversas/fila", label: "Fila de envios" },
       { href: "/admin/conversas/importar", label: "Importar lista" },
     ],
   },

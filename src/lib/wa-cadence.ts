@@ -217,3 +217,16 @@ export function parseCsv(text: string): string[][] {
   if (row.some((c) => c.trim() !== "")) rows.push(row);
   return rows;
 }
+
+/** "agora", "em 25 min", "em 3 h", "em 2 dias": quanto falta para um horário. Passado = "agora" (já está na hora). */
+export function relativeFromNow(target: Date | string | null, now = new Date()) {
+  if (!target) return "—";
+  const diff = new Date(target).getTime() - now.getTime();
+  if (diff <= 60_000) return "agora";
+  const minutes = Math.round(diff / 60_000);
+  if (minutes < 60) return `em ${minutes} min`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `em ${hours} h`;
+  const days = Math.round(hours / 24);
+  return `em ${days} dia${days > 1 ? "s" : ""}`;
+}

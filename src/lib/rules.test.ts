@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { detectColumns, effectiveDailyLimit, isWithinSendWindow, normalizeSteps, parseCsv, prepareImportRows, renderMessage } from "./wa-cadence";
+import { detectColumns, effectiveDailyLimit, isWithinSendWindow, normalizeSteps, parseCsv, prepareImportRows, relativeFromNow, renderMessage } from "./wa-cadence";
 import { formatPhone, isOptOutText, nextStatus, normalizePhone, parseUazapiMessage, parseUazapiStatusUpdate, phoneFromJid } from "./whatsapp";
 import { cashPosition } from "./cash";
 import { applyManualPayment } from "./payment";
@@ -468,5 +468,16 @@ describe("cadências de WhatsApp", () => {
       ["Silva; Maria", "84999998888"],
       ["João", "84988887777"],
     ]);
+  });
+});
+
+describe("tempo relativo da fila", () => {
+  const now = new Date("2026-10-22T12:00:00Z");
+  it("descreve quanto falta", () => {
+    expect(relativeFromNow(null, now)).toBe("—");
+    expect(relativeFromNow("2026-10-22T11:00:00Z", now)).toBe("agora");
+    expect(relativeFromNow("2026-10-22T12:25:00Z", now)).toBe("em 25 min");
+    expect(relativeFromNow("2026-10-22T15:00:00Z", now)).toBe("em 3 h");
+    expect(relativeFromNow("2026-10-24T12:00:00Z", now)).toBe("em 2 dias");
   });
 });

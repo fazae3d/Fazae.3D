@@ -315,58 +315,252 @@ export async function runCadenceTick(now = new Date()): Promise<TickResult> {
 
   const result: TickResult = { ran: true, ...empty };
   for (const enrollment of due) {
-    // Reserva: só quem conseguir adiantar o horário desta inscrição envia.
-    const claim = await db.waEnrollment.updateMany({
-      where: { id: enrollment.id, status: "ativa", nextRunAt: { lte: now } },
-      data: { nextRunAt: new Date(now.getTime() + 10 * 60_000) },
-    });
-    if (claim.count !== 1) continue;
-
-    const stop = async (reason: string) => {
-      await db.waEnrollment.update({ where: { id: enrollment.id }, data: { status: "parada", stopReason: reason, nextRunAt: null } });
-      result.stopped += 1;
-    };
-
-    const conversation = await db.waConversation.findUnique({ where: { id: enrollment.conversationId } });
-    if (!conversation || conversation.optedOut) {
-      await stop("pediu para sair");
-      continue;
-    }
-    if (conversation.lastInboundAt && conversation.lastInboundAt > enrollment.createdAt) {
-      await stop("respondeu");
-      continue;
-    }
-    const parsed = normalizeSteps(enrollment.cadence.steps);
-    if (!parsed.ok) {
-      await stop("cadência sem mensagens válidas");
-      continue;
-    }
-    const step = parsed.steps[enrollment.stepIndex];
-    if (!step) {
-      await db.waEnrollment.update({ where: { id: enrollment.id }, data: { status: "concluida", nextRunAt: null } });
-      continue;
-    }
-
-    const text = renderMessage(step.text, conversation);
-    const sent = await sendConversationText(conversation.id, text, { origin: "cadencia", delayMs: 1500 + Math.floor(Math.random() * 2500) });
-    if (!sent.success) {
-      result.failed += 1;
-      const attempts = enrollment.attempts + 1;
-      if (attempts >= MAX_ATTEMPTS) await stop("falha no envio");
-      else await db.waEnrollment.update({ where: { id: enrollment.id }, data: { attempts, nextRunAt: new Date(now.getTime() + RETRY_AFTER_MS) } });
-      continue;
-    }
-
-    result.sent += 1;
-    if (conversation.stage === "novo") await db.waConversation.update({ where: { id: conversation.id }, data: { stage: "contato" } });
-    const nextStep = parsed.steps[enrollment.stepIndex + 1];
-    await db.waEnrollment.update({
-      where: { id: enrollment.id },
-      data: nextStep
-        ? { stepIndex: enrollment.stepIndex + 1, attempts: 0, nextRunAt: new Date(now.getTime() + nextStep.delayHours * 3_600_000) }
-        : { stepIndex: enrollment.stepIndex + 1, attempts: 0, status: "concluida", nextRunAt: null },
-    });
+    const outcome = await processEnrollment(enrollment, now, { force: false });
+    if (outcome === "sent") result.sent += 1;
+    else if (outcome === "failed") result.failed += 1;
+    else if (outcome === "stopped") result.stopped += 1;
   }
   result.remainingToday = budget.remaining - result.sent;
   return result;
+}
+
+export type ProcessOutcome = "sent" | "failed" | "stopped" | "concluded" | "skipped";
+
+/**
+ * Envia a próxima mensagem de uma inscrição (usado pela rodada automática e pelo "Enviar agora" da fila). Reserva a inscrição antes
+ * de enviar, confere se o contato continua podendo receber (não pediu para sair, não respondeu) e só então avança para o passo seguinte.
+ * `force` ignora o horário agendado (o "Enviar agora"); as travas de segurança do contato valem sempre.
+ */
+export async function processEnrollment(
+  enrollment: { id: string; conversationId: string; stepIndex: number; attempts: number; createdAt: Date; cadence: { steps: unknown } },
+  now: Date,
+  options: { force: boolean },
+): Promise<ProcessOutcome> {
+  const claim = await db.waEnrollment.updateMany({
+    where: { id: enrollment.id, status: "ativa", ...(options.force ? {} : { nextRunAt: { lte: now } }) },
+    data: { nextRunAt: new Date(now.getTime() + 10 * 60_000) },
+  });
+  if (claim.count !== 1) return "skipped";
+
+  const stop = async (reason: string): Promise<ProcessOutcome> => {
+    await db.waEnrollment.update({ where: { id: enrollment.id }, data: { status: "parada", stopReason: reason, nextRunAt: null } });
+    return "stopped";
+  };
+
+  const conversation = await db.waConversation.findUnique({ where: { id: enrollment.conversationId } });
+  if (!conversation || conversation.optedOut) return stop("pediu para sair");
+  if (conversation.lastInboundAt && conversation.lastInboundAt > enrollment.createdAt) return stop("respondeu");
+  const parsed = normalizeSteps(enrollment.cadence.steps);
+  if (!parsed.ok) return stop("cadência sem mensagens válidas");
+  const step = parsed.steps[enrollment.stepIndex];
+  if (!step) {
+    await db.waEnrollment.update({ where: { id: enrollment.id }, data: { status: "concluida", nextRunAt: null } });
+    return "concluded";
+  }
+
+  const text = renderMessage(step.text, conversation);
+  const sent = await sendConversationText(conversation.id, text, { origin: "cadencia", delayMs: 1500 + Math.floor(Math.random() * 2500) });
+  if (!sent.success) {
+    const attempts = enrollment.attempts + 1;
+    if (attempts >= MAX_ATTEMPTS) await stop("falha no envio");
+    else await db.waEnrollment.update({ where: { id: enrollment.id }, data: { attempts, nextRunAt: new Date(now.getTime() + RETRY_AFTER_MS) } });
+    return "failed";
+  }
+
+  if (conversation.stage === "novo") await db.waConversation.update({ where: { id: conversation.id }, data: { stage: "contato" } });
+  const nextStep = parsed.steps[enrollment.stepIndex + 1];
+  await db.waEnrollment.update({
+    where: { id: enrollment.id },
+    data: nextStep
+      ? { stepIndex: enrollment.stepIndex + 1, attempts: 0, nextRunAt: new Date(now.getTime() + nextStep.delayHours * 3_600_000) }
+      : { stepIndex: enrollment.stepIndex + 1, attempts: 0, status: "concluida", nextRunAt: null },
+  });
+  return "sent";
+}
+
+/* ---------- acompanhamento: fila, enviadas e encerradas ---------- */
+
+export type QueueItem = {
+  id: string;
+  conversationId: string;
+  name: string | null;
+  phone: string;
+  cadenceId: string;
+  cadenceName: string;
+  cadenceActive: boolean;
+  stepIndex: number;
+  totalSteps: number;
+  nextText: string;
+  nextRunAt: string | null;
+  attempts: number;
+};
+
+export type QueueFilter = { cadenceId?: string; q?: string };
+
+function enrollmentWhere(filter: QueueFilter) {
+  const q = filter.q?.trim();
+  const digits = q?.replace(/\D/g, "");
+  return {
+    ...(filter.cadenceId ? { cadenceId: filter.cadenceId } : {}),
+    ...(q
+      ? {
+          conversation: {
+            OR: [{ name: { contains: q, mode: "insensitive" as const } }, ...(digits && digits.length >= 4 ? [{ phone: { contains: digits } }] : [])],
+          },
+        }
+      : {}),
+  };
+}
+
+/** Quem ainda vai receber: inscrições ativas, da mais próxima para a mais distante. */
+export async function listQueue(filter: QueueFilter = {}, limit = 300): Promise<QueueItem[]> {
+  const rows = await db.waEnrollment.findMany({
+    where: { status: "ativa", ...enrollmentWhere(filter) },
+    include: { cadence: true, conversation: { select: { name: true, phone: true } } },
+    orderBy: [{ nextRunAt: "asc" }, { createdAt: "asc" }],
+    take: limit,
+  });
+  return rows.map((row) => {
+    const parsed = normalizeSteps(row.cadence.steps);
+    const steps = parsed.ok ? parsed.steps : [];
+    const step = steps[row.stepIndex];
+    return {
+      id: row.id,
+      conversationId: row.conversationId,
+      name: row.conversation.name,
+      phone: row.conversation.phone,
+      cadenceId: row.cadenceId,
+      cadenceName: row.cadence.name,
+      cadenceActive: row.cadence.active,
+      stepIndex: row.stepIndex,
+      totalSteps: steps.length,
+      nextText: step ? renderMessage(step.text, row.conversation, () => 0) : "",
+      nextRunAt: row.nextRunAt?.toISOString() ?? null,
+      attempts: row.attempts,
+    };
+  });
+}
+
+export type ClosedItem = {
+  id: string;
+  conversationId: string;
+  name: string | null;
+  phone: string;
+  cadenceName: string;
+  status: string;
+  stopReason: string | null;
+  stepIndex: number;
+  totalSteps: number;
+};
+
+/** Cadências que já terminaram ou foram paradas. */
+export async function listClosed(filter: QueueFilter = {}, limit = 300): Promise<ClosedItem[]> {
+  const rows = await db.waEnrollment.findMany({
+    where: { status: { in: ["concluida", "parada"] }, ...enrollmentWhere(filter) },
+    include: { cadence: { select: { name: true, steps: true } }, conversation: { select: { name: true, phone: true } } },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+  return rows.map((row) => {
+    const parsed = normalizeSteps(row.cadence.steps);
+    return {
+      id: row.id,
+      conversationId: row.conversationId,
+      name: row.conversation.name,
+      phone: row.conversation.phone,
+      cadenceName: row.cadence.name,
+      status: row.status,
+      stopReason: row.stopReason,
+      stepIndex: row.stepIndex,
+      totalSteps: parsed.ok ? parsed.steps.length : 0,
+    };
+  });
+}
+
+export type SentItem = {
+  id: string;
+  conversationId: string;
+  name: string | null;
+  phone: string;
+  body: string;
+  status: string;
+  origin: string;
+  error: string | null;
+  createdAt: string;
+  /** O contato respondeu depois dessa mensagem. */
+  replied: boolean;
+};
+
+/** Mensagens que o envio automático já mandou (mais recentes primeiro). */
+export async function listSentAutomated(q?: string, limit = 200): Promise<SentItem[]> {
+  const term = q?.trim();
+  const digits = term?.replace(/\D/g, "");
+  const rows = await db.waMessage.findMany({
+    where: {
+      direction: "out",
+      origin: { in: ["cadencia", "campanha"] },
+      ...(term
+        ? { conversation: { OR: [{ name: { contains: term, mode: "insensitive" as const } }, ...(digits && digits.length >= 4 ? [{ phone: { contains: digits } }] : [])] } }
+        : {}),
+    },
+    include: { conversation: { select: { name: true, phone: true, lastInboundAt: true } } },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+  return rows.map((m) => ({
+    id: m.id,
+    conversationId: m.conversationId,
+    name: m.conversation.name,
+    phone: m.conversation.phone,
+    body: m.body,
+    status: m.status,
+    origin: m.origin,
+    error: m.error,
+    createdAt: m.createdAt.toISOString(),
+    replied: Boolean(m.conversation.lastInboundAt && m.conversation.lastInboundAt > m.createdAt),
+  }));
+}
+
+export type QueueStats = { queued: number; sentToday: number; concluded: number; stopped: number; replies: number };
+
+export async function getQueueStats(now = new Date()): Promise<QueueStats> {
+  const [grouped, sentToday, replies] = await Promise.all([
+    db.waEnrollment.groupBy({ by: ["status"], _count: { _all: true } }),
+    db.waMessage.count({ where: { direction: "out", origin: { in: ["cadencia", "campanha"] }, status: { not: "failed" }, createdAt: { gte: startOfStoreDay(now) } } }),
+    db.waEnrollment.count({ where: { status: "parada", stopReason: "respondeu" } }),
+  ]);
+  const count = (s: string) => grouped.find((g) => g.status === s)?._count._all ?? 0;
+  return { queued: count("ativa"), sentToday, concluded: count("concluida"), stopped: count("parada"), replies };
+}
+
+/** "Enviar agora": manda já a próxima mensagem da inscrição, sem esperar o horário (as travas do contato continuam valendo). */
+export async function sendEnrollmentNow(id: string, now = new Date()): Promise<{ success: true; outcome: ProcessOutcome } | { success: false; error: string }> {
+  const enrollment = await db.waEnrollment.findUnique({ where: { id }, include: { cadence: true } });
+  if (!enrollment || enrollment.status !== "ativa") return { success: false, error: "Essa inscrição não está mais na fila." };
+  const outcome = await processEnrollment(enrollment, now, { force: true });
+  if (outcome === "skipped") return { success: false, error: "Esse envio já está sendo feito. Atualize a página." };
+  return { success: true, outcome };
+}
+
+/** Empurra o próximo envio para frente (por padrão, 1 dia). */
+export async function postponeEnrollment(id: string, hours = 24, now = new Date()): Promise<void> {
+  const enrollment = await db.waEnrollment.findUnique({ where: { id }, select: { status: true, nextRunAt: true } });
+  if (!enrollment || enrollment.status !== "ativa") throw new Error("Essa inscrição não está mais na fila.");
+  const base = enrollment.nextRunAt && enrollment.nextRunAt > now ? enrollment.nextRunAt : now;
+  await db.waEnrollment.update({ where: { id }, data: { nextRunAt: new Date(base.getTime() + hours * 3_600_000) } });
+}
+
+/** Volta a andar uma inscrição que foi parada à mão ou por falha de envio (não vale para quem respondeu ou pediu para sair). */
+export async function resumeEnrollment(id: string, now = new Date()): Promise<void> {
+  const enrollment = await db.waEnrollment.findUnique({ where: { id }, include: { conversation: { select: { optedOut: true } } } });
+  if (!enrollment || enrollment.status !== "parada") throw new Error("Essa inscrição não está parada.");
+  if (enrollment.conversation.optedOut) throw new Error("O contato pediu para não receber mensagens.");
+  if (enrollment.stopReason !== "parada manualmente" && enrollment.stopReason !== "falha no envio") throw new Error("Essa cadência terminou porque o contato respondeu ou saiu; não dá para retomar.");
+  await db.waEnrollment.update({ where: { id }, data: { status: "ativa", stopReason: null, attempts: 0, nextRunAt: now } });
+}
+
+/** Cancela várias inscrições de uma vez (as que estão na fila). */
+export async function stopManyEnrollments(ids: string[]): Promise<number> {
+  const result = await db.waEnrollment.updateMany({ where: { id: { in: ids }, status: "ativa" }, data: { status: "parada", stopReason: "parada manualmente", nextRunAt: null } });
+  return result.count;
 }
