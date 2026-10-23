@@ -21,6 +21,7 @@ import { round2 } from "@/lib/money";
 import type { ProductionStage } from "@/generated/prisma/client";
 import type { Order, OrderItem, ProductionItem } from "@/server/types";
 import { withMutationFallback } from "@/lib/db-fallback";
+import { logAdminAction } from "@/server/audit";
 
 function slugify(text: string) {
   return text
@@ -53,6 +54,7 @@ export async function updateProductionAction(
     }),
   );
   if (result.success) {
+    await logAdminAction("pedido.producao", "Order", orderId, { etapa: data.stage, prazo: data.deadline, sinalRecebido: data.depositAmount });
     revalidatePath("/admin/producao");
     revalidatePath("/admin/pedidos");
   }
@@ -198,6 +200,7 @@ export async function launchProductionItemAsSaleAction(
       reserveStock: Boolean(item.productSlug) && item.stockAddedQty > 0,
     });
     await deleteProductionItem(item.id);
+    await logAdminAction("venda.producao", "Order", created.id, { item: item.description, cliente: customerName, total: created.total });
 
     revalidatePath("/admin/producao");
     revalidatePath("/admin/pedidos");

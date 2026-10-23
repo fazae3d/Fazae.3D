@@ -11,6 +11,7 @@ import { addOrder, generateOrderId, OutOfStockError } from "@/server/repositorie
 import { getProduct, updateProduct } from "@/server/repositories/product-repository";
 import type { Order } from "@/server/types";
 import { withMutationFallback } from "@/lib/db-fallback";
+import { logAdminAction } from "@/server/audit";
 
 async function requireAdmin() {
   if (ADMIN_AUTH_DISABLED) return true;
@@ -117,6 +118,7 @@ export async function createManualSaleAction(input: ManualSaleFormInput): Promis
   });
 
   if (result.success) {
+    await logAdminAction("venda.manual", "Order", result.order.id, { canal: channel, cliente: customerName, total: result.order.total, itens: items.length });
     revalidatePath("/admin/pedidos");
     revalidatePath("/admin/estoque");
     revalidatePath("/admin/produtos");

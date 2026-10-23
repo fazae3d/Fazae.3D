@@ -11,6 +11,18 @@ const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
+  events: {
+    // Quem entrou no painel e quando (só administradores): fica em Atividade.
+    async signIn({ user }) {
+      if (user?.role !== "admin" || !user.email) return;
+      try {
+        const { db } = await import("@/server/db");
+        await db.auditLog.create({ data: { actorEmail: user.email, action: "painel.entrou", targetType: "User", targetId: user.email, kind: "event" } });
+      } catch (error) {
+        console.error("[auditoria] falha ao registrar entrada", error);
+      }
+    },
+  },
   providers: [
     // PLACEHOLDER credentials, create a Google Cloud OAuth client and set
     // AUTH_GOOGLE_ID / AUTH_GOOGLE_SECRET in .env.local before this works.

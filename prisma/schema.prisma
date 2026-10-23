@@ -582,8 +582,20 @@ model AuditLog {
   targetType String
   targetId   String
   details    Json?
+  /** "event" (ação com nome, ex.: pedido.pago) | "create" | "update" | "delete" (registro automático de cada mudança, com antes e depois). */
+  kind       String   @default("event")
+  /** Lista do que mudou: [{ field, from, to }]. */
+  changes    Json?
+  before     Json?
+  after      Json?
+  /** Quando esta mudança foi desfeita pelo painel, e por quem. */
+  restoredAt DateTime?
+  restoredBy String?
 
   @@index([at])
+  @@index([targetType, targetId])
+  @@index([actorEmail])
+  @@index([kind])
 }
 
 enum QuoteStatus {

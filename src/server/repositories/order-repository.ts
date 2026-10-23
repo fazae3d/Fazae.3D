@@ -46,7 +46,8 @@ export class OutOfStockError extends Error {
   }
 }
 
-type Tx = Prisma.TransactionClient;
+/** Cliente dentro de uma transação (é o cliente com auditoria, sem as operações de conexão e transação). */
+type Tx = Omit<typeof db, "$connect" | "$disconnect" | "$on" | "$transaction" | "$extends" | "$use">;
 
 function quantitiesBySlug(items: Order["items"]) {
   const totals = new Map<string, number>();

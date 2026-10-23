@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { canRestore, describeChange, diffRows, entryTitle, filledFields, rowKey, snapshotRow } from "./audit-format";
 import { canRepeat, missingVariables, usedVariables, describeAudience, describeDays, detectColumns, effectiveDailyLimit, hasAudience, isWithinSchedule, isWithinSendWindow, normalizeAudience, normalizeSendDays, normalizeSteps, normalizeWindow, parseCsv, prepareImportRows, relativeFromNow, renderMessage } from "./wa-cadence";
 import { formatPhone, isMobilePhone, isOptOutText, nextStatus, normalizePhone, parseUazapiMessage, parseUazapiStatusUpdate, phoneFromJid, slugifyShortcut, withOptOutNotice } from "./whatsapp";
 import { analyzeResults, formatDuration } from "./wa-results";
@@ -608,5 +609,47 @@ describe("resultados do WhatsApp", () => {
     expect(formatDuration(30)).toBe("30 min");
     expect(formatDuration(90)).toBe("1,5 h");
     expect(formatDuration(null)).toBe("Sem dados");
+  });
+});
+
+describe("auditoria: antes e depois", () => {
+  it("compara só o que mudou e ignora campos técnicos", () => {
+    const before = { id: "1", name: "Chaveiro", price: 14.99, stock: 3, updatedAt: new Date("2026-10-01T10:00:00Z"), tags: ["a"] };
+    const after = { id: "1", name: "Chaveiro", price: 16.5, stock: 3, updatedAt: new Date("2026-10-02T10:00:00Z"), tags: ["a"] };
+    expect(diffRows(before, after)).toEqual([{ field: "price", from: 14.99, to: 16.5 }]);
+    expect(diffRows(before, before)).toEqual([]);
+  });
+  it("não guarda segredos e corta textos gigantes", () => {
+    const snap = snapshotRow({ email: "a@b.c", passwordHash: "x".repeat(60), resetToken: null, text: "y".repeat(3000) })!;
+    expect(snap.passwordHash).toBe("(oculto)");
+    expect(snap.resetToken).toBeNull();
+    expect(String(snap.text).length).toBeLessThan(1600);
+  });
+  it("mostra a mudança em português, com dinheiro e porcentagem", () => {
+    expect(describeChange({ field: "pixDiscountPct", from: 5, to: 7 })).toBe("Desconto no Pix: 5% → 7%");
+    expect(describeChange({ field: "price", from: 14.99, to: 16.5 }).replace(/ /g, " ")).toBe("Preço: R$ 14,99 → R$ 16,50");
+    expect(describeChange({ field: "active", from: true, to: false })).toBe("Ativo: Sim → Não");
+    expect(describeChange({ field: "notes", from: null, to: "ok" })).toBe("Observações: vazio → ok");
+  });
+  it("lista os campos preenchidos na criação e na exclusão", () => {
+    expect(filledFields({ code: "X", value: 5, notes: null, tags: [] }, "to")).toEqual([
+      { field: "code", from: null, to: "X" },
+      { field: "value", from: null, to: 5 },
+    ]);
+    expect(filledFields({ code: "X" }, "from")).toEqual([{ field: "code", from: "X", to: null }]);
+  });
+  it("identifica o item e dá o título certo", () => {
+    expect(rowKey("Product", { slug: "astronauta" })).toBe("astronauta");
+    expect(rowKey("Coupon", null, { code: "FAZAE10" })).toBe("FAZAE10");
+    expect(entryTitle({ kind: "update", action: "Product.update", targetType: "Product" })).toBe("Alterou produto");
+    expect(entryTitle({ kind: "event", action: "pedido.pago", targetType: "Order" })).toBe("Marcou pedido(s) como pago(s)");
+  });
+  it("só deixa desfazer o que é seguro desfazer, e uma vez", () => {
+    expect(canRestore({ kind: "update", targetType: "Coupon" })).toBe(true);
+    expect(canRestore({ kind: "update", targetType: "Coupon", restoredAt: new Date() })).toBe(false);
+    expect(canRestore({ kind: "delete", targetType: "Product" })).toBe(false);
+    expect(canRestore({ kind: "delete", targetType: "Coupon" })).toBe(true);
+    expect(canRestore({ kind: "create", targetType: "Coupon" })).toBe(false);
+    expect(canRestore({ kind: "update", targetType: "Order" })).toBe(false);
   });
 });
