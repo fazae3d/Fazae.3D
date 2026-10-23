@@ -137,6 +137,7 @@ export default function CheckoutPage() {
                 subtotal={subtotal}
                 freeShippingThreshold={settings.freeShippingThreshold}
                 localDelivery={getLocalDeliveryRules(settings)}
+                shippingRules={settings.rules}
                 destinationCep={address.zip}
                 items={lines.map((l) => ({ productSlug: l.productSlug, quantity: l.quantity }))}
                 initial={shipping ? shippingOptionKey(shipping) : undefined}

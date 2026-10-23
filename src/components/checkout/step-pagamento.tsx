@@ -5,7 +5,7 @@ import { initMercadoPago, Payment } from "@mercadopago/sdk-react";
 import { processCheckoutPaymentAction, type PendingPaymentInstructions } from "@/app/(storefront)/checkout/actions";
 import { formatPrice } from "@/lib/format";
 import { formatPct } from "@/lib/money";
-import { PIX_RECEIVER_NOTICE } from "@/lib/site-config";
+import { useStoreRules } from "@/contexts/store-rules-context";
 import type { Order } from "@/server/types";
 
 const publicKey = process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY;
@@ -34,6 +34,7 @@ export function StepPagamento({
   onBack: () => void;
 }) {
   const [brickError, setBrickError] = useState<string | null>(null);
+  const { pixNotice } = useStoreRules().company;
 
   if (publicKey && !mpInitialized) {
     initMercadoPago(publicKey, { locale: "pt-BR" });
@@ -79,7 +80,7 @@ export function StepPagamento({
         </p>
       )}
 
-      <p className="text-xs text-graphite">{PIX_RECEIVER_NOTICE}</p>
+      {pixNotice ? <p className="text-xs text-graphite">{pixNotice}</p> : null}
 
       {brickError && <p className="text-sm text-red-600">{brickError}</p>}
 

@@ -3,6 +3,8 @@
  * (Sem banco nem rede: usado pelo registro automático, pela página Atividade e pelos testes.)
  */
 
+import { RULE_FIELDS, getPath, parseStoreRules } from "@/lib/store-rules";
+
 export type Row = Record<string, unknown>;
 export type AuditChange = { field: string; from: unknown; to: unknown };
 
@@ -68,6 +70,10 @@ export function snapshotRow(row: Row | null | undefined): Row | null {
       continue;
     }
     const value = normalize(raw);
+    if (key === "rules") {
+      out[key] = value;
+      continue;
+    }
     const text = typeof value === "string" ? value : JSON.stringify(value);
     out[key] = text && text.length > MAX_VALUE_CHARS ? `${text.slice(0, MAX_VALUE_CHARS)}…` : value;
   }
@@ -76,6 +82,21 @@ export function snapshotRow(row: Row | null | undefined): Row | null {
 
 const same = (a: unknown, b: unknown) => JSON.stringify(normalize(a)) === JSON.stringify(normalize(b));
 
+/** Prefixo dos campos das Regras da loja ("rules.shipping.standardCost"): o JSON é aberto regra por regra para mostrar e desfazer cada uma. */
+export const RULES_PREFIX = "rules.";
+
+/** Regras que mudaram entre o antes e o depois (cada uma com o valor completo, já com os padrões aplicados). */
+function diffRules(before: unknown, after: unknown): AuditChange[] {
+  if ((before === null || before === undefined) && (after === null || after === undefined)) return [];
+  const b = parseStoreRules(before);
+  const a = parseStoreRules(after);
+  return RULE_FIELDS.flatMap((spec) => {
+    const from = getPath(b, spec.path);
+    const to = getPath(a, spec.path);
+    return same(from, to) ? [] : [{ field: RULES_PREFIX + spec.path, from, to }];
+  });
+}
+
 /** O que mudou entre o antes e o depois (só campos relevantes). */
 export function diffRows(before: Row | null, after: Row | null): AuditChange[] {
   const b = snapshotRow(before) ?? {};
@@ -83,6 +104,10 @@ export function diffRows(before: Row | null, after: Row | null): AuditChange[] {
   const changes: AuditChange[] = [];
   for (const field of new Set([...Object.keys(b), ...Object.keys(a)])) {
     if (IGNORED_FIELDS.has(field)) continue;
+    if (field === "rules") {
+      changes.push(...diffRules(b[field], a[field]));
+      continue;
+    }
     if (!same(b[field], a[field])) changes.push({ field, from: b[field] ?? null, to: a[field] ?? null });
   }
   return changes;
@@ -92,7 +117,7 @@ export function diffRows(before: Row | null, after: Row | null): AuditChange[] {
 export function filledFields(row: Row | null, direction: "to" | "from"): AuditChange[] {
   const snap = snapshotRow(row) ?? {};
   return Object.entries(snap)
-    .filter(([field, value]) => !IGNORED_FIELDS.has(field) && value !== null && value !== undefined && value !== "" && !(Array.isArray(value) && value.length === 0))
+    .filter(([field, value]) => !IGNORED_FIELDS.has(field) && field !== "rules" && value !== null && value !== undefined && value !== "" && !(Array.isArray(value) && value.length === 0))
     .map(([field, value]) => (direction === "to" ? { field, from: null, to: value } : { field, from: value, to: null }));
 }
 
@@ -210,7 +235,11 @@ const MONEY_FIELDS = new Set([
 ]);
 const PERCENT_FIELDS = new Set(["pixDiscountPct", "defaultProfitMarginPct", "averageFailureRatePct"]);
 
+const RULE_SPECS = new Map(RULE_FIELDS.map((spec) => [RULES_PREFIX + spec.path, spec]));
+
 export function fieldLabel(field: string) {
+  const rule = RULE_SPECS.get(field);
+  if (rule) return `Regras da loja: ${rule.label}`;
   if (FIELD_LABELS[field]) return FIELD_LABELS[field];
   const words = field.replace(/([A-Z])/g, " $1").toLowerCase().trim();
   return words.charAt(0).toUpperCase() + words.slice(1);
@@ -222,6 +251,9 @@ export function formatAuditValue(field: string, value: unknown): string {
   if (value === null || value === undefined || value === "") return "vazio";
   if (typeof value === "boolean") return value ? "Sim" : "Não";
   if (typeof value === "number") {
+    const rule = RULE_SPECS.get(field);
+    if (rule?.kind === "money") return brl(value);
+    if (rule?.unit) return `${String(value).replace(".", ",")} ${rule.unit}`;
     if (MONEY_FIELDS.has(field)) return brl(value);
     if (PERCENT_FIELDS.has(field)) return `${value}%`;
     return String(value).replace(".", ",");

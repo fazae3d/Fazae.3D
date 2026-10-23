@@ -8,7 +8,8 @@ import { JsonLd } from "@/components/json-ld";
 import { withReadFallback } from "@/lib/db-fallback";
 import { formatPrice } from "@/lib/format";
 import { getLocalDeliveryRules } from "@/lib/local-delivery";
-import { COMPANY } from "@/lib/site-config";
+import { FALLBACK_SETTINGS } from "@/lib/settings-fallback";
+import { companyAddress } from "@/lib/store-rules";
 import { getSettings } from "@/server/repositories/settings-repository";
 
 type City = { slug: string; name: string; intro: string };
@@ -43,19 +44,24 @@ export async function generateMetadata({ params }: CityParams): Promise<Metadata
   });
 }
 
+/** "Entrega em até 48h" vira "em até 48h" para entrar no meio de uma frase. */
+function deliveryEta(eta: string) {
+  return eta.replace(/^entrega\s+/i, "");
+}
+
 export default async function LocalLandingPage({ params }: CityParams) {
   const { cidade } = await params;
   const city = CITIES.find((c) => c.slug === cidade);
   if (!city) notFound();
 
-  const settings = await withReadFallback(() => getSettings(), { freeShippingThreshold: 299.9, whatsappNumber: "" });
+  const settings = await withReadFallback(() => getSettings(), { ...FALLBACK_SETTINGS, whatsappNumber: "" });
   const rules = getLocalDeliveryRules(settings);
   const other = CITIES.find((c) => c.slug !== city.slug)!;
 
   const faq = [
     {
       q: `Vocês fazem entrega em ${city.name}?`,
-      a: `Sim. Em Natal e Parnamirim entregamos em até 48h. O frete é ${formatPrice(rules.fee)} e fica grátis em compras a partir de ${formatPrice(rules.threshold)}.`,
+      a: `Sim. Em ${rules.citiesLabel} entregamos ${deliveryEta(rules.eta)}. O frete é ${formatPrice(rules.fee)} e fica grátis em compras a partir de ${formatPrice(rules.threshold)}.`,
     },
     {
       q: "Dá para pedir uma peça personalizada?",
@@ -114,7 +120,7 @@ export default async function LocalLandingPage({ params }: CityParams) {
         <section>
           <h2 className="font-display mb-3 text-xl text-paper">Entrega em {city.name}</h2>
           <p className="leading-relaxed">
-            Em Natal e Parnamirim a gente entrega em até 48h. O frete é de {formatPrice(rules.fee)} e fica{" "}
+            Em {rules.citiesLabel} a gente entrega {deliveryEta(rules.eta)}. O frete é de {formatPrice(rules.fee)} e fica{" "}
             <strong className="text-paper">grátis em compras a partir de {formatPrice(rules.threshold)}</strong>. Para o resto do Brasil,
             enviamos pelos Correios e transportadoras, com frete calculado no checkout.
           </p>
@@ -145,7 +151,7 @@ export default async function LocalLandingPage({ params }: CityParams) {
 
         <section className="border border-paper/10 bg-mist p-6">
           <p className="mb-4 text-paper/85">
-            Estamos em {COMPANY.address}. Conte sua ideia e receba um orçamento, ou comece pelo catálogo.
+            Estamos em {companyAddress(settings.rules.company)}. Conte sua ideia e receba um orçamento, ou comece pelo catálogo.
           </p>
           <div className="flex flex-wrap gap-3">
             <ButtonLink href="/personalizado" variant="primary">

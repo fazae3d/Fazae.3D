@@ -3,6 +3,7 @@ import { PageHeader, StatusBadge } from "@/components/admin/page-header";
 import { getCustomersWithMetrics, type CustomerWithMetrics } from "@/server/repositories/customer-repository";
 import { formatPrice } from "@/lib/format";
 import { isInactive } from "@/lib/customer-insights";
+import { getStoreRules } from "@/server/store-rules";
 import { formatStoreDate } from "@/lib/quote";
 import { withReadFallback } from "@/lib/db-fallback";
 import { fallbackCustomersWithStats } from "@/server/demo-fallback";
@@ -24,6 +25,7 @@ export default async function AdminCustomersPage({
 
   const customers = await withReadFallback(() => getCustomersWithMetrics(), fallbackCustomers);
   const now = new Date();
+  const { reactivationDays } = (await getStoreRules()).automation;
 
   const rows = customers
     .filter(
@@ -117,7 +119,7 @@ export default async function AdminCustomersPage({
                   <td className="px-4 py-3">
                     {customer.metrics.orderCount === 0 ? (
                       <StatusBadge>Ainda não comprou</StatusBadge>
-                    ) : isInactive(customer.metrics, now) ? (
+                    ) : isInactive(customer.metrics, now, reactivationDays) ? (
                       <StatusBadge tone="warning">Parado</StatusBadge>
                     ) : (
                       <StatusBadge tone="success">Ativo</StatusBadge>

@@ -5,9 +5,9 @@ import { useCart } from "@/contexts/cart-context";
 import { useStoreSettings } from "@/hooks/use-store-settings";
 import { formatPrice } from "@/lib/format";
 import { round2 } from "@/lib/money";
-import { SHIPPING_OPTIONS } from "@/lib/shipping";
+import { getShippingOptions } from "@/lib/shipping";
 import { checkLocalDeliveryAction, quoteShippingAction } from "@/app/actions/shipping";
-import { LOCAL_DELIVERY_LABEL, getLocalDeliveryRules, localDeliveryCost } from "@/lib/local-delivery";
+import { getLocalDeliveryRules, localDeliveryCost } from "@/lib/local-delivery";
 import type { ShippingQuote } from "@/lib/melhor-envio";
 
 /** Shown on the PDP, the point where the purchase decision actually happens, not just at cart/checkout. */
@@ -104,7 +104,7 @@ export function ShippingEstimate({
 
           {localDelivery && (
             <p className="mt-2 text-petrol">
-              {LOCAL_DELIVERY_LABEL}:{" "}
+              {localRules.label}:{" "}
               {localDeliveryCost(potentialSubtotal, localRules) === 0
                 ? "Grátis 🎉"
                 : `${formatPrice(localRules.fee)} (grátis a partir de ${formatPrice(localRules.threshold)})`}
@@ -122,7 +122,7 @@ export function ShippingEstimate({
             </ul>
           ) : (
             <ul className="mt-1.5 space-y-0.5">
-              {SHIPPING_OPTIONS.map((option) => (
+              {getShippingOptions(settings.rules).map((option) => (
                 <li key={option.key}>
                   {option.label}: {option.eta}
                 </li>

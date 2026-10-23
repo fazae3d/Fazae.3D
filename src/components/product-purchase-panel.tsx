@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useCart } from "@/contexts/cart-context";
 import { useWishlist } from "@/contexts/wishlist-context";
-import { LOW_STOCK_THRESHOLD, isMadeToOrder, isSoldOut } from "@/lib/badges";
+import { isMadeToOrder, isSoldOut } from "@/lib/badges";
+import { useStoreRules } from "@/contexts/store-rules-context";
 import { formatPrice } from "@/lib/format";
 import { pixPrice } from "@/lib/money";
 import { usePixDiscountPct } from "@/contexts/pix-discount-context";
@@ -98,10 +99,11 @@ function ProntaEntregaPanel({ product, header }: { product: Product; header: Rea
 
   const ctaRef = useRef<HTMLDivElement>(null);
 
+  const { storefront } = useStoreRules();
   const soldOut = isSoldOut(product);
   const madeToOrder = isMadeToOrder(product);
   const maxQuantity = madeToOrder ? 20 : soldOut ? 1 : product.stock;
-  const lowStock = !soldOut && !madeToOrder && product.stock <= LOW_STOCK_THRESHOLD;
+  const lowStock = !soldOut && !madeToOrder && product.stock <= storefront.lowStockThreshold;
   const canBuy = !soldOut && product.price !== undefined && currentMaterial;
 
   useEffect(() => {
@@ -328,7 +330,7 @@ function ProntaEntregaPanel({ product, header }: { product: Product; header: Rea
 
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-paper/15 pt-3 text-[11px] text-graphite">
           <SecurityBadge />
-          <span>Troca ou devolução grátis em até 7 dias</span>
+          <span>Troca ou devolução grátis em até {storefront.returnDays} dias</span>
         </div>
       </div>
 

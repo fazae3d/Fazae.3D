@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Accordion } from "@/components/accordion";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { JsonLd } from "@/components/json-ld";
+import { getStoreRules } from "@/server/store-rules";
 
 export const metadata: Metadata = pageMeta({
   title: "Perguntas frequentes",
@@ -11,7 +12,8 @@ export const metadata: Metadata = pageMeta({
   path: "/faq",
 });
 
-const FAQ_ITEMS = [
+function buildFaqItems(returnDays: number) {
+  return [
   {
     title: "Vocês fabricam as peças ou revendem?",
     plainAnswer:
@@ -50,10 +52,10 @@ const FAQ_ITEMS = [
   {
     title: "Como funcionam trocas e devoluções?",
     plainAnswer:
-      "Peças prontas têm até 7 dias após o recebimento para troca ou devolução. Peças sob encomenda não têm direito de arrependimento, mas continuam cobertas por defeito de fabricação. Veja os detalhes na página de Trocas e devoluções.",
+      `Peças prontas têm até ${returnDays} dias após o recebimento para troca ou devolução. Peças sob encomenda não têm direito de arrependimento, mas continuam cobertas por defeito de fabricação. Veja os detalhes na página de Trocas e devoluções.`,
     content: (
       <>
-        Peças prontas têm até 7 dias após o recebimento para troca ou devolução. Peças sob encomenda não têm
+        Peças prontas têm até {returnDays} dias após o recebimento para troca ou devolução. Peças sob encomenda não têm
         direito de arrependimento, mas continuam cobertas por defeito de fabricação. Veja os detalhes em{" "}
         <Link href="/trocas-e-devolucoes" className="text-petrol hover:underline">
           Trocas e devoluções
@@ -101,24 +103,27 @@ const FAQ_ITEMS = [
     ),
   },
 ];
+}
 
-const faqJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: FAQ_ITEMS.map((item) => ({
-    "@type": "Question",
-    name: item.title,
-    acceptedAnswer: { "@type": "Answer", text: item.plainAnswer },
-  })),
-};
+export default async function FaqPage() {
+  const rules = await getStoreRules();
+  const faqItems = buildFaqItems(rules.storefront.returnDays);
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqItems.map((item) => ({
+      "@type": "Question",
+      name: item.title,
+      acceptedAnswer: { "@type": "Answer", text: item.plainAnswer },
+    })),
+  };
 
-export default function FaqPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-16 sm:px-6 lg:px-8">
       <JsonLd data={faqJsonLd} />
       <Breadcrumb items={[{ label: "Início", href: "/" }, { label: "FAQ" }]} />
       <h1 className="font-display mb-10 text-3xl sm:text-4xl">Perguntas frequentes</h1>
-      <Accordion items={FAQ_ITEMS} defaultOpenIndex={-1} />
+      <Accordion items={faqItems} defaultOpenIndex={-1} />
     </div>
   );
 }

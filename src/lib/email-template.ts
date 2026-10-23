@@ -1,6 +1,8 @@
 import { itemSpecsInline } from "@/lib/order-item";
 import { escapeHtml } from "@/lib/email";
-import { DEFAULT_WHATSAPP_NUMBER, INSTAGRAM_URL, SITE_NAME, SITE_TAGLINE, SITE_URL, getWhatsAppLink } from "@/lib/site-config";
+import { SITE_NAME, SITE_URL, getWhatsAppLink } from "@/lib/site-config";
+import { FALLBACK_SETTINGS } from "@/lib/settings-fallback";
+import { DEFAULT_RULES } from "@/lib/store-rules";
 import { getSettings } from "@/server/repositories/settings-repository";
 import { withReadFallback } from "@/lib/db-fallback";
 
@@ -28,12 +30,13 @@ export type EmailAction = { label: string; url: string };
  * e-mail send and pass the result in as `contactUrl`.
  */
 export async function getEmailContactUrl(): Promise<string> {
-  const { whatsappNumber } = await withReadFallback(() => getSettings(), {
-    freeShippingThreshold: 299.9,
-    whatsappNumber: DEFAULT_WHATSAPP_NUMBER,
-  });
+  const { whatsappNumber, rules } = await withReadFallback(() => getSettings(), FALLBACK_SETTINGS);
+  // O layout é síncrono; como todo envio chama esta função antes, guardamos aqui o slogan e o Instagram vigentes (Regras da loja).
+  emailBrand = { tagline: rules.company.tagline, instagramUrl: rules.company.instagramUrl };
   return getWhatsAppLink(whatsappNumber);
 }
+
+let emailBrand = { tagline: DEFAULT_RULES.company.tagline, instagramUrl: DEFAULT_RULES.company.instagramUrl };
 
 /**
  * Wraps a fragment of body HTML in the branded shell every transactional
@@ -129,10 +132,10 @@ export function renderEmailLayout({
             <tr>
               <td style="background-color:${COLORS.ink};padding:24px 32px;text-align:center;">
                 <p style="margin:0 0 6px;font-size:12px;color:${COLORS.graphite};font-family:Arial,Helvetica,sans-serif;">
-                  ${escapeHtml(SITE_NAME)} · ${escapeHtml(SITE_TAGLINE)}
+                  ${escapeHtml(SITE_NAME)} · ${escapeHtml(emailBrand.tagline)}
                 </p>
                 <p style="margin:0;font-size:12px;font-family:Arial,Helvetica,sans-serif;">
-                  <a href="${escapeHtml(INSTAGRAM_URL)}" style="color:${COLORS.petrol};text-decoration:none;">Instagram</a>
+                  <a href="${escapeHtml(emailBrand.instagramUrl)}" style="color:${COLORS.petrol};text-decoration:none;">Instagram</a>
                 </p>
               </td>
             </tr>

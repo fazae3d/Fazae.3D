@@ -16,7 +16,7 @@ import {
   markQuoteSentAction,
   setQuoteStatusAction,
 } from "@/app/admin/orcamentos/actions";
-import { quoteNumberLabel, quoteWhatsAppMessage, validityFromNow, DEFAULT_QUOTE_VALIDITY_DAYS, type QuoteStatus } from "@/lib/quote";
+import { quoteNumberLabel, quoteWhatsAppMessage, validityFromNow, type QuoteStatus } from "@/lib/quote";
 
 const BTN = "flex items-center gap-1.5 rounded-lg border border-mist px-3.5 py-2 text-sm transition-colors hover:border-petrol disabled:opacity-60";
 const BTN_PRIMARY = "flex items-center gap-1.5 rounded-lg bg-petrol px-3.5 py-2 text-sm font-semibold text-[#111] transition-opacity hover:opacity-90 disabled:opacity-60";
@@ -31,6 +31,7 @@ function whatsappDigits(phone?: string) {
 export function QuoteActions({
   quote,
   publicUrl,
+  validityDays,
 }: {
   quote: {
     id: string;
@@ -48,6 +49,8 @@ export function QuoteActions({
     linkedOrderId?: string;
   };
   publicUrl: string;
+  /** Validade de um orçamento novo (duplicar), vinda das Regras da loja. */
+  validityDays: number;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -162,7 +165,7 @@ export function QuoteActions({
           disabled={pending}
           onClick={() => {
             startTransition(async () => {
-              const result = await duplicateQuoteAction(quote.id, validityFromNow(DEFAULT_QUOTE_VALIDITY_DAYS));
+              const result = await duplicateQuoteAction(quote.id, validityFromNow(validityDays));
               if (!result.success) {
                 toast(result.error, "error");
                 return;

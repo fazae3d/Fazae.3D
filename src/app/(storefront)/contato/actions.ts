@@ -3,6 +3,7 @@
 import { contactSchema } from "@/lib/validation";
 import { escapeHtml, sendEmail } from "@/lib/email";
 import { getClientIp, rateLimit } from "@/server/rate-limit";
+import { getStoreRules } from "@/server/store-rules";
 
 export type ContactResult = { success: true } | { success: false; error: string };
 
@@ -15,7 +16,7 @@ export async function contactAction(input: unknown): Promise<ContactResult> {
     return { success: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
 
-  const storeEmail = process.env.STORE_CONTACT_EMAIL;
+  const storeEmail = (await getStoreRules()).owner.email || process.env.STORE_CONTACT_EMAIL;
   if (!storeEmail) {
     console.error("[contato] STORE_CONTACT_EMAIL não configurado, mensagem não entregue");
     return { success: false, error: "Não foi possível enviar sua mensagem agora. Fale com a gente pelo WhatsApp." };

@@ -1,9 +1,8 @@
 import { createHmac } from "crypto";
 import { createCoupon, findCoupon } from "@/server/repositories/coupon-repository";
+import { getStoreRules } from "@/server/store-rules";
 
-/** Agradecimento por avaliar: R$ 5 de desconto em compras a partir de R$ 30, uso único. Não depende da nota dada. */
-export const REVIEW_REWARD_VALUE = 5;
-export const REVIEW_REWARD_MIN_SUBTOTAL = 30;
+/** Agradecimento por avaliar: desconto fixo em compras a partir de um mínimo, uso único (valores nas Regras da loja). Não depende da nota dada. */
 
 function secret() {
   const value = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET;
@@ -17,11 +16,13 @@ export function rewardCodeFor(orderId: string) {
   return `OBRIGADO-${digest.slice(0, 6).toUpperCase()}`;
 }
 
-/** Cria o cupom do pedido (se ainda não existir) e devolve o código. */
-export async function ensureRewardCoupon(orderId: string): Promise<string> {
+/** Cria o cupom do pedido (se ainda não existir) e devolve o código. Valor 0 nas regras desliga a recompensa (devolve null). */
+export async function ensureRewardCoupon(orderId: string): Promise<string | null> {
+  const { reviews } = await getStoreRules({ fresh: true });
+  if (reviews.rewardValue <= 0) return null;
   const code = rewardCodeFor(orderId);
   if (!(await findCoupon(code))) {
-    await createCoupon({ code, type: "fixo", value: REVIEW_REWARD_VALUE, minSubtotal: REVIEW_REWARD_MIN_SUBTOTAL, usageLimit: 1, active: true });
+    await createCoupon({ code, type: "fixo", value: reviews.rewardValue, minSubtotal: reviews.rewardMinSubtotal, usageLimit: 1, active: true });
   }
   return code;
 }

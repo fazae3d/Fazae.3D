@@ -55,6 +55,7 @@ export const QUOTE_STATUS_LABELS: Record<QuoteDisplayStatus, string> = {
   vencido: "Vencido",
 };
 
+/** Padrões de um orçamento novo; as Regras da loja (painel) sobrescrevem. */
 export const DEFAULT_QUOTE_VALIDITY_DAYS = 7;
 export const DEFAULT_QUOTE_DELIVERY = "7 a 10 dias úteis após a confirmação do pagamento.";
 export const DEFAULT_QUOTE_PAYMENT =

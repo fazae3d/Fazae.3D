@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { getAllCategories, getAllProducts } from "@/lib/demo-data";
-import { LOW_STOCK_THRESHOLD, isSoldOut } from "@/lib/badges";
+import { isSoldOut } from "@/lib/badges";
 import { formatPrice } from "@/lib/format";
 import { round2 } from "@/lib/money";
 import {
@@ -20,6 +20,7 @@ import { monthGoalProgress } from "@/lib/finance-stats";
 import { isInactive, wasRecentlyReminded } from "@/lib/customer-insights";
 import { getCustomersWithMetrics } from "@/server/repositories/customer-repository";
 import { getSettings } from "@/server/repositories/settings-repository";
+import { getStoreRules } from "@/server/store-rules";
 import { withReadFallback } from "@/lib/db-fallback";
 import { RevenueChart } from "@/components/admin/revenue-chart";
 import { PageHeader } from "@/components/admin/page-header";
@@ -101,9 +102,10 @@ function Panel({ title, children, footer }: { title: string; children: ReactNode
 }
 
 export default async function AdminDashboardPage() {
-  const [settings, customersWithMetrics] = await Promise.all([
+  const [settings, customersWithMetrics, storeRules] = await Promise.all([
     withReadFallback(() => getSettings(), null),
     withReadFallback(() => getCustomersWithMetrics(), []),
+    getStoreRules(),
   ]);
   const [productsResult, categoriesResult, ordersResult, rawMaterialsResult, quotesResult] = await Promise.all([
     readWithStatus(() => getAllProducts(), fallbackProducts),
@@ -128,7 +130,7 @@ export default async function AdminDashboardPage() {
   const { confirmed: confirmedRevenue, pending: pendingRevenue } = revenueSplit(orders);
 
   const soldOut = products.filter(isSoldOut);
-  const lowStock = products.filter((p) => !isSoldOut(p) && p.stock <= LOW_STOCK_THRESHOLD);
+  const lowStock = products.filter((p) => !isSoldOut(p) && p.stock <= storeRules.storefront.lowStockThreshold);
 
   const activeProductionOrders = orders.filter(
     (o) => isActiveOrder(o) && (o.productionStage === "inicio" || o.productionStage === "em_producao"),
@@ -153,7 +155,7 @@ export default async function AdminDashboardPage() {
   const quotesToFollowUp = quotes.filter((q) => needsFollowUp(q));
   const nowDate = new Date();
   const customersToReactivate = customersWithMetrics.filter(
-    (c) => c.phone && isInactive(c.metrics, nowDate) && !wasRecentlyReminded(c.lastReminderAt, nowDate),
+    (c) => c.phone && isInactive(c.metrics, nowDate, storeRules.automation.reactivationDays) && !wasRecentlyReminded(c.lastReminderAt, nowDate, storeRules.automation.reminderCooldownDays),
   );
   const goal = settings?.monthlyGoal ?? 0;
   const goalProgress = goal > 0 ? monthGoalProgress(orders, goal) : null;

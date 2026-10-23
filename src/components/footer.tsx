@@ -3,7 +3,9 @@ import { FlowLines } from "./flow-lines";
 import { PaymentIcons } from "./payment-icons";
 import { SecurityBadge } from "./security-badge";
 import { NewsletterForm } from "./newsletter-form";
-import { DEFAULT_WHATSAPP_NUMBER, INSTAGRAM_URL, SITE_NAME, SITE_TAGLINE, getWhatsAppLink, companyIdentification } from "@/lib/site-config";
+import { SITE_NAME, getWhatsAppLink } from "@/lib/site-config";
+import { FALLBACK_SETTINGS } from "@/lib/settings-fallback";
+import { companyIdentificationLine } from "@/lib/store-rules";
 import { getSettings } from "@/server/repositories/settings-repository";
 import { withReadFallback } from "@/lib/db-fallback";
 
@@ -58,10 +60,8 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
 ];
 
 export async function Footer() {
-  const { whatsappNumber } = await withReadFallback(() => getSettings(), {
-    freeShippingThreshold: 299.9,
-    whatsappNumber: DEFAULT_WHATSAPP_NUMBER,
-  });
+  const { whatsappNumber, rules } = await withReadFallback(() => getSettings(), FALLBACK_SETTINGS);
+  const whatsappHref = getWhatsAppLink(whatsappNumber, rules.texts.whatsappMessage);
 
   return (
     <footer className="relative overflow-hidden bg-ink text-paper">
@@ -71,7 +71,7 @@ export async function Footer() {
         <div className="flex flex-col gap-6 border-b border-paper/15 pb-12 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <img src="/logo-header.webp" alt={SITE_NAME} className="h-8 w-auto" />
-            <p className="label-caps mt-3 text-xs text-paper/60">{SITE_TAGLINE}</p>
+            <p className="label-caps mt-3 text-xs text-paper/60">{rules.company.tagline}</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Link
@@ -81,7 +81,7 @@ export async function Footer() {
               Ver produtos
             </Link>
             <a
-              href={getWhatsAppLink(whatsappNumber)}
+              href={whatsappHref}
               target="_blank"
               rel="noopener noreferrer"
               className="label-caps inline-flex w-fit items-center gap-2 rounded-full bg-petrol px-6 py-3 text-xs text-ink transition-colors hover:bg-paper"
@@ -115,7 +115,7 @@ export async function Footer() {
             <ul className="space-y-2.5">
               <li>
                 <a
-                  href={getWhatsAppLink(whatsappNumber)}
+                  href={whatsappHref}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 py-1 text-sm text-paper/85 transition-colors hover:text-petrol sm:py-0"
@@ -126,7 +126,7 @@ export async function Footer() {
               </li>
               <li>
                 <a
-                  href={INSTAGRAM_URL}
+                  href={rules.company.instagramUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 text-sm text-paper/85 transition-colors hover:text-petrol"
@@ -142,7 +142,7 @@ export async function Footer() {
         <div className="flex flex-col gap-4 border-t border-paper/15 pt-8 text-xs text-paper/60 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
             <p>© {new Date().getFullYear()} {SITE_NAME}. Todos os direitos reservados.</p>
-            <p className="max-w-xl text-[11px] leading-relaxed">{companyIdentification()}</p>
+            <p className="max-w-xl text-[11px] leading-relaxed">{companyIdentificationLine(rules.company)}</p>
           </div>
           <div className="flex flex-wrap items-center gap-5">
             <SecurityBadge />

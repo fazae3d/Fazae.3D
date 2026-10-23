@@ -3,6 +3,7 @@ import { PageHeader, StatusBadge } from "@/components/admin/page-header";
 import { withReadFallback } from "@/lib/db-fallback";
 import { formatPrice } from "@/lib/format";
 import { isInactive, rankCustomers } from "@/lib/customer-insights";
+import { getStoreRules } from "@/server/store-rules";
 import { round2 } from "@/lib/money";
 import { formatStoreDate } from "@/lib/quote";
 import { getCustomersWithMetrics } from "@/server/repositories/customer-repository";
@@ -23,6 +24,7 @@ export default async function BestCustomersPage({ searchParams }: { searchParams
   const topTenRevenue = round2(buyers.slice(0, 10).reduce((sum, c) => sum + c.metrics.totalSpent, 0));
   const repeatBuyers = buyers.filter((c) => c.metrics.orderCount >= 2).length;
   const now = new Date();
+  const { reactivationDays } = (await getStoreRules()).automation;
 
   return (
     <div>
@@ -90,7 +92,7 @@ export default async function BestCustomersPage({ searchParams }: { searchParams
             </thead>
             <tbody className="divide-y divide-mist">
               {top.map((customer, index) => {
-                const inactive = isInactive(customer.metrics, now);
+                const inactive = isInactive(customer.metrics, now, reactivationDays);
                 return (
                   <tr key={customer.id} className="transition-colors hover:bg-mist/40">
                     <td className="px-4 py-3 text-graphite">{index + 1}</td>

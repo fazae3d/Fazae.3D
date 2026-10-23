@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Breadcrumb } from "@/components/breadcrumb";
-import { COMPANY } from "@/lib/site-config";
+import { companyAddress } from "@/lib/store-rules";
+import { getStoreRules } from "@/server/store-rules";
 
 export const metadata: Metadata = {
   title: "Política de privacidade",
@@ -8,7 +9,8 @@ export const metadata: Metadata = {
 
 const SECTION_TITLE = "mb-2 text-sm text-paper label-caps";
 
-export default function PrivacidadePage() {
+export default async function PrivacidadePage() {
+  const { company: COMPANY } = await getStoreRules();
   return (
     <div className="mx-auto max-w-2xl px-4 py-16 sm:px-6 lg:px-8">
       <Breadcrumb items={[{ label: "Início", href: "/" }, { label: "Privacidade" }]} />
@@ -19,7 +21,7 @@ export default function PrivacidadePage() {
           <h2 className={SECTION_TITLE}>Quem cuida dos seus dados</h2>
           <p>
             O controlador dos dados é {COMPANY.legalName}
-            {COMPANY.cnpj ? `, CNPJ ${COMPANY.cnpj}` : ""}, {COMPANY.address}, CEP {COMPANY.zip}. Para qualquer assunto sobre seus
+            {COMPANY.cnpj ? `, CNPJ ${COMPANY.cnpj}` : ""}, {companyAddress(COMPANY)}, CEP {COMPANY.zip}. Para qualquer assunto sobre seus
             dados, fale com a gente pela página de{" "}
             <a href="/contato" className="text-petrol hover:underline">
               Contato

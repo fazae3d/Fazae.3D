@@ -2,7 +2,8 @@ import { pageMeta } from "@/lib/seo";
 import type { Metadata } from "next";
 import { Breadcrumb } from "@/components/breadcrumb";
 import { ContactForm } from "@/components/contact-form";
-import { DEFAULT_WHATSAPP_NUMBER, getWhatsAppLink } from "@/lib/site-config";
+import { getWhatsAppLink } from "@/lib/site-config";
+import { FALLBACK_SETTINGS } from "@/lib/settings-fallback";
 import { getSettings } from "@/server/repositories/settings-repository";
 import { withReadFallback } from "@/lib/db-fallback";
 
@@ -14,10 +15,7 @@ export const metadata: Metadata = pageMeta({
 
 export default async function ContatoPage() {
   // TODO(fase DB): remove o fallback quando a Fazaê tiver o próprio banco, hoje a leitura real falharia sem Supabase configurado.
-  const { whatsappNumber } = await withReadFallback(() => getSettings(), {
-    freeShippingThreshold: 299.9,
-    whatsappNumber: DEFAULT_WHATSAPP_NUMBER,
-  });
+  const { whatsappNumber, rules } = await withReadFallback(() => getSettings(), FALLBACK_SETTINGS);
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-16 sm:px-6 lg:px-8">
@@ -28,7 +26,7 @@ export default async function ContatoPage() {
       </p>
 
       <a
-        href={getWhatsAppLink(whatsappNumber)}
+        href={getWhatsAppLink(whatsappNumber, rules.texts.whatsappMessage)}
         target="_blank"
         rel="noopener noreferrer"
         className="mb-10 flex items-center gap-3 border border-paper/15 p-4 text-sm transition-colors hover:border-petrol"

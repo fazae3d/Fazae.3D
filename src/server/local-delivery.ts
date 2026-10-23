@@ -1,4 +1,4 @@
-import { isLocalDeliveryCity } from "@/lib/local-delivery";
+import { isLocalDeliveryCity, type LocalDeliveryRules } from "@/lib/local-delivery";
 
 type ViaCepResponse = { localidade?: string; uf?: string; erro?: boolean | string };
 
@@ -8,7 +8,7 @@ type ViaCepResponse = { localidade?: string; uf?: string; erro?: boolean | strin
  * delivery can't be unlocked by typing "Natal" next to another city's CEP.
  * Fails closed, any lookup problem simply means "not eligible".
  */
-export async function isLocalDeliveryCep(cep: string): Promise<boolean> {
+export async function isLocalDeliveryCep(cep: string, area?: Pick<LocalDeliveryRules, "cities" | "state">): Promise<boolean> {
   const digits = cep.replace(/\D/g, "");
   if (digits.length !== 8) return false;
   try {
@@ -19,7 +19,7 @@ export async function isLocalDeliveryCep(cep: string): Promise<boolean> {
     if (!response.ok) return false;
     const data: ViaCepResponse = await response.json();
     if (data.erro) return false;
-    return isLocalDeliveryCity(data.localidade, data.uf);
+    return isLocalDeliveryCity(data.localidade, data.uf, area);
   } catch {
     return false;
   }

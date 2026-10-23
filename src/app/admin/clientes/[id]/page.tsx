@@ -7,6 +7,7 @@ import { getAllQuotes } from "@/server/repositories/quote-repository";
 import { formatPrice } from "@/lib/format";
 import { round2 } from "@/lib/money";
 import { buildCustomerMetrics, daysSince, isInactive, phoneKey } from "@/lib/customer-insights";
+import { getStoreRules } from "@/server/store-rules";
 import { QUOTE_STATUS_LABELS, formatStoreDate, quoteDisplayStatus, quoteNumberLabel } from "@/lib/quote";
 import { withReadFallback } from "@/lib/db-fallback";
 import { fallbackCustomers, fallbackOrders, fallbackCustomOrderRequests } from "@/server/demo-fallback";
@@ -59,6 +60,7 @@ export default async function AdminCustomerDetailPage({ params }: { params: Prom
 
   const metrics = buildCustomerMetrics([customer], orders).get(customer.id)!;
   const now = new Date();
+  const { reactivationDays } = (await getStoreRules()).automation;
   // "A receber" é um conceito de pagamento, não de fase de produção: soma o saldo
   // (total - sinal) de qualquer pedido em que o sinal recebido não cobre o total.
   const totalReceivable = round2(
@@ -96,8 +98,8 @@ export default async function AdminCustomerDetailPage({ params }: { params: Prom
             <span className="inline-flex flex-wrap items-center gap-2">
               {metrics.orderCount === 0 ? (
                 <StatusBadge>Ainda não comprou</StatusBadge>
-              ) : isInactive(metrics, now) ? (
-                <StatusBadge tone="warning">Parado há mais de 120 dias</StatusBadge>
+              ) : isInactive(metrics, now, reactivationDays) ? (
+                <StatusBadge tone="warning">Parado há mais de {reactivationDays} dias</StatusBadge>
               ) : (
                 <StatusBadge tone="success">Cliente ativo</StatusBadge>
               )}

@@ -4,6 +4,9 @@ import { getProduct } from "@/lib/demo-data";
 import { withReadFallback } from "@/lib/db-fallback";
 import { fallbackProducts } from "@/server/demo-fallback";
 import { getSettings } from "@/server/repositories/settings-repository";
+import { getLocalDeliveryRules } from "@/lib/local-delivery";
+import { FALLBACK_SETTINGS } from "@/lib/settings-fallback";
+import { getStoreRules } from "@/server/store-rules";
 import { calculateShipping, type ShippingQuote } from "@/lib/melhor-envio";
 import { isLocalDeliveryCep } from "@/server/local-delivery";
 import { getClientIp, rateLimit } from "@/server/rate-limit";
@@ -14,7 +17,7 @@ export type ShippingQuoteInput = { productSlug: string; quantity: number };
 export async function checkLocalDeliveryAction(destinationCep: string): Promise<boolean> {
   const limited = await rateLimit(`cep-check:${await getClientIp()}`, 60, 10 * 60 * 1000);
   if (!limited.allowed) return false;
-  return isLocalDeliveryCep(destinationCep);
+  return isLocalDeliveryCep(destinationCep, getLocalDeliveryRules({ rules: await getStoreRules() }));
 }
 
 /**
@@ -33,7 +36,7 @@ export async function quoteShippingAction(
   const limited = await rateLimit(`shipping-quote:${await getClientIp()}`, 40, 10 * 60 * 1000);
   if (!limited.allowed) return [];
 
-  const settings = await withReadFallback(() => getSettings(), { freeShippingThreshold: 299.9, whatsappNumber: "" });
+  const settings = await withReadFallback(() => getSettings(), { ...FALLBACK_SETTINGS, whatsappNumber: "" });
   if (!settings.originCep) return [];
 
   const products = await Promise.all(

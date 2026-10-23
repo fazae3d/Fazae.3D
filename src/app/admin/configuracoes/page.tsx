@@ -2,13 +2,10 @@ import { PageHeader } from "@/components/admin/page-header";
 import { SettingsForm } from "@/components/admin/settings-form";
 import { getSettings } from "@/server/repositories/settings-repository";
 import { withReadFallback } from "@/lib/db-fallback";
-import { DEFAULT_WHATSAPP_NUMBER } from "@/lib/site-config";
+import { FALLBACK_SETTINGS } from "@/lib/settings-fallback";
 
 export default async function AdminSettingsPage() {
-  const settings = await withReadFallback(() => getSettings(), {
-    freeShippingThreshold: 299.9,
-    whatsappNumber: DEFAULT_WHATSAPP_NUMBER,
-  });
+  const settings = await withReadFallback(() => getSettings(), FALLBACK_SETTINGS);
 
   return (
     <div className="max-w-3xl">

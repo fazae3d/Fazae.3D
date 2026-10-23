@@ -1,17 +1,15 @@
 import { WhatsAppFloatLink } from "./whatsapp-float-link";
-import { DEFAULT_WHATSAPP_NUMBER, getWhatsAppLink } from "@/lib/site-config";
+import { getWhatsAppLink } from "@/lib/site-config";
+import { FALLBACK_SETTINGS } from "@/lib/settings-fallback";
 import { getSettings } from "@/server/repositories/settings-repository";
 import { withReadFallback } from "@/lib/db-fallback";
 
 export async function WhatsAppFloatButton() {
-  const { whatsappNumber } = await withReadFallback(() => getSettings(), {
-    freeShippingThreshold: 299.9,
-    whatsappNumber: DEFAULT_WHATSAPP_NUMBER,
-  });
+  const { whatsappNumber, rules } = await withReadFallback(() => getSettings(), FALLBACK_SETTINGS);
 
   return (
     <WhatsAppFloatLink
-      href={getWhatsAppLink(whatsappNumber)}
+      href={getWhatsAppLink(whatsappNumber, rules.texts.whatsappMessage)}
       className="fixed bottom-24 right-4 z-40 flex h-10 w-10 items-center justify-center rounded-full bg-[#25D366] text-paper shadow-lg transition-transform hover:scale-105 lg:bottom-5 lg:right-5 lg:h-11 lg:w-11"
     >
       <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">

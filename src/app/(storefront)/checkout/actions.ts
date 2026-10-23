@@ -4,8 +4,8 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { fetchProductsForLines, resolveCartItems } from "@/lib/resolve-cart-items";
 import { checkoutAddressSchema } from "@/lib/validation";
-import { SHIPPING_OPTIONS, computeShippingCost } from "@/lib/shipping";
-import { LOCAL_DELIVERY_LABEL, getLocalDeliveryRules, localDeliveryCost } from "@/lib/local-delivery";
+import { computeShippingCost, getShippingOptions } from "@/lib/shipping";
+import { getLocalDeliveryRules, localDeliveryCost } from "@/lib/local-delivery";
 import { isLocalDeliveryCep } from "@/server/local-delivery";
 import { calculateShipping } from "@/lib/melhor-envio";
 import { computeCouponDiscount } from "@/lib/coupons";
@@ -20,7 +20,6 @@ import {
   recordPaymentOutcome,
 } from "@/server/repositories/order-repository";
 import { notifyOwner } from "@/lib/owner-notify";
-import { LOW_STOCK_THRESHOLD } from "@/lib/badges";
 import { registerCouponUsage } from "@/server/repositories/coupon-repository";
 import { validateCouponWithFallback } from "@/server/coupon-validation";
 import { getSettings } from "@/server/repositories/settings-repository";
@@ -28,7 +27,8 @@ import { getClientIp, rateLimit } from "@/server/rate-limit";
 import { sendEmail } from "@/lib/email";
 import { getEmailContactUrl, renderEmailLayout, renderOrderItemsTable, renderTotalHighlight } from "@/lib/email-template";
 import { firstName, formatPrice } from "@/lib/format";
-import { DEFAULT_WHATSAPP_NUMBER, SITE_URL } from "@/lib/site-config";
+import { SITE_URL } from "@/lib/site-config";
+import { FALLBACK_SETTINGS } from "@/lib/settings-fallback";
 import { withReadFallback } from "@/lib/db-fallback";
 import { createMercadoPagoPayment, mapPaymentTypeToMethod } from "@/lib/mercadopago";
 import type { Order, OrderStatus } from "@/server/types";
@@ -156,10 +156,7 @@ export async function processCheckoutPaymentAction(
     }
   }
 
-  const settings = await withReadFallback(
-    () => getSettings({ fresh: true }),
-    { freeShippingThreshold: 299.9, whatsappNumber: DEFAULT_WHATSAPP_NUMBER },
-  );
+  const settings = await withReadFallback(() => getSettings({ fresh: true }), FALLBACK_SETTINGS);
   const { freeShippingThreshold, originCep } = settings;
 
   // Pix never stacks with a coupon, whichever discount is larger wins. When
@@ -185,17 +182,17 @@ export async function processCheckoutPaymentAction(
     // the live settings) since the client only says "I picked this option".
     // Runs even with a free-shipping coupon, because the label tells the admin
     // this order goes out by motoboy, not by a carrier.
-    if (!(await isLocalDeliveryCep(address.zip))) {
+    if (!(await isLocalDeliveryCep(address.zip, getLocalDeliveryRules(settings)))) {
       return { success: false, error: "Entrega local indisponível para este pedido. Volte e escolha outra forma de entrega." };
     }
     shipping = freeShippingFromCoupon ? 0 : localDeliveryCost(subtotal, getLocalDeliveryRules(settings));
-    shippingMethod = LOCAL_DELIVERY_LABEL;
+    shippingMethod = getLocalDeliveryRules(settings).label;
   } else if (freeShippingFromCoupon) {
     shippingMethod = "Frete grátis (cupom)";
   } else {
     if (shippingChoice.kind === "flat") {
-      shipping = computeShippingCost(shippingChoice.method, subtotal, freeShippingThreshold);
-      shippingMethod = SHIPPING_OPTIONS.find((o) => o.key === shippingChoice.method)?.label ?? "Entrega";
+      shipping = computeShippingCost(shippingChoice.method, subtotal, freeShippingThreshold, settings.rules);
+      shippingMethod = getShippingOptions(settings.rules).find((o) => o.key === shippingChoice.method)?.label ?? "Entrega";
     } else if (!originCep) {
       return { success: false, error: "Frete indisponível no momento. Volte e escolha a entrega novamente." };
     } else {
@@ -315,7 +312,7 @@ export async function processCheckoutPaymentAction(
     .map((item) => productsBySlug.get(item.productSlug))
     .filter((p): p is NonNullable<typeof p> => Boolean(p) && p!.type !== "sob_encomenda")
     .map((p) => ({ name: p.name, left: p.stock - (wantedBySlug.get(p.slug) ?? 0) }))
-    .filter((p) => p.left <= LOW_STOCK_THRESHOLD);
+    .filter((p) => p.left <= settings.rules.storefront.lowStockThreshold);
   if (lowStock.length > 0) {
     await notifyOwner(
       "Estoque baixo depois de uma venda",

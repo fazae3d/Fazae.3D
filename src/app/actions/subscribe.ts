@@ -6,6 +6,7 @@ import { getEmailContactUrl, renderEmailLayout } from "@/lib/email-template";
 import { UNSUBSCRIBE_PURPOSE } from "@/lib/reminder-unsubscribe";
 import { SITE_URL } from "@/lib/site-config";
 import { getClientIp, rateLimit } from "@/server/rate-limit";
+import { getStoreRules } from "@/server/store-rules";
 import { findCoupon } from "@/server/repositories/coupon-repository";
 import { upsertSubscriber } from "@/server/repositories/subscriber-repository";
 import { createSignedToken } from "@/server/signed-token";
@@ -33,7 +34,8 @@ export async function subscribeAction(input: unknown): Promise<SubscribeResult> 
   try {
     const { created } = await upsertSubscriber({ email, name: name || undefined, source });
     if (created) {
-      const coupon = await findCoupon("FAZAE10").catch(() => undefined);
+      const welcomeCode = (await getStoreRules()).payments.welcomeCouponCode;
+      const coupon = welcomeCode ? await findCoupon(welcomeCode).catch(() => undefined) : undefined;
       const couponHtml = coupon && coupon.active
         ? `<p style="margin:14px 0 0;padding:12px 14px;background:#f1ffd0;border-left:4px solid #b6ff00;">Seu cupom de primeira compra: <strong>${escapeHtml(coupon.code)}</strong>. É só colocar no carrinho.</p>`
         : "";

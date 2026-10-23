@@ -4,6 +4,7 @@ import { getWhatsAppProvider } from "../whatsapp/provider";
 import { buildMessageVars } from "../whatsapp/context";
 import { getAllCustomers, getCustomersWithMetrics, markCustomerReminded } from "./customer-repository";
 import { isInactive, phoneKey, wasRecentlyReminded } from "@/lib/customer-insights";
+import { getStoreRules } from "@/server/store-rules";
 import { storeDayKey } from "@/lib/store-time";
 import { isMobilePhone, normalizePhone, withOptOutNotice } from "@/lib/whatsapp";
 import {
@@ -777,9 +778,10 @@ export async function collectAudience(cadence: AudienceCadence, now = new Date()
 
   if (audience.inactiveCustomersDays) {
     const customers = await getCustomersWithMetrics();
+    const cooldownDays = (await getStoreRules()).automation.reminderCooldownDays;
     const inactive = customers.flatMap((cu) => {
       const phone = normalizePhone(cu.phone);
-      return phone && isInactive(cu.metrics, now, audience.inactiveCustomersDays) && !wasRecentlyReminded(cu.lastReminderAt, now) ? [{ phone, name: cu.name, customerId: cu.id }] : [];
+      return phone && isInactive(cu.metrics, now, audience.inactiveCustomersDays) && !wasRecentlyReminded(cu.lastReminderAt, now, cooldownDays) ? [{ phone, name: cu.name, customerId: cu.id }] : [];
     });
     await addPhones(inactive);
   }

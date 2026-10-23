@@ -148,6 +148,8 @@ export type StoreSettings = {
   /** Saldo em conta informado pelo dono e o dia (AAAA-MM-DD) a que ele se refere; sem data = "Em caixa" ainda não configurado. */
   cashBalance?: number;
   cashBalanceDate?: string;
+  /** Regras da loja (sempre completas: o que não foi editado vem do padrão). Ver lib/store-rules. */
+  rules: import("@/lib/store-rules").StoreRules;
 };
 
 /** Custo extra nomeado e reutilizável (argola, ímã, embalagem...), somado ad-hoc na calculadora de precificação. */

@@ -1,7 +1,8 @@
 import { EmptyState } from "@/components/admin/empty-state";
 import Link from "next/link";
 import { getAllProducts } from "@/lib/demo-data";
-import { LOW_STOCK_THRESHOLD, isSoldOut } from "@/lib/badges";
+import { isSoldOut } from "@/lib/badges";
+import { getStoreRules } from "@/server/store-rules";
 import { withReadFallback } from "@/lib/db-fallback";
 import { fallbackProducts } from "@/server/demo-fallback";
 import { matchesSearch } from "@/lib/search";
@@ -24,9 +25,9 @@ const SORT_LABELS: Record<SortKey, string> = {
   name: "Nome (A-Z)",
 };
 
-function stockStatus(product: Product) {
+function stockStatus(product: Product, lowStockThreshold: number) {
   if (isSoldOut(product)) return { label: "Esgotado", className: "text-graphite" };
-  if (product.stock <= LOW_STOCK_THRESHOLD) return { label: "Estoque baixo", className: "text-sand" };
+  if (product.stock <= lowStockThreshold) return { label: "Estoque baixo", className: "text-sand" };
   return { label: "Em estoque", className: "text-petrol" };
 }
 
@@ -39,11 +40,12 @@ export default async function AdminStockPage({
   const query = params.q?.trim() ?? "";
   const sort: SortKey = params.sort === "stock-desc" || params.sort === "name" ? params.sort : "stock-asc";
 
+  const { lowStockThreshold } = (await getStoreRules()).storefront;
   const allProducts = await withReadFallback(() => getAllProducts(), fallbackProducts);
   const products = allProducts.filter((p) => !query || matchesSearch(p, query)).sort(SORTERS[sort]);
 
   const soldOutCount = products.filter(isSoldOut).length;
-  const lowStockCount = products.filter((p) => !isSoldOut(p) && p.stock <= LOW_STOCK_THRESHOLD).length;
+  const lowStockCount = products.filter((p) => !isSoldOut(p) && p.stock <= lowStockThreshold).length;
 
   return (
     <div>
@@ -99,7 +101,7 @@ export default async function AdminStockPage({
             </thead>
             <tbody className="divide-y divide-mist">
               {products.map((product) => {
-                const status = stockStatus(product);
+                const status = stockStatus(product, lowStockThreshold);
                 return (
                   <tr key={product.slug}>
                     <td className="px-4 py-3">

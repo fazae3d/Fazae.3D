@@ -6,16 +6,13 @@ import { useStoreSettings } from "@/hooks/use-store-settings";
 import { formatPrice } from "@/lib/format";
 import { formatPct } from "@/lib/money";
 import { usePixDiscountPct } from "@/contexts/pix-discount-context";
-import { LOCAL_DELIVERY_CITIES_LABEL, getLocalDeliveryRules } from "@/lib/local-delivery";
-
-const STATIC_MESSAGES = [
-  "Ganhe 10% OFF na primeira compra com o cupom FAZAE10",
-  "Parcele em até 3x sem juros",
-];
+import { getLocalDeliveryRules } from "@/lib/local-delivery";
+import { useStoreRules } from "@/contexts/store-rules-context";
 
 export function AnnouncementBar() {
   const { subtotal } = useCart();
   const { settings } = useStoreSettings();
+  const rules = useStoreRules();
   const [index, setIndex] = useState(0);
 
   const remaining = Math.max(0, settings.freeShippingThreshold - subtotal);
@@ -25,20 +22,22 @@ export function AnnouncementBar() {
       ? `Faltam ${formatPrice(remaining)} para você ganhar frete grátis`
       : "Você garantiu frete grátis 🎉";
 
-  const remainingLocal = Math.max(0, getLocalDeliveryRules(settings).threshold - subtotal);
+  const localCities = getLocalDeliveryRules({ ...settings, rules }).citiesLabel;
+  const remainingLocal = Math.max(0, getLocalDeliveryRules({ ...settings, rules }).threshold - subtotal);
   const localMessage =
     remainingLocal > 0
-      ? `${LOCAL_DELIVERY_CITIES_LABEL}: faltam ${formatPrice(remainingLocal)} para frete grátis`
-      : `${LOCAL_DELIVERY_CITIES_LABEL}: você garantiu frete grátis 🎉`;
+      ? `${localCities}: faltam ${formatPrice(remainingLocal)} para frete grátis`
+      : `${localCities}: você garantiu frete grátis 🎉`;
 
   const pixPct = usePixDiscountPct();
+  const { welcomeCouponCode, welcomeCouponText, installments } = rules.payments;
   const messages = [
-    STATIC_MESSAGES[0],
+    welcomeCouponCode ? `Ganhe ${welcomeCouponText || "desconto"} com o cupom ${welcomeCouponCode}` : null,
     `${formatPct(pixPct)}% de desconto pagando no Pix`,
-    STATIC_MESSAGES[1],
+    installments > 1 ? `Parcele em até ${installments}x sem juros` : null,
     shippingMessage,
     localMessage,
-  ];
+  ].filter((m): m is string => Boolean(m));
 
   useEffect(() => {
     const id = setInterval(() => {

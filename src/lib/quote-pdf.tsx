@@ -1,5 +1,6 @@
 import { Document, Image, Page, StyleSheet, Text, View, renderToBuffer } from "@react-pdf/renderer";
-import { COMPANY, INSTAGRAM_URL, SITE_URL } from "@/lib/site-config";
+import { SITE_URL } from "@/lib/site-config";
+import { companyAddress, DEFAULT_RULES, type StoreRules } from "@/lib/store-rules";
 import { formatPrice } from "@/lib/format";
 import { formatPhone } from "@/lib/br-format";
 import { daysUntil, formatStoreDate, quoteNumberLabel, quoteSavings, type Quote } from "@/lib/quote";
@@ -62,6 +63,8 @@ function Money({ value }: { value: number }) {
 
 export type QuotePdfContext = {
   whatsappNumber: string;
+  /** Dados da empresa (Regras da loja); sem eles, os padrões. */
+  company?: StoreRules["company"];
 };
 
 export function QuotePdf({ quote, context }: { quote: Quote; context: QuotePdfContext }) {
@@ -72,9 +75,11 @@ export function QuotePdf({ quote, context }: { quote: Quote; context: QuotePdfCo
     savings.freeShipping ? "frete grátis" : "",
   ].filter(Boolean);
   const daysLeft = daysUntil(quote.validUntil);
+  const COMPANY = context.company ?? DEFAULT_RULES.company;
+  const address = companyAddress(COMPANY);
   const whatsapp = context.whatsappNumber.replace(/\D/g, "");
   const localWhats = whatsapp.startsWith("55") ? whatsapp.slice(2) : whatsapp;
-  const identification = [COMPANY.legalName, COMPANY.cnpj ? `CNPJ ${COMPANY.cnpj}` : null, `${COMPANY.address}, CEP ${COMPANY.zip}`]
+  const identification = [COMPANY.legalName, COMPANY.cnpj ? `CNPJ ${COMPANY.cnpj}` : null, `${address}, CEP ${COMPANY.zip}`]
     .filter(Boolean)
     .join(" · ");
 
@@ -127,7 +132,7 @@ export function QuotePdf({ quote, context }: { quote: Quote; context: QuotePdfCo
               <Text style={s.label}>DE</Text>
               <Text style={s.strong}>{COMPANY.legalName}</Text>
               {COMPANY.cnpj ? <Text style={s.small}>CNPJ {COMPANY.cnpj}</Text> : null}
-              <Text style={s.small}>{COMPANY.address}</Text>
+              <Text style={s.small}>{address}</Text>
               <Text style={s.small}>CEP {COMPANY.zip}</Text>
               {localWhats ? <Text style={s.small}>WhatsApp {formatPhone(localWhats)}</Text> : null}
             </View>
@@ -231,7 +236,7 @@ export function QuotePdf({ quote, context }: { quote: Quote; context: QuotePdfCo
         <View style={s.footer} fixed>
           <Text style={s.footText}>{identification}</Text>
           <Text style={s.footText}>
-            {SITE_URL.replace(/^https?:\/\//, "")} · {INSTAGRAM_URL.replace(/^https?:\/\/(www\.)?instagram\.com\//, "@")}
+            {SITE_URL.replace(/^https?:\/\//, "")} · {COMPANY.instagramUrl.replace(/^https?:\/\/(www\.)?instagram\.com\//, "@")}
           </Text>
         </View>
       </Page>

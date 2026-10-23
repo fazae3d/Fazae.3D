@@ -50,7 +50,7 @@ function CarrinhoPageInner() {
 
   const remaining = round2(Math.max(0, settings.freeShippingThreshold - subtotal));
   const shipping =
-    subtotal > 0 ? (freeShippingFromCoupon ? 0 : computeShippingCost("padrao", subtotal, settings.freeShippingThreshold)) : 0;
+    subtotal > 0 ? (freeShippingFromCoupon ? 0 : computeShippingCost("padrao", subtotal, settings.freeShippingThreshold, settings.rules)) : 0;
   const total = round2(Math.max(0, subtotal - discount) + shipping);
 
   return (

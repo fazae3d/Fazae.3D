@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { ButtonLink } from "../button";
 import { formatPrice } from "@/lib/format";
-import { PIX_RECEIVER_NOTICE } from "@/lib/site-config";
+import { useStoreRules } from "@/contexts/store-rules-context";
 import { trackEvent } from "@/lib/analytics";
 import type { Order } from "@/server/types";
 import type { PendingPaymentInstructions } from "@/app/(storefront)/checkout/actions";
@@ -11,6 +11,7 @@ import type { PendingPaymentInstructions } from "@/app/(storefront)/checkout/act
 const isTestMode = process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY?.startsWith("TEST-") ?? false;
 
 export function PixInstructions({ qrCode, qrCodeBase64 }: { qrCode?: string; qrCodeBase64?: string }) {
+  const { pixNotice } = useStoreRules().company;
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -56,7 +57,7 @@ export function PixInstructions({ qrCode, qrCodeBase64 }: { qrCode?: string; qrC
           </div>
         </div>
       )}
-      <p className="text-xs text-graphite">{PIX_RECEIVER_NOTICE}</p>
+      {pixNotice ? <p className="text-xs text-graphite">{pixNotice}</p> : null}
     </div>
   );
 }

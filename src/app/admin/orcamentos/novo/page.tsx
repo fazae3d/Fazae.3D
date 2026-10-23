@@ -1,13 +1,8 @@
 import { PageHeader } from "@/components/admin/page-header";
 import { QuoteForm, type QuoteFormInitial } from "@/components/admin/quote-form";
 import { withReadFallback } from "@/lib/db-fallback";
-import {
-  DEFAULT_QUOTE_DELIVERY,
-  DEFAULT_QUOTE_NOTES,
-  DEFAULT_QUOTE_PAYMENT,
-  DEFAULT_QUOTE_VALIDITY_DAYS,
-  validityFromNow,
-} from "@/lib/quote";
+import { validityFromNow } from "@/lib/quote";
+import { getStoreRules } from "@/server/store-rules";
 import { getCustomOrderRequest } from "@/server/repositories/custom-order-request-repository";
 import { getAllCustomers, getCustomer } from "@/server/repositories/customer-repository";
 import { getConversation } from "@/server/repositories/whatsapp-repository";
@@ -28,6 +23,7 @@ export default async function NewQuotePage({ searchParams }: PageProps<"/admin/o
     ? (await withReadFallback(() => getAllCustomers(), [])).find((c) => phoneKey(c.phone) === phoneKey(conversation.phone))
     : undefined;
   const { products, customers } = await loadQuoteFormOptions();
+  const { quote: quoteRules } = await getStoreRules();
 
   const initial: QuoteFormInitial = {
     customerName: lead?.name ?? known?.name ?? conversation?.name ?? knownFromChat?.name ?? "",
@@ -48,10 +44,10 @@ export default async function NewQuotePage({ searchParams }: PageProps<"/admin/o
       : [],
     discount: 0,
     shipping: 0,
-    validUntil: validityFromNow(DEFAULT_QUOTE_VALIDITY_DAYS),
-    deliveryTime: DEFAULT_QUOTE_DELIVERY,
-    paymentTerms: DEFAULT_QUOTE_PAYMENT,
-    notes: DEFAULT_QUOTE_NOTES,
+    validUntil: validityFromNow(quoteRules.validityDays),
+    deliveryTime: quoteRules.deliveryText,
+    paymentTerms: quoteRules.paymentText,
+    notes: quoteRules.notesText,
     linkedRequestId: lead?.id,
   };
 

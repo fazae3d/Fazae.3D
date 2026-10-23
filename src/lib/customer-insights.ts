@@ -1,7 +1,7 @@
 import { round2 } from "@/lib/money";
 import type { Customer, Order } from "@/server/types";
 
-/** Cliente que não compra há tantos dias entra na lista de reativação. */
+/** Padrões (Regras da loja, no painel, sobrescrevem): cliente que não compra há tantos dias entra na lista de reativação. */
 export const REACTIVATION_DAYS = 120;
 /** Depois de um lembrete, o cliente some da lista por este tempo (para não insistir). */
 export const REMINDER_COOLDOWN_DAYS = 30;
@@ -82,8 +82,8 @@ export function isInactive(metrics: CustomerMetrics, now = new Date(), days = RE
 }
 
 /** Foi lembrado há pouco? Então fica fora da lista até acabar o intervalo. */
-export function wasRecentlyReminded(lastReminderAt: string | undefined, now = new Date()) {
-  return lastReminderAt !== undefined && daysSince(lastReminderAt, now) < REMINDER_COOLDOWN_DAYS;
+export function wasRecentlyReminded(lastReminderAt: string | undefined, now = new Date(), cooldownDays = REMINDER_COOLDOWN_DAYS) {
+  return lastReminderAt !== undefined && daysSince(lastReminderAt, now) < cooldownDays;
 }
 
 export type RankedCustomer<T> = T & { metrics: CustomerMetrics };

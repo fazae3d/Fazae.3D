@@ -1,14 +1,18 @@
-import { COMPANY, SITE_URL } from "@/lib/site-config";
+import { SITE_URL } from "@/lib/site-config";
+import { companyAddress } from "@/lib/store-rules";
+import { getStoreRules } from "@/server/store-rules";
 
-export const dynamic = "force-static";
+// Atualiza a cada hora: o endereço vem das Regras da loja (painel).
+export const revalidate = 3600;
 
 /** Resumo da loja para assistentes de IA (convenção llms.txt): quem somos, o que vendemos e onde ficam as informações. */
-export function GET() {
+export async function GET() {
+  const { company } = await getStoreRules();
   const body = `# Fazaê 3D
 
 > Loja de impressão 3D em Parnamirim/RN: chaveiros, decoração, itens geek e utilidades, prontos ou sob encomenda. Entrega em até 48h em Natal e Parnamirim e envio para todo o Brasil.
 
-Endereço: ${COMPANY.address}, CEP ${COMPANY.zip}
+Endereço: ${companyAddress(company)}, CEP ${company.zip}
 
 ## Principais páginas
 - [Loja (catálogo completo)](${SITE_URL}/loja): produtos impressos em 3D com preço e disponibilidade

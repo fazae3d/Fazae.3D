@@ -15,13 +15,8 @@ import { getProduct } from "@/server/repositories/product-repository";
 import { createSignedToken } from "@/server/signed-token";
 import { notifyPixWhatsApp } from "@/server/whatsapp/automation";
 import { UNSUBSCRIBE_PURPOSE } from "@/lib/reminder-unsubscribe";
+import { getStoreRules } from "@/server/store-rules";
 
-/** How long a cart sits untouched before it's considered abandoned. */
-const ABANDONED_THRESHOLD_MS = 2 * 60 * 60 * 1000;
-/** O 2º lembrete (com incentivo) sai 3 dias depois do 1º, se o carrinho continuar parado. */
-const SECOND_REMINDER_AFTER_MS = 3 * 24 * 60 * 60 * 1000;
-/** Cupom oferecido no 2º lembrete (só se existir e estiver ativo no painel). */
-const ABANDONED_CART_COUPON = process.env.ABANDONED_CART_COUPON ?? "FAZAE10";
 
 /**
  * Vercel Cron calls this on the schedule in vercel.json, sending
@@ -35,9 +30,11 @@ function isAuthorized(request: NextRequest): boolean {
   return request.headers.get("authorization") === `Bearer ${secret}`;
 }
 
-async function activeCouponCode(): Promise<string | null> {
+/** Cupom oferecido no 2º lembrete: o de boas-vindas das Regras da loja (só se existir e estiver ativo em Cupons). */
+async function activeCouponCode(code: string): Promise<string | null> {
+  if (!code) return null;
   try {
-    const coupon = await findCoupon(ABANDONED_CART_COUPON);
+    const coupon = await findCoupon(code);
     if (!coupon || !coupon.active) return null;
     if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) return null;
     return coupon.code;
@@ -46,13 +43,13 @@ async function activeCouponCode(): Promise<string | null> {
   }
 }
 
-/** Nomes dos itens com poucas unidades de verdade (2 ou menos, só peça pronta): escassez honesta. */
-async function lowStockNames(items: { productSlug: string; name: string }[]): Promise<string[]> {
+/** Nomes dos itens com poucas unidades de verdade (até o limite do selo "Últimas peças", só peça pronta): escassez honesta. */
+async function lowStockNames(items: { productSlug: string; name: string }[], scarcityThreshold: number): Promise<string[]> {
   const names: string[] = [];
   for (const item of items) {
     try {
       const product = await getProduct(item.productSlug);
-      if (product && product.type !== "sob_encomenda" && product.stock > 0 && product.stock <= 2) names.push(item.name);
+      if (product && product.type !== "sob_encomenda" && product.stock > 0 && product.stock <= scarcityThreshold) names.push(item.name);
     } catch {
       // sem a informação de estoque, simplesmente não mostra o aviso
     }
@@ -65,10 +62,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
+  const rules = await getStoreRules({ fresh: true });
   const now = Date.now();
-  const carts = await getRemindableAbandonedCarts(new Date(now - ABANDONED_THRESHOLD_MS), new Date(now - SECOND_REMINDER_AFTER_MS));
+  // Quanto tempo um carrinho fica parado até contar como abandonado, e quando sai o 2º lembrete (com incentivo).
+  const abandonedAfterMs = rules.automation.abandonedCartHours * 60 * 60 * 1000;
+  const secondReminderAfterMs = rules.automation.abandonedCartSecondDays * 24 * 60 * 60 * 1000;
+  const carts = await getRemindableAbandonedCarts(new Date(now - abandonedAfterMs), new Date(now - secondReminderAfterMs));
   const contactUrl = await getEmailContactUrl();
-  const couponCode = await activeCouponCode();
+  const couponCode = await activeCouponCode(rules.payments.welcomeCouponCode);
 
   let sent = 0;
   for (const cart of carts) {
@@ -83,7 +84,7 @@ export async function GET(request: NextRequest) {
     const firstItem = cart.items[0]?.name ?? "seu carrinho";
     const shortName = firstItem.length > 48 ? `${firstItem.slice(0, 45)}...` : firstItem;
 
-    const low = second ? await lowStockNames(cart.items) : [];
+    const low = second ? await lowStockNames(cart.items, rules.storefront.scarcityThreshold) : [];
     const lowLine = low.length
       ? `<p style="margin:14px 0 0;font-weight:bold;">Restam poucas unidades de ${escapeHtml(low.join(", "))}.</p>`
       : "";

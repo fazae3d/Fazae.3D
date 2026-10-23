@@ -1,6 +1,7 @@
 import { pageMeta } from "@/lib/seo";
 import type { Metadata } from "next";
 import { Breadcrumb } from "@/components/breadcrumb";
+import { getStoreRules } from "@/server/store-rules";
 
 export const metadata: Metadata = pageMeta({
   title: "Trocas e devoluções",
@@ -8,7 +9,8 @@ export const metadata: Metadata = pageMeta({
   path: "/trocas-e-devolucoes",
 });
 
-export default function TrocasEDevolucoesPage() {
+export default async function TrocasEDevolucoesPage() {
+  const { storefront } = await getStoreRules();
   return (
     <div className="mx-auto max-w-2xl px-4 py-16 sm:px-6 lg:px-8">
       <Breadcrumb items={[{ label: "Início", href: "/" }, { label: "Trocas e devoluções" }]} />
@@ -18,7 +20,7 @@ export default function TrocasEDevolucoesPage() {
         <section>
           <h2 className="mb-2 text-sm text-paper label-caps">Peças prontas (pronta entrega)</h2>
           <p>
-            Você tem até 7 dias corridos após o recebimento do pedido para solicitar troca ou devolução, conforme
+            Você tem até {storefront.returnDays} dias corridos após o recebimento do pedido para solicitar troca ou devolução, conforme
             o Código de Defesa do Consumidor. A peça deve estar sem uso e na embalagem original, e você deve informar o
             número do pedido.
           </p>

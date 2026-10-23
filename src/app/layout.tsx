@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Exo_2, Inter } from "next/font/google";
 import { SessionProvider } from "next-auth/react";
 import "./globals.css";
-import { SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/site-config";
+import { SITE_NAME, SITE_URL } from "@/lib/site-config";
 
 const exo2 = Exo_2({
   variable: "--font-exo2",

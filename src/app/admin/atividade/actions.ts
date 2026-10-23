@@ -3,9 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { ADMIN_AUTH_DISABLED } from "@/lib/dev-flags";
-import { AUDITED_MODELS, canRestore, describeChange, type AuditChange } from "@/lib/audit-format";
+import { AUDITED_MODELS, RULES_PREFIX, canRestore, describeChange, type AuditChange } from "@/lib/audit-format";
+import { getPath, parseStoreRules, setPath } from "@/lib/store-rules";
 import { db } from "@/server/db";
 import { logAdminAction } from "@/server/audit";
+import { clearSettingsCache } from "@/server/repositories/settings-repository";
 
 const lowerFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 const MASK = "(oculto)";
@@ -51,11 +53,22 @@ export async function restoreAuditEntryAction(id: string): Promise<{ success: tr
       const current = await delegate.findUnique({ where });
       if (!current) return { success: false, error: "O registro não existe mais." };
       const changes = (Array.isArray(entry.changes) ? entry.changes : []) as unknown as AuditChange[];
-      const stale = changes.filter((c) => c.to !== MASK && !sameJson(JSON.parse(JSON.stringify(current[c.field] ?? null)), c.to ?? null));
+      // Regras da loja ficam num JSON só: cada regra é comparada e devolvida individualmente, sem mexer nas outras.
+      const currentRules = parseStoreRules(current.rules);
+      const currentValue = (field: string) =>
+        field.startsWith(RULES_PREFIX) ? getPath(currentRules, field.slice(RULES_PREFIX.length)) : JSON.parse(JSON.stringify(current[field] ?? null));
+      const stale = changes.filter((c) => c.to !== MASK && !sameJson(currentValue(c.field), c.to ?? null));
       if (stale.length > 0) {
         return { success: false, error: `Isto já foi alterado de novo depois (${stale.map((c) => describeChange(c).split(":")[0]).join(", ")}). Confira o histórico antes de desfazer.` };
       }
-      const data = Object.fromEntries(changes.filter((c) => c.from !== MASK).map((c) => [c.field, revive(c.from)]));
+      const restorable = changes.filter((c) => c.from !== MASK);
+      const data: Record<string, unknown> = Object.fromEntries(restorable.filter((c) => !c.field.startsWith(RULES_PREFIX)).map((c) => [c.field, revive(c.from)]));
+      const ruleChanges = restorable.filter((c) => c.field.startsWith(RULES_PREFIX));
+      if (ruleChanges.length > 0) {
+        const merged = JSON.parse(JSON.stringify(currentRules)) as Record<string, unknown>;
+        for (const c of ruleChanges) setPath(merged, c.field.slice(RULES_PREFIX.length), c.from);
+        data.rules = merged;
+      }
       if (Object.keys(data).length === 0) return { success: false, error: "Nada para desfazer." };
       await delegate.update({ where, data });
     } else {
@@ -73,5 +86,10 @@ export async function restoreAuditEntryAction(id: string): Promise<{ success: tr
   await db.auditLog.update({ where: { id }, data: { restoredAt: new Date(), restoredBy: actor } });
   await logAdminAction("auditoria.desfazer", entry.targetType, entry.targetId, { alteracao: id, tipo: entry.kind });
   revalidatePath("/admin", "layout");
+  if (entry.targetType === "Settings") {
+    // Configurações e Regras da loja valem na loja inteira: esquece o cache e renova as páginas.
+    clearSettingsCache();
+    revalidatePath("/", "layout");
+  }
   return { success: true };
 }

@@ -4,9 +4,12 @@
  * (APP_USR-) ones, showing a "sandbox" disclaimer during a real charge
  * would be actively misleading, not just inaccurate copy.
  */
+import { useStoreRules } from "@/contexts/store-rules-context";
+
 const isTestMode = process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY?.startsWith("TEST-") ?? false;
 
 export function TrustBadges() {
+  const { returnDays } = useStoreRules().storefront;
   return (
     <div className="mt-4 space-y-2.5 border-t border-mist pt-4 text-[11px] text-graphite">
       <div className="flex items-center gap-2">
@@ -28,7 +31,7 @@ export function TrustBadges() {
           <path d="M3 12a9 9 0 1 0 9-9" />
           <path d="M3 5v5h5" />
         </svg>
-        <span>Troca ou devolução grátis em até 7 dias</span>
+        <span>Troca ou devolução grátis em até {returnDays} dias</span>
       </div>
     </div>
   );

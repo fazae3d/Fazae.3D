@@ -1,6 +1,7 @@
 import { db } from "../db";
 import type { StoreSettings } from "../types";
 import { parseChannelFees } from "@/lib/channels";
+import { parseStoreRules, type StoreRules } from "@/lib/store-rules";
 
 const SETTINGS_ID = 1;
 
@@ -22,6 +23,7 @@ function toSettings(row: {
   monthlyGoal: number;
   cashBalance: number;
   cashBalanceDate: Date | null;
+  rules: unknown;
 }): StoreSettings {
   return {
     freeShippingThreshold: row.freeShippingThreshold,
@@ -41,6 +43,7 @@ function toSettings(row: {
     monthlyGoal: row.monthlyGoal,
     cashBalance: row.cashBalance,
     cashBalanceDate: row.cashBalanceDate?.toISOString().slice(0, 10),
+    rules: parseStoreRules(row.rules),
   };
 }
 
@@ -60,8 +63,20 @@ export async function getSettings(options?: { fresh?: boolean }): Promise<StoreS
   return value;
 }
 
-export async function updateSettings(input: Partial<StoreSettings>): Promise<StoreSettings> {
+/** Esquece o cache das configurações (usado quando algo altera Settings por fora deste repositório, como desfazer em Atividade). */
+export function clearSettingsCache() {
+  settingsCache = null;
+}
+
+export async function updateSettings(input: Partial<Omit<StoreSettings, "rules">>): Promise<StoreSettings> {
   const row = await db.settings.update({ where: { id: SETTINGS_ID }, data: input });
+  settingsCache = null;
+  return toSettings(row);
+}
+
+/** Salva as regras da loja (já validadas) e limpa o cache para valerem na hora. */
+export async function updateStoreRules(rules: StoreRules): Promise<StoreSettings> {
+  const row = await db.settings.update({ where: { id: SETTINGS_ID }, data: { rules } });
   settingsCache = null;
   return toSettings(row);
 }

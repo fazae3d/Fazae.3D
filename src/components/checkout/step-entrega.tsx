@@ -1,16 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { SHIPPING_OPTIONS, computeShippingCost, type ShippingMethod } from "@/lib/shipping";
+import { computeShippingCost, getShippingOptions, type ShippingMethod } from "@/lib/shipping";
+import type { PublicRules } from "@/lib/store-rules";
 import { checkLocalDeliveryAction, quoteShippingAction, type ShippingQuoteInput } from "@/app/actions/shipping";
 import { formatPrice } from "@/lib/format";
 import { round2 } from "@/lib/money";
-import {
-  LOCAL_DELIVERY_ETA,
-  LOCAL_DELIVERY_LABEL,
-  localDeliveryCost,
-  type LocalDeliveryRules,
-} from "@/lib/local-delivery";
+import { localDeliveryCost, type LocalDeliveryRules } from "@/lib/local-delivery";
 
 export type ShippingOption =
   | { kind: "local"; label: string; eta: string; cost: number }
@@ -30,6 +26,7 @@ export function StepEntrega({
   subtotal,
   freeShippingThreshold,
   localDelivery,
+  shippingRules,
   destinationCep,
   items,
   initial,
@@ -41,6 +38,7 @@ export function StepEntrega({
   subtotal: number;
   freeShippingThreshold: number;
   localDelivery: LocalDeliveryRules;
+  shippingRules: Pick<PublicRules, "shipping">;
   destinationCep: string;
   items: ShippingQuoteInput[];
   initial?: string;
@@ -85,19 +83,19 @@ export function StepEntrega({
   // changes what's *displayed*/charged at the top level (checkout/page.tsx),
   // never gets baked into the option itself. That way toggling the coupon
   // after a quote was already picked can't leave a stale zeroed-out price behind.
-  const flatOptions: ShippingOption[] = SHIPPING_OPTIONS.map((o) => ({
+  const flatOptions: ShippingOption[] = getShippingOptions(shippingRules).map((o) => ({
     kind: "flat" as const,
     key: o.key,
     label: o.label,
     eta: o.eta,
-    cost: computeShippingCost(o.key, subtotal, freeShippingThreshold),
+    cost: computeShippingCost(o.key, subtotal, freeShippingThreshold, shippingRules),
   }));
 
   // Own-logistics delivery only exists for Natal/Parnamirim, and is always
   // listed first when it applies: free from the minimum, flat fee below it.
   const localCost = localDeliveryCost(subtotal, localDelivery);
   const localOption: ShippingOption[] = localEligible
-    ? [{ kind: "local", label: LOCAL_DELIVERY_LABEL, eta: LOCAL_DELIVERY_ETA, cost: localCost }]
+    ? [{ kind: "local", label: localDelivery.label, eta: localDelivery.eta, cost: localCost }]
     : [];
   const remainingForLocal = round2(Math.max(0, localDelivery.threshold - subtotal));
 

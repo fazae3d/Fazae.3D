@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import { Breadcrumb } from "@/components/breadcrumb";
-import { COMPANY } from "@/lib/site-config";
+import { companyAddress } from "@/lib/store-rules";
+import { getStoreRules } from "@/server/store-rules";
 
 export const metadata: Metadata = {
   title: "Termos de uso",
 };
 
-export default function TermosPage() {
+export default async function TermosPage() {
+  const { company: COMPANY } = await getStoreRules();
   return (
     <div className="mx-auto max-w-2xl px-4 py-16 sm:px-6 lg:px-8">
       <Breadcrumb items={[{ label: "Início", href: "/" }, { label: "Termos" }]} />
@@ -17,7 +19,7 @@ export default function TermosPage() {
           <h2 className="mb-2 text-sm text-paper label-caps">Quem vende</h2>
           <p>
             Este site é operado por {COMPANY.legalName}
-            {COMPANY.cnpj ? `, CNPJ ${COMPANY.cnpj}` : ""}, com sede na {COMPANY.address}, CEP {COMPANY.zip}. Para falar
+            {COMPANY.cnpj ? `, CNPJ ${COMPANY.cnpj}` : ""}, com sede na {companyAddress(COMPANY)}, CEP {COMPANY.zip}. Para falar
             com a gente, use a página de{" "}
             <a href="/contato" className="text-petrol hover:underline">
               Contato

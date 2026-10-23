@@ -10,11 +10,13 @@ import { ProductPhoto } from "./product-photo";
 import { PriceBlock } from "./price-block";
 import { WishlistButton } from "./wishlist-button";
 import { useCart } from "@/contexts/cart-context";
+import { useStoreRules } from "@/contexts/store-rules-context";
 
 export function ProductCard({ product }: { product: Product }) {
   const { addLine } = useCart();
   const [adding, setAdding] = useState(false);
-  const badge = getPrimaryBadge(product);
+  const { scarcityThreshold } = useStoreRules().storefront;
+  const badge = getPrimaryBadge(product, scarcityThreshold);
   const soldOut = isSoldOut(product);
   const canQuickAdd = product.price !== undefined && product.materials.length > 0;
   // Com mais de um material ou cor, adicionar o primeiro "no escuro" pode gerar pedido na cor errada: leva para a página do produto.

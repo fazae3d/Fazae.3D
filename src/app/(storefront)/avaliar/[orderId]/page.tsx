@@ -7,7 +7,8 @@ import { findOrderById } from "@/server/repositories/order-repository";
 import { getProduct } from "@/server/repositories/product-repository";
 import { getReviewForOrderProduct } from "@/server/repositories/review-repository";
 import { isValidReviewToken } from "@/server/review-link";
-import { REVIEW_REWARD_MIN_SUBTOTAL, REVIEW_REWARD_VALUE, ensureRewardCoupon } from "@/server/review-reward";
+import { ensureRewardCoupon } from "@/server/review-reward";
+import { getStoreRules } from "@/server/store-rules";
 import { formatPrice } from "@/lib/format";
 
 export const metadata: Metadata = {
@@ -71,6 +72,7 @@ export default async function ReviewByLinkPage({
     )
   ).filter((e): e is NonNullable<typeof e> => e !== null);
 
+  const { rewardValue, rewardMinSubtotal } = (await getStoreRules()).reviews;
   const reviewedAny = entries.some((e) => e.review);
   const couponCode = reviewedAny ? await ensureRewardCoupon(order.id).catch(() => null) : null;
 
@@ -79,9 +81,14 @@ export default async function ReviewByLinkPage({
       <p className="label-caps text-xs text-petrol">Pedido {order.id}</p>
       <h1 className="font-display mt-2 text-3xl sm:text-4xl">Como foi o seu pedido?</h1>
       <p className="mt-3 text-graphite">
-        Sua opinião ajuda quem está escolhendo e ajuda a gente a melhorar. Avalie e ganhe{" "}
-        <strong className="text-paper">{formatPrice(REVIEW_REWARD_VALUE)} de desconto</strong> na próxima compra (a partir de{" "}
-        {formatPrice(REVIEW_REWARD_MIN_SUBTOTAL)}). O desconto vale para qualquer nota, a gente quer o seu feedback sincero.
+        Sua opinião ajuda quem está escolhendo e ajuda a gente a melhorar.
+        {rewardValue > 0 ? (
+          <>
+            {" "}
+            Avalie e ganhe <strong className="text-paper">{formatPrice(rewardValue)} de desconto</strong> na próxima compra (a partir de{" "}
+            {formatPrice(rewardMinSubtotal)}). O desconto vale para qualquer nota, a gente quer o seu feedback sincero.
+          </>
+        ) : null}
       </p>
 
       {couponCode ? (
@@ -89,7 +96,7 @@ export default async function ReviewByLinkPage({
           <p className="text-xs font-bold uppercase tracking-widest">Obrigado! Seu presente</p>
           <p className="font-display mt-1 text-3xl">{couponCode}</p>
           <p className="mt-2 text-sm font-medium">
-            Use no carrinho: {formatPrice(REVIEW_REWARD_VALUE)} de desconto em compras a partir de {formatPrice(REVIEW_REWARD_MIN_SUBTOTAL)}. Uso único.
+            Use no carrinho: {formatPrice(rewardValue)} de desconto em compras a partir de {formatPrice(rewardMinSubtotal)}. Uso único.
           </p>
           <ButtonLink href="/loja" variant="secondary" className="mt-4 inline-flex">
             Ver produtos

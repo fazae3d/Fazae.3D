@@ -7,6 +7,7 @@ import { useStoreSettings } from "@/hooks/use-store-settings";
 import { formatPrice } from "@/lib/format";
 import { formatPct } from "@/lib/money";
 import { usePixDiscountPct } from "@/contexts/pix-discount-context";
+import { useStoreRules } from "@/contexts/store-rules-context";
 import { CartCrossSell } from "./cart-cross-sell";
 import { QuantityStepper } from "./quantity-stepper";
 import { ButtonLink } from "./button";
@@ -17,6 +18,7 @@ export function CartDrawer() {
   const { toggle } = useWishlist();
   const { settings } = useStoreSettings();
   const pixPct = usePixDiscountPct();
+  const rules = useStoreRules();
   const [showOffers, setShowOffers] = useState(false);
 
   const remainingForFreeShipping = Math.max(0, settings.freeShippingThreshold - subtotal);
@@ -73,7 +75,11 @@ export function CartDrawer() {
                   <p className="label-caps mb-3 text-[10px] text-paper">Ofertas disponíveis</p>
                   <ul className="space-y-2">
                     <li>
-                      <span className="text-paper">Cupom FAZAE10</span> · 10% OFF na primeira compra
+                      {rules.payments.welcomeCouponCode ? (
+                        <>
+                          <span className="text-paper">Cupom {rules.payments.welcomeCouponCode}</span> · {rules.payments.welcomeCouponText}
+                        </>
+                      ) : null}
                     </li>
                     <li>
                       <span className="text-paper">{formatPct(pixPct)}% OFF no Pix</span> em qualquer

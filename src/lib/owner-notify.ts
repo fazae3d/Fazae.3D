@@ -1,12 +1,13 @@
 import { escapeHtml, sendEmail } from "@/lib/email";
+import { getStoreRules } from "@/server/store-rules";
 
 /**
  * Avisa o dono da loja por e-mail (novo pedido, pagamento aprovado, problema que exige atenção).
- * Usa STORE_CONTACT_EMAIL; sem ela, só registra no log. Nunca lança: um aviso que falha não pode
+ * Usa o e-mail das Regras da loja (painel); sem ele, STORE_CONTACT_EMAIL; sem nenhum, só registra no log. Nunca lança: um aviso que falha não pode
  * derrubar o checkout nem o webhook.
  */
 export async function notifyOwner(subject: string, lines: string[]): Promise<void> {
-  const to = process.env.STORE_CONTACT_EMAIL;
+  const to = (await getStoreRules()).owner.email || process.env.STORE_CONTACT_EMAIL;
   const cleanSubject = subject.replace(/[\r\n]+/g, " ").slice(0, 150);
   if (!to) {
     console.warn("[aviso ao dono] STORE_CONTACT_EMAIL não configurado:", cleanSubject, lines.join(" | "));

@@ -9,6 +9,7 @@ import { QUOTE_TONES } from "../quote-tones";
 import { getQuote } from "@/server/repositories/quote-repository";
 import { findConversationIdByPhone } from "@/server/repositories/whatsapp-repository";
 import { withReadFallback } from "@/lib/db-fallback";
+import { getStoreRules } from "@/server/store-rules";
 
 export default async function QuoteDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -142,6 +143,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
 
         <QuoteActions
           publicUrl={SITE_URL}
+          validityDays={(await getStoreRules()).quote.validityDays}
           quote={{
             id: quote.id,
             number: quote.number,

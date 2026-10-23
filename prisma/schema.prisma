@@ -350,6 +350,8 @@ model Settings {
   /** Saldo em conta na data `cashBalanceDate` (R$). Vendas recebidas e despesas a partir dessa data movimentam o "Em caixa". */
   cashBalance               Float     @default(0)
   cashBalanceDate           DateTime?
+  /** Regras da loja editáveis (frete padrão, prazos, textos, dados da empresa...). Formato e padrões em src/lib/store-rules.ts; vazio = tudo no padrão. */
+  rules                     Json?
 }
 
 /** Custo extra nomeado e reutilizável (argola, ímã, embalagem...), somado ad-hoc na calculadora de precificação. */

@@ -14,7 +14,10 @@ import { withReadFallback } from "@/lib/db-fallback";
 import { DEFAULT_PIX_DISCOUNT_PCT } from "@/lib/money";
 import { getSettings } from "@/server/repositories/settings-repository";
 import { WishlistProvider } from "@/contexts/wishlist-context";
-import { COMPANY, INSTAGRAM_URL, SITE_NAME, SITE_URL } from "@/lib/site-config";
+import { SITE_NAME, SITE_URL } from "@/lib/site-config";
+import { DEFAULT_RULES, joinNames, publicRules, type StoreRules } from "@/lib/store-rules";
+import { StoreRulesProvider } from "@/contexts/store-rules-context";
+import { getStoreRules } from "@/server/store-rules";
 import { JsonLd } from "@/components/json-ld";
 
 /**
@@ -24,32 +27,30 @@ import { JsonLd } from "@/components/json-ld";
 export const revalidate = 60;
 
 /** Loja física/online com endereço e área de atendimento: ajuda o Google a mostrar a Fazaê em buscas locais ("impressão 3D Natal"). */
-const ORGANIZATION_JSON_LD = {
-  "@context": "https://schema.org",
-  "@type": "Store",
-  name: `${SITE_NAME} 3D`,
-  legalName: COMPANY.legalName,
-  url: SITE_URL,
-  logo: `${SITE_URL}/logo-email.png`,
-  image: `${SITE_URL}/opengraph-image`,
-  description:
-    "Impressão 3D em Natal e Parnamirim: peças prontas e sob encomenda, do funcional ao decorativo. Você imagina, a gente cria.",
-  address: {
-    "@type": "PostalAddress",
-    streetAddress: "Rua Luís Nogueira Filho, 419",
-    addressLocality: "Parnamirim",
-    addressRegion: "RN",
-    postalCode: COMPANY.zip,
-    addressCountry: "BR",
-  },
-  areaServed: [
-    { "@type": "City", name: "Natal" },
-    { "@type": "City", name: "Parnamirim" },
-    { "@type": "Country", name: "Brasil" },
-  ],
-  sameAs: [INSTAGRAM_URL],
-  ...(COMPANY.cnpj ? { taxID: COMPANY.cnpj } : {}),
-};
+function organizationJsonLd(rules: StoreRules) {
+  const { company, localDelivery } = rules;
+  return {
+    "@context": "https://schema.org",
+    "@type": "Store",
+    name: `${SITE_NAME} 3D`,
+    legalName: company.legalName,
+    url: SITE_URL,
+    logo: `${SITE_URL}/logo-email.png`,
+    image: `${SITE_URL}/opengraph-image`,
+    description: `Impressão 3D em ${joinNames(localDelivery.cities)}: peças prontas e sob encomenda, do funcional ao decorativo. ${company.tagline}`,
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: company.street,
+      addressLocality: company.city,
+      addressRegion: company.state,
+      postalCode: company.zip,
+      addressCountry: "BR",
+    },
+    areaServed: [...localDelivery.cities.map((name) => ({ "@type": "City", name })), { "@type": "Country", name: "Brasil" }],
+    sameAs: [company.instagramUrl],
+    ...(company.cnpj ? { taxID: company.cnpj } : {}),
+  };
+}
 
 const WEBSITE_JSON_LD = {
   "@context": "https://schema.org",
@@ -64,6 +65,7 @@ const WEBSITE_JSON_LD = {
 };
 
 export default async function StorefrontLayout({ children }: { children: ReactNode }) {
+  const rules = await getStoreRules().catch(() => DEFAULT_RULES);
   const pixDiscountPct = await withReadFallback(
     async () => (await getSettings()).pixDiscountPct ?? DEFAULT_PIX_DISCOUNT_PCT,
     DEFAULT_PIX_DISCOUNT_PCT,
@@ -75,9 +77,10 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
   return (
     <MenuCategoriesProvider categories={menuCategories}>
     <PixDiscountProvider pct={pixDiscountPct}>
+    <StoreRulesProvider rules={publicRules(rules)}>
     <CartProvider>
       <WishlistProvider>
-        <JsonLd data={ORGANIZATION_JSON_LD} />
+        <JsonLd data={organizationJsonLd(rules)} />
         <JsonLd data={WEBSITE_JSON_LD} />
         <div
           aria-hidden="true"
@@ -95,6 +98,7 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
         <LazyCookieConsent />
       </WishlistProvider>
     </CartProvider>
+    </StoreRulesProvider>
     </PixDiscountProvider>
     </MenuCategoriesProvider>
   );

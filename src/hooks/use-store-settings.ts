@@ -2,15 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getSettingsSnapshotAction } from "@/app/actions/settings";
-import type { StoreSettings } from "@/server/types";
+import { FALLBACK_PUBLIC_SETTINGS, type PublicSettings } from "@/lib/settings-fallback";
 
-/** Matches the seed default in src/server/db.ts, shown only for the instant before the real snapshot loads. */
-const INITIAL_SETTINGS: StoreSettings = {
-  freeShippingThreshold: 299.9,
-  whatsappNumber: "5584999999999",
-};
+/** Padrões, mostrados só no instante antes do snapshot real chegar. */
+const INITIAL_SETTINGS: PublicSettings = FALLBACK_PUBLIC_SETTINGS;
 
-type SettingsSnapshot = Awaited<ReturnType<typeof getSettingsSnapshotAction>>;
+type SettingsSnapshot = PublicSettings;
 
 /** Mesma ideia do catálogo: vários componentes pedem as configurações ao mesmo tempo, então a primeira chamada é compartilhada por alguns segundos. */
 const SETTINGS_TTL_MS = 30_000;
@@ -28,7 +25,7 @@ function loadSettings(force: boolean): Promise<SettingsSnapshot> {
 
 /** Client-side store-settings snapshot, fetched via a Server Action on mount, see useProductSnapshot for why this can't be a static import. */
 export function useStoreSettings() {
-  const [settings, setSettings] = useState<StoreSettings>(INITIAL_SETTINGS);
+  const [settings, setSettings] = useState<PublicSettings>(INITIAL_SETTINGS);
   const [loaded, setLoaded] = useState(false);
 
   const refresh = useCallback(async (force = true) => {

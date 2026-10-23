@@ -2,10 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getMercadoPagoPayment } from "@/lib/mercadopago";
 import { notifyOrderStatusChange } from "@/lib/order-notifications";
 import { pruneRateLimitBuckets } from "@/server/rate-limit";
+import { getStoreRules } from "@/server/store-rules";
 import { applyPaymentUpdate, cancelUnpaidOrder, findStaleUnpaidOrders } from "@/server/repositories/order-repository";
-
-/** Pix vence em 1 dia e boleto em 3: passado esse prazo com folga, um pedido ainda sem pagamento está abandonado. */
-const STALE_AFTER_MS = 4 * 24 * 60 * 60 * 1000;
 
 function isAuthorized(request: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
@@ -23,7 +21,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const stale = await findStaleUnpaidOrders(new Date(Date.now() - STALE_AFTER_MS));
+  // Pix vence em 1 dia e boleto em 3: passado o prazo das Regras da loja (padrão 4 dias), um pedido ainda sem pagamento está abandonado.
+  const staleAfterMs = (await getStoreRules({ fresh: true })).automation.pendingOrderExpireDays * 24 * 60 * 60 * 1000;
+  const stale = await findStaleUnpaidOrders(new Date(Date.now() - staleAfterMs));
   let cancelled = 0;
   let recovered = 0;
 

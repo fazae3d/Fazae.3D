@@ -1,6 +1,7 @@
 import { formatInstallments, formatPrice } from "@/lib/format";
 import { formatPct, pixPrice } from "@/lib/money";
 import { usePixDiscountPct } from "@/contexts/pix-discount-context";
+import { useStoreRules } from "@/contexts/store-rules-context";
 
 /**
  * The Pix-discounted price is the headline number across the store, matches
@@ -18,6 +19,7 @@ export function PriceBlock({
   size?: "sm" | "lg";
 }) {
   const pixPct = usePixDiscountPct();
+  const installments = useStoreRules().payments.installments;
   const pix = pixPrice(price, pixPct);
 
   if (size === "sm") {
@@ -31,7 +33,7 @@ export function PriceBlock({
           <span>{formatPrice(price)}</span>
           {compareAtPrice && <span className="line-through">{formatPrice(compareAtPrice)}</span>}
         </div>
-        <p className="text-xs text-graphite">{formatInstallments(price)}</p>
+        {installments > 1 ? <p className="text-xs text-graphite">{formatInstallments(price, installments)}</p> : null}
       </div>
     );
   }
@@ -48,7 +50,7 @@ export function PriceBlock({
         </span>
       </div>
       <p className="mt-1 text-sm text-graphite">{formatPrice(price)} no cartão ou boleto</p>
-      <p className="text-sm text-graphite">{formatInstallments(price)}</p>
+      {installments > 1 ? <p className="text-sm text-graphite">{formatInstallments(price, installments)}</p> : null}
     </div>
   );
 }

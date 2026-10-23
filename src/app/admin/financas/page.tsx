@@ -84,7 +84,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
   const channelRows = channelResults(orders);
   // Payback, meta e fluxo de caixa olham o período todo (o fluxo já separa mês a mês).
   const payback = investmentPayback(allOrders, allExpenses);
-  const goal = growthGoal(allOrders, 5, 12);
+  const goal = growthGoal(allOrders, settings?.rules.finance.growthMultiplier ?? 5, settings?.rules.finance.growthMonths ?? 12);
   const cashFlow = cashFlowByMonth(allOrders, allExpenses, 6);
   const categoryBreakdown = expenseCategoryBreakdown(expenses);
   const maxCategoryTotal = Math.max(1, ...categoryBreakdown.map((c) => c.total));
@@ -211,7 +211,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
         </div>
 
         <div className="border border-mist p-5">
-          <p className="label-caps text-[11px] text-graphite">Meta: 5x em 12 meses</p>
+          <p className="label-caps text-[11px] text-graphite">Meta: {settings?.rules.finance.growthMultiplier ?? 5}x em {settings?.rules.finance.growthMonths ?? 12} meses</p>
           <p className="font-display mt-2 text-2xl">{formatPrice(goal.targetMonthly)}/mês</p>
           <p className="mt-1 text-xs text-graphite">
             Partindo de {formatPrice(goal.baselineMonthly)}/mês

@@ -4,6 +4,7 @@ import { SectionHeading } from "@/components/section-heading";
 import { CustomOrderForm } from "@/components/custom-order-form";
 import { getProduct } from "@/lib/demo-data";
 import { withReadFallback } from "@/lib/db-fallback";
+import { getStoreRules } from "@/server/store-rules";
 
 export const metadata: Metadata = pageMeta({
   title: "Peça personalizada sob encomenda: orçamento de impressão 3D",
@@ -22,6 +23,7 @@ const STEPS = [
 export default async function PersonalizadoPage({ searchParams }: { searchParams: Promise<{ ref?: string }> }) {
   const { ref } = await searchParams;
   // Vindo da página de um produto ("personalizar este"): já preenche a descrição com o nome dele.
+  const rules = await getStoreRules();
   const refProduct = ref ? await withReadFallback(() => getProduct(ref), undefined) : undefined;
   return (
     <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8">
@@ -29,7 +31,7 @@ export default async function PersonalizadoPage({ searchParams }: { searchParams
         as="h1"
         eyebrow="Sob encomenda"
         title="Sua ideia, impressa do seu jeito"
-        subtitle="Não achou o que precisa no catálogo? Conta pra gente o que você imagina, com material, cor, tamanho e referências, e a gente monta a peça perfeita para você."
+        subtitle={rules.texts.customOrderIntro}
       />
 
       <ol className="mt-10 flex flex-wrap gap-x-8 gap-y-3">

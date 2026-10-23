@@ -14,7 +14,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ tok
   if (!quote) return new Response("Orçamento não encontrado.", { status: 404 });
 
   const settings = await getSettings().catch(() => null);
-  const pdf = await renderQuotePdf(quote, { whatsappNumber: settings?.whatsappNumber ?? DEFAULT_WHATSAPP_NUMBER });
+  const pdf = await renderQuotePdf(quote, { whatsappNumber: settings?.whatsappNumber ?? DEFAULT_WHATSAPP_NUMBER, company: settings?.rules.company });
 
   return new Response(new Uint8Array(pdf), {
     headers: {
