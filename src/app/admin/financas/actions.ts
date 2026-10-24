@@ -18,6 +18,12 @@ const expenseFormSchema = z.object({
   totalValue: z.number("Informe um valor válido.").min(0.01, "Informe um valor maior que zero."),
   purchaseDate: z.string().min(1, "Informe a data da compra."),
   notes: z.string().optional(),
+  installments: z.number().int("Use um número inteiro de parcelas.").min(1, "Use pelo menos 1 parcela.").max(60, "No máximo 60 parcelas.").optional(),
+  firstDueDate: z
+    .string()
+    .regex(/^d{4}-d{2}-d{2}$/, "Informe uma data válida para a 1ª parcela.")
+    .optional()
+    .or(z.literal("")),
 });
 
 export type ExpenseFormInput = z.infer<typeof expenseFormSchema>;
@@ -35,7 +41,9 @@ export async function createExpenseAction(input: ExpenseFormInput): Promise<Expe
   }
 
   const result = await withMutationFallback(async () => {
-    const expense = await createExpense(parsed.data);
+    const { firstDueDate, installments, ...rest } = parsed.data;
+    const parcelado = (installments ?? 1) > 1;
+    const expense = await createExpense({ ...rest, installments: installments ?? 1, firstDueDate: parcelado && firstDueDate ? firstDueDate : undefined });
     return { success: true, expense } as ExpenseMutationResult;
   });
   if (result.success) revalidatePath("/admin/financas");

@@ -175,6 +175,9 @@ export type Expense = {
   totalValue: number;
   purchaseDate: string;
   notes?: string;
+  /** Quantas parcelas no cartão (1 ou ausente = à vista) e o vencimento da primeira (AAAA-MM-DD; ausente = dia da compra). */
+  installments?: number;
+  firstDueDate?: string;
   createdAt: string;
 };
 

@@ -178,6 +178,8 @@ const FIELD_LABELS: Record<string, string> = {
   cashBalanceDate: "Data do saldo em caixa",
   totalValue: "Valor",
   purchaseDate: "Data da compra",
+  installments: "Parcelas no cartão",
+  firstDueDate: "Vencimento da 1ª parcela",
   category: "Categoria",
   quantity: "Quantidade",
   unitValue: "Valor unitário",

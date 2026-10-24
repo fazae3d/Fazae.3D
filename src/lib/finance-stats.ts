@@ -1,5 +1,6 @@
 import { round2 } from "@/lib/money";
-import { storeMonthKey, toStoreTime } from "@/lib/store-time";
+import { storeDayKey, storeMonthKey, toStoreTime } from "@/lib/store-time";
+import { expenseCashOutflows } from "@/lib/installments";
 import type { Expense, Order } from "@/server/types";
 
 /** Mês de um pedido (tem horário): no fuso da loja. */
@@ -62,10 +63,10 @@ export type CashFlowMonth = { key: string; label: string; inflow: number; outflo
 
 /**
  * Fluxo de caixa real: TODA despesa conta como saída (inclusive equipamento
- * é dinheiro que saiu de verdade), diferente do DRE, que trata equipamento
+ * é dinheiro que saiu de verdade; compra parcelada conta por parcela vencida), diferente do DRE, que trata equipamento
  * como investimento e não como despesa operacional.
  */
-export function cashFlowByMonth(orders: Order[], expenses: Expense[], months = 6): CashFlowMonth[] {
+export function cashFlowByMonth(orders: Order[], expenses: Expense[], months = 6, today = storeDayKey(new Date())): CashFlowMonth[] {
   const buckets = lastNMonths(months);
   const inflowByMonth = new Map<string, number>();
   const outflowByMonth = new Map<string, number>();
@@ -75,9 +76,10 @@ export function cashFlowByMonth(orders: Order[], expenses: Expense[], months = 6
     const key = monthKey(new Date(order.createdAt));
     inflowByMonth.set(key, (inflowByMonth.get(key) ?? 0) + order.total);
   }
-  for (const expense of expenses) {
-    const key = dateOnlyMonthKey(new Date(expense.purchaseDate));
-    outflowByMonth.set(key, (outflowByMonth.get(key) ?? 0) + expense.totalValue);
+  // Compra parcelada sai do caixa parcela a parcela, no vencimento (a compra à vista, no dia da compra).
+  for (const { day, amount } of expenseCashOutflows(expenses, today)) {
+    const key = day.slice(0, 7);
+    outflowByMonth.set(key, (outflowByMonth.get(key) ?? 0) + amount);
   }
 
   let cumulative = 0;

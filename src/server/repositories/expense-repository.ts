@@ -10,6 +10,8 @@ function toExpense(row: {
   totalValue: number;
   purchaseDate: Date;
   notes: string | null;
+  installments: number;
+  firstDueDate: Date | null;
   createdAt: Date;
 }): Expense {
   return {
@@ -21,6 +23,8 @@ function toExpense(row: {
     totalValue: row.totalValue,
     purchaseDate: row.purchaseDate.toISOString(),
     notes: row.notes ?? undefined,
+    installments: row.installments,
+    firstDueDate: row.firstDueDate?.toISOString(),
     createdAt: row.createdAt.toISOString(),
   };
 }
@@ -38,11 +42,17 @@ export type CreateExpenseInput = {
   totalValue: number;
   purchaseDate: string;
   notes?: string;
+  installments?: number;
+  firstDueDate?: string;
 };
 
 export async function createExpense(input: CreateExpenseInput): Promise<Expense> {
   const row = await db.expense.create({
-    data: { ...input, purchaseDate: new Date(input.purchaseDate) },
+    data: {
+      ...input,
+      purchaseDate: new Date(input.purchaseDate),
+      firstDueDate: input.firstDueDate ? new Date(input.firstDueDate) : undefined,
+    },
   });
   return toExpense(row);
 }

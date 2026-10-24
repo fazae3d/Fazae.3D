@@ -21,6 +21,7 @@ import { storeDayKey, storeMonthKey } from "@/lib/store-time";
 import { MonthFilter } from "@/components/admin/month-filter";
 import { getAllConsignmentVisits } from "@/server/repositories/consignment-repository";
 import { ExpenseManager } from "@/components/admin/expense-manager";
+import { upcomingInstallments } from "@/lib/installments";
 
 function KpiCard({
   label,
@@ -85,7 +86,11 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
   // Payback, meta e fluxo de caixa olham o período todo (o fluxo já separa mês a mês).
   const payback = investmentPayback(allOrders, allExpenses);
   const goal = growthGoal(allOrders, settings?.rules.finance.growthMultiplier ?? 5, settings?.rules.finance.growthMonths ?? 12);
-  const cashFlow = cashFlowByMonth(allOrders, allExpenses, 6);
+  const today = storeDayKey(new Date());
+  const cashFlow = cashFlowByMonth(allOrders, allExpenses, 6, today);
+  const upcoming = upcomingInstallments(allExpenses, today);
+  const upcomingTotal = round2(upcoming.reduce((sum, i) => sum + i.amount, 0));
+  const upcomingByMonth = upcoming.reduce((map, i) => map.set(i.day.slice(0, 7), round2((map.get(i.day.slice(0, 7)) ?? 0) + i.amount)), new Map<string, number>());
   const categoryBreakdown = expenseCategoryBreakdown(expenses);
   const maxCategoryTotal = Math.max(1, ...categoryBreakdown.map((c) => c.total));
   const cash = cashPosition({
@@ -94,6 +99,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
     orders: allOrders,
     payments,
     expenses: allExpenses,
+    today,
   });
 
   return (
@@ -261,6 +267,37 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
         </table>
       </div>
 
+      {upcoming.length > 0 && (
+        <div className="mb-8 border border-mist p-5">
+          <p className="label-caps text-[11px] text-graphite">Parcelas a pagar</p>
+          <p className="font-display mt-2 text-2xl">{formatPrice(upcomingTotal)}</p>
+          <p className="mt-1 text-xs text-graphite">
+            em {upcoming.length} parcela(s) de compras no cartão. Cada uma sai do caixa e do fluxo no dia do vencimento, sem você precisar marcar nada.
+          </p>
+          <ul className="mt-4 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
+            {[...upcomingByMonth.entries()].map(([key, value]) => (
+              <li key={key} className="flex items-center justify-between border border-mist px-3 py-2">
+                <span className="capitalize">{monthLabel(key)}</span>
+                <span className="font-medium">{formatPrice(value)}</span>
+              </li>
+            ))}
+          </ul>
+          <details className="mt-4 text-xs">
+            <summary className="cursor-pointer text-petrol">Ver cada parcela</summary>
+            <ul className="mt-2 divide-y divide-mist">
+              {upcoming.map((i) => (
+                <li key={`${i.expenseId}-${i.number}`} className="flex items-center justify-between gap-3 py-1.5">
+                  <span className="min-w-0 truncate">
+                    {new Date(`${i.day}T00:00:00.000Z`).toLocaleDateString("pt-BR", { timeZone: "UTC" })} · {i.description} ({i.number}/{i.of})
+                  </span>
+                  <span className="shrink-0">{formatPrice(i.amount)}</span>
+                </li>
+              ))}
+            </ul>
+          </details>
+        </div>
+      )}
+
       {categoryBreakdown.length > 0 && (
         <div className="mb-8 border border-mist p-5">
           <p className="label-caps mb-4 text-[11px] text-graphite">
@@ -282,7 +319,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
         </div>
       )}
 
-      <ExpenseManager expenses={expenses} />
+      <ExpenseManager expenses={expenses} today={today} />
     </div>
   );
 }

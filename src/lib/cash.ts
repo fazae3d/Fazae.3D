@@ -3,6 +3,7 @@ import { orderBalanceDue } from "@/lib/admin-stats";
 import { receivedAmount } from "@/lib/payment";
 import { CONSIGNMENT_ID_PREFIX } from "@/lib/finance-stats";
 import { storeDayKey } from "@/lib/store-time";
+import { expenseCashOutflows } from "@/lib/installments";
 import type { Expense, Order } from "@/server/types";
 
 export type OrderPaymentEvent = { orderId: string; amount: number; paidAt: string };
@@ -17,7 +18,7 @@ export type CashPosition = {
   received: number;
   /** Taxas do Mercado Pago e dos marketplaces sobre o que foi recebido. */
   fees: number;
-  /** Todas as despesas (qualquer categoria) desde o saldo inicial. */
+  /** Todas as despesas (qualquer categoria) desde o saldo inicial; compra parcelada conta só as parcelas já vencidas. */
   spent: number;
   balance: number;
   /** Vendas lançadas no painel que ainda não foram pagas (ou só em parte): dinheiro que vai entrar. */
@@ -36,8 +37,11 @@ export function cashPosition(input: {
   orders: Order[];
   payments: OrderPaymentEvent[];
   expenses: Expense[];
+  /** Dia de hoje (AAAA-MM-DD): parcelas que vencem depois ainda não saíram do caixa. */
+  today?: string;
 }): CashPosition {
   const { openingBalance, openingDate, orders, payments, expenses } = input;
+  const today = input.today ?? storeDayKey(new Date());
   const since = openingDate;
   const afterStart = (day: string) => since !== null && day >= since;
 
@@ -74,7 +78,7 @@ export function cashPosition(input: {
     if (net > 0 && order.total > 0) fees += (order.paymentFee ?? 0) * Math.min(1, net / order.total);
   }
 
-  const spent = since === null ? 0 : expenses.filter((e) => afterStart(e.purchaseDate.slice(0, 10))).reduce((sum, e) => sum + e.totalValue, 0);
+  const spent = since === null ? 0 : expenseCashOutflows(expenses, today).filter((o) => afterStart(o.day)).reduce((sum, o) => sum + o.amount, 0);
 
   return {
     configured: since !== null,
