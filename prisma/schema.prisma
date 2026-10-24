@@ -386,6 +386,8 @@ model Expense {
   /** Compra no cartão em várias vezes: quantas parcelas (1 = à vista) e o vencimento da primeira (vazio = dia da compra). */
   installments Int             @default(1)
   firstDueDate DateTime?
+  /** Parcelas pagas antes do vencimento: { "2": "2026-10-20" } (número da parcela e dia em que saiu do caixa). */
+  paidInstallments Json?
   createdAt    DateTime        @default(now())
 
   @@index([purchaseDate])

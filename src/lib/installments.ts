@@ -1,10 +1,13 @@
 import { round2 } from "@/lib/money";
 import type { Expense } from "@/server/types";
 
-/** Uma parcela de uma compra: o dia em que cai (AAAA-MM-DD) e quanto vale. */
-export type Installment = { number: number; of: number; day: string; amount: number };
+/**
+ * Uma parcela de uma compra: o dia do vencimento (AAAA-MM-DD) e quanto vale.
+ * `paidOn` aparece quando ela foi marcada como paga antes do vencimento (o dia em que o dinheiro saiu).
+ */
+export type Installment = { number: number; of: number; day: string; amount: number; paidOn?: string };
 
-type InstallmentExpense = Pick<Expense, "totalValue" | "purchaseDate" | "installments" | "firstDueDate">;
+type InstallmentExpense = Pick<Expense, "totalValue" | "purchaseDate" | "installments" | "firstDueDate" | "paidInstallments">;
 
 /** Soma meses a um dia AAAA-MM-DD; se o dia não existe no mês de destino (31 em fevereiro), cai no último dia dele. */
 export function addMonthsToDay(day: string, months: number): string {
@@ -36,17 +39,30 @@ export function expenseInstallments(expense: InstallmentExpense): Installment[] 
     of,
     day: addMonthsToDay(first, i),
     amount: i === of - 1 ? round2(expense.totalValue - each * (of - 1)) : each,
+    paidOn: expense.paidInstallments?.[String(i + 1)],
   }));
 }
 
-/** Compra à vista conta no dia da compra, como sempre; parcela de compra parcelada só conta como paga quando o vencimento chega. */
+/**
+ * Compra à vista conta no dia da compra, como sempre. Parcela de compra parcelada conta como paga quando foi marcada como paga
+ * (antecipada) ou quando o vencimento chega.
+ */
 export function isInstallmentPaid(installment: Installment, today: string) {
-  return installment.of === 1 || installment.day <= today;
+  return installment.of === 1 || Boolean(installment.paidOn) || installment.day <= today;
 }
 
-/** Saídas de dinheiro de verdade (dia e valor): à vista na data da compra, parceladas em cada parcela vencida. */
+/** Dia em que o dinheiro sai: o dia em que foi marcada como paga, ou o vencimento. */
+export function installmentCashDay(installment: Installment) {
+  return installment.paidOn ?? installment.day;
+}
+
+/** Saídas de dinheiro de verdade (dia e valor): à vista na data da compra, parceladas em cada parcela paga ou vencida. */
 export function expenseCashOutflows(expenses: InstallmentExpense[], today: string): { day: string; amount: number }[] {
-  return expenses.flatMap((e) => expenseInstallments(e).filter((i) => isInstallmentPaid(i, today)).map((i) => ({ day: i.day, amount: i.amount })));
+  return expenses.flatMap((e) =>
+    expenseInstallments(e)
+      .filter((i) => isInstallmentPaid(i, today))
+      .map((i) => ({ day: installmentCashDay(i), amount: i.amount })),
+  );
 }
 
 export type InstallmentSummary = {
@@ -76,7 +92,7 @@ export function installmentSummary(expense: InstallmentExpense, today: string): 
 
 export type UpcomingInstallment = { expenseId: string; description: string; number: number; of: number; day: string; amount: number };
 
-/** Parcelas que ainda vão vencer (compras parceladas), da mais próxima para a mais distante. */
+/** Parcelas que ainda vão vencer e não foram pagas (compras parceladas), da mais próxima para a mais distante. */
 export function upcomingInstallments(expenses: (InstallmentExpense & { id: string; description: string })[], today: string): UpcomingInstallment[] {
   return expenses
     .filter((e) => installmentCount(e) > 1)

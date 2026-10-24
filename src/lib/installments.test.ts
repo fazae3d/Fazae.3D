@@ -74,3 +74,25 @@ describe("compra parcelada no caixa", () => {
     expect(later.reduce((sum, m) => sum + m.outflow, 0)).toBe(300);
   });
 });
+
+describe("parcela paga antes do vencimento", () => {
+  const base = { openingBalance: 5000, openingDate: "2026-09-01", payments: [], orders: [] };
+  const e = expense({ totalValue: 400, installments: 4, paidInstallments: { "3": "2026-09-15" } });
+
+  it("conta como paga e sai do caixa no dia marcado, não no vencimento", () => {
+    const list = expenseInstallments(e);
+    expect(list[2].paidOn).toBe("2026-09-15");
+    expect(installmentSummary(e, "2026-09-20").paid).toBe(2);
+    // 1ª venceu em 09-10 (100) e a 3ª foi paga em 09-15 (100): 200 já saíram
+    expect(cashPosition({ ...base, expenses: [e], today: "2026-09-20" }).spent).toBe(200);
+  });
+
+  it("não aparece mais em parcelas a pagar", () => {
+    const up = upcomingInstallments([{ ...e, id: "e1", description: "Máquina" }] as never, "2026-09-20");
+    expect(up.map((i) => i.number)).toEqual([2, 4]);
+  });
+
+  it("no vencimento não conta de novo", () => {
+    expect(cashPosition({ ...base, expenses: [e], today: "2026-12-31" }).spent).toBe(400);
+  });
+});

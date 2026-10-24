@@ -22,6 +22,7 @@ import { MonthFilter } from "@/components/admin/month-filter";
 import { getAllConsignmentVisits } from "@/server/repositories/consignment-repository";
 import { ExpenseManager } from "@/components/admin/expense-manager";
 import { upcomingInstallments } from "@/lib/installments";
+import { InstallmentPayButton } from "@/components/admin/installment-pay-button";
 
 function KpiCard({
   label,
@@ -290,7 +291,10 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
                   <span className="min-w-0 truncate">
                     {new Date(`${i.day}T00:00:00.000Z`).toLocaleDateString("pt-BR", { timeZone: "UTC" })} · {i.description} ({i.number}/{i.of})
                   </span>
-                  <span className="shrink-0">{formatPrice(i.amount)}</span>
+                  <span className="flex shrink-0 items-center gap-3">
+                    {formatPrice(i.amount)}
+                    <InstallmentPayButton expenseId={i.expenseId} number={i.number} paid={false} />
+                  </span>
                 </li>
               ))}
             </ul>

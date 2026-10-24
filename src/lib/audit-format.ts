@@ -180,6 +180,7 @@ const FIELD_LABELS: Record<string, string> = {
   purchaseDate: "Data da compra",
   installments: "Parcelas no cartão",
   firstDueDate: "Vencimento da 1ª parcela",
+  paidInstallments: "Parcelas pagas antes do vencimento",
   category: "Categoria",
   quantity: "Quantidade",
   unitValue: "Valor unitário",

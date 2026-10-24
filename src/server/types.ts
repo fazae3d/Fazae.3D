@@ -178,6 +178,8 @@ export type Expense = {
   /** Quantas parcelas no cartão (1 ou ausente = à vista) e o vencimento da primeira (AAAA-MM-DD; ausente = dia da compra). */
   installments?: number;
   firstDueDate?: string;
+  /** Parcelas pagas antes do vencimento: número da parcela → dia (AAAA-MM-DD) em que saiu do caixa. */
+  paidInstallments?: Record<string, string>;
   createdAt: string;
 };
 

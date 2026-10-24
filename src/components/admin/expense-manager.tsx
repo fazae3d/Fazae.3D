@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createExpenseAction, deleteExpenseAction } from "@/app/admin/financas/actions";
+import { createExpenseAction, deleteExpenseAction, updateExpenseAction } from "@/app/admin/financas/actions";
+import { InstallmentPayButton } from "@/components/admin/installment-pay-button";
 import { Select } from "@/components/select";
 import { formatPrice } from "@/lib/format";
-import { installmentCount, installmentSummary } from "@/lib/installments";
+import { expenseInstallments, installmentCount, installmentSummary, isInstallmentPaid } from "@/lib/installments";
 import type { Expense, ExpenseCategory } from "@/server/types";
 
 const CATEGORY_OPTIONS: { value: ExpenseCategory; label: string }[] = [
@@ -33,6 +34,8 @@ export function ExpenseManager({ expenses, today }: { expenses: Expense[]; today
   const [purchaseDate, setPurchaseDate] = useState(todayIso());
   const [installments, setInstallments] = useState("1");
   const [firstDueDate, setFirstDueDate] = useState("");
+  const [notes, setNotes] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -47,31 +50,57 @@ export function ExpenseManager({ expenses, today }: { expenses: Expense[]; today
     if (q > 0 && u > 0) setTotalValue(String(Math.round(q * u * 100) / 100));
   };
 
-  const handleAdd = async () => {
-    setError(null);
-    setSubmitting(true);
-    const result = await createExpenseAction({
-      description: description.trim(),
-      category,
-      quantity: quantity ? Number(quantity) : undefined,
-      unitValue: unitValue ? Number(unitValue) : undefined,
-      totalValue: Number(totalValue) || 0,
-      purchaseDate,
-      installments: Number(installments) || 1,
-      firstDueDate: firstDueDate || undefined,
-    });
-    setSubmitting(false);
-    if (!result.success) {
-      setError(result.error);
-      return;
-    }
+  const resetForm = () => {
+    setEditingId(null);
     setDescription("");
+    setCategory("material");
     setQuantity("");
     setUnitValue("");
     setTotalValue("");
     setPurchaseDate(todayIso());
     setInstallments("1");
     setFirstDueDate("");
+    setNotes("");
+    setError(null);
+  };
+
+  /** Carrega a despesa no formulário para corrigir (vale para as antigas, à vista, e para as parceladas). */
+  const startEdit = (expense: Expense) => {
+    setEditingId(expense.id);
+    setDescription(expense.description);
+    setCategory(expense.category);
+    setQuantity(expense.quantity ? String(expense.quantity) : "");
+    setUnitValue(expense.unitValue ? String(expense.unitValue) : "");
+    setTotalValue(String(expense.totalValue));
+    setPurchaseDate(expense.purchaseDate.slice(0, 10));
+    setInstallments(String(installmentCount(expense)));
+    setFirstDueDate(expense.firstDueDate ? expense.firstDueDate.slice(0, 10) : "");
+    setNotes(expense.notes ?? "");
+    setError(null);
+    document.getElementById("exp-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const handleSave = async () => {
+    setError(null);
+    setSubmitting(true);
+    const input = {
+      description: description.trim(),
+      category,
+      quantity: quantity ? Number(quantity) : undefined,
+      unitValue: unitValue ? Number(unitValue) : undefined,
+      totalValue: Number(totalValue) || 0,
+      purchaseDate,
+      notes: notes || undefined,
+      installments: Number(installments) || 1,
+      firstDueDate: firstDueDate || undefined,
+    };
+    const result = editingId ? await updateExpenseAction(editingId, input) : await createExpenseAction(input);
+    setSubmitting(false);
+    if (!result.success) {
+      setError(result.error);
+      return;
+    }
+    resetForm();
     router.refresh();
   };
 
@@ -83,9 +112,9 @@ export function ExpenseManager({ expenses, today }: { expenses: Expense[]; today
   };
 
   return (
-    <div className="border border-mist p-5">
+    <div id="exp-form" className="border border-mist p-5">
       <p className="label-caps mb-4 text-xs text-graphite">
-        Despesas {expenses.length > 0 && `(${expenses.length})`}
+        {editingId ? "Editando despesa" : `Despesas ${expenses.length > 0 ? `(${expenses.length})` : ""}`}
       </p>
 
       <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -200,14 +229,24 @@ export function ExpenseManager({ expenses, today }: { expenses: Expense[]; today
         ) : null}
       </div>
 
-      <button
-        type="button"
-        onClick={handleAdd}
-        disabled={submitting || !description.trim() || !totalValue}
-        className="label-caps border border-ink px-5 py-2.5 text-xs transition-colors hover:bg-ink hover:text-paper disabled:opacity-60"
-      >
-        {submitting ? "Adicionando..." : "Adicionar despesa"}
-      </button>
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={submitting || !description.trim() || !totalValue}
+          className="label-caps border border-ink px-5 py-2.5 text-xs transition-colors hover:bg-ink hover:text-paper disabled:opacity-60"
+        >
+          {submitting ? "Salvando..." : editingId ? "Salvar alterações" : "Adicionar despesa"}
+        </button>
+        {editingId ? (
+          <button type="button" onClick={resetForm} className="label-caps text-xs text-graphite hover:text-ink">
+            Cancelar edição
+          </button>
+        ) : null}
+      </div>
+      {editingId ? (
+        <p className="mt-2 text-[11px] text-graphite">Parcelas já marcadas como pagas continuam marcadas. Mudar o valor ou o número de parcelas recalcula as demais.</p>
+      ) : null}
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
 
       {expenses.length > 0 && (
@@ -231,9 +270,32 @@ export function ExpenseManager({ expenses, today }: { expenses: Expense[]; today
                       : " · quitada"}
                   </p>
                 ) : null}
+                {plan ? (
+                  <details className="mt-1 text-xs">
+                    <summary className="cursor-pointer text-petrol">Ver parcelas</summary>
+                    <ul className="mt-1 space-y-1">
+                      {expenseInstallments(expense).map((i) => {
+                        const paid = isInstallmentPaid(i, today);
+                        const early = Boolean(i.paidOn);
+                        return (
+                          <li key={i.number} className="flex items-center justify-between gap-3">
+                            <span className={paid ? "text-graphite" : "text-ink"}>
+                              {i.number}/{i.of} · vence {dayLabel(i.day)} · {formatPrice(i.amount)}
+                              {early ? ` · paga em ${dayLabel(i.paidOn!)} (antecipada)` : paid ? " · paga" : " · a pagar"}
+                            </span>
+                            {!paid || early ? <InstallmentPayButton expenseId={expense.id} number={i.number} paid={early} /> : null}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </details>
+                ) : null}
               </div>
               <div className="flex shrink-0 items-center gap-4">
                 <span className="font-medium">{formatPrice(expense.totalValue)}</span>
+                <button type="button" onClick={() => startEdit(expense)} className="label-caps text-[11px] text-petrol hover:underline">
+                  Editar
+                </button>
                 <button
                   type="button"
                   onClick={() => handleDelete(expense.id)}
