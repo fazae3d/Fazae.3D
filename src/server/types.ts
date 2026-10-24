@@ -180,6 +180,11 @@ export type Expense = {
   firstDueDate?: string;
   /** Parcelas pagas antes do vencimento: número da parcela → dia (AAAA-MM-DD) em que saiu do caixa. */
   paidInstallments?: Record<string, string>;
+  /** Como foi pago (pix, dinheiro, debito ou cartao) e, no cartão, qual. */
+  paymentMethod?: string;
+  cardName?: string;
+  /** Valor real de parcelas ajustadas (juros): número da parcela → valor. */
+  installmentAmounts?: Record<string, number>;
   createdAt: string;
 };
 

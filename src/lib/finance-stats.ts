@@ -108,7 +108,7 @@ export type SimplifiedDRE = {
 };
 
 /**
- * DRE simplificado, regime de caixa. Equipamento fica de fora de propósito
+ * DRE simplificado, pela data da compra (compra parcelada entra inteira no mês em que foi feita; o caixa conta por parcela em cashFlowByMonth). Equipamento fica de fora de propósito
  * é investimento (capex), tratado no payback, não aqui. Sem isso, comprar uma
  * impressora nova faria a margem operacional do mês parecer péssima mesmo
  * com a operação saudável.

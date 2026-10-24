@@ -16,7 +16,7 @@ function formatDay(day: string) {
 }
 
 /** "Em caixa": o saldo da conta hoje. Parte do valor que o dono informa e acompanha vendas pagas e despesas. */
-export function CashCard({ position, today }: { position: CashPosition; today: string }) {
+export function CashCard({ position, today, committed = 0 }: { position: CashPosition; today: string; committed?: number }) {
   const router = useRouter();
   const { toast } = useToast();
   const [editing, setEditing] = useState(!position.configured);
@@ -72,6 +72,12 @@ export function CashCard({ position, today }: { position: CashPosition; today: s
               <dd>{formatPrice(position.spent)}</dd>
             </div>
           </dl>
+          {committed > 0 && (
+            <p className="mt-3 text-xs text-graphite">
+              Parcelas e faturas que vencem nos próximos 30 dias: <strong className="text-ink">{formatPrice(committed)}</strong>. Livre depois delas:{" "}
+              <strong className={position.balance - committed < 0 ? "text-red-500" : "text-petrol"}>{formatPrice(position.balance - committed)}</strong>.
+            </p>
+          )}
           {position.toReceive > 0 && (
             <p className="mt-3 text-xs text-graphite">
               Ainda vai entrar: <strong className="text-ink">{formatPrice(position.toReceive)}</strong> de vendas lançadas no painel que não foram pagas.

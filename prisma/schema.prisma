@@ -373,6 +373,24 @@ enum ExpenseCategory {
   operacional
 }
 
+/**
+ * Despesa que se repete todo mês (energia, chip, assinaturas). Todo mês a loja lança sozinha uma despesa comum com este valor,
+ * que dá para editar depois (a conta de energia muda, por exemplo).
+ */
+model RecurringExpense {
+  id                 String          @id @default(cuid())
+  description        String
+  category           ExpenseCategory
+  amount             Float
+  dayOfMonth         Int
+  /** Primeiro mês em que a despesa passa a ser lançada (AAAA-MM). */
+  startMonth         String
+  active             Boolean         @default(true)
+  /** Último mês já lançado (AAAA-MM), para nunca lançar duas vezes. */
+  lastGeneratedMonth String?
+  createdAt          DateTime        @default(now())
+}
+
 /** Registro de compras/gastos reais, base do módulo Finanças (/admin/financas). */
 model Expense {
   id           String          @id @default(cuid())
@@ -388,6 +406,12 @@ model Expense {
   firstDueDate DateTime?
   /** Parcelas pagas antes do vencimento: { "2": "2026-10-20" } (número da parcela e dia em que saiu do caixa). */
   paidInstallments Json?
+  /** Como foi pago: pix, dinheiro, debito ou cartao (vazio = não informado). */
+  paymentMethod String?
+  /** Nome do cartão (para somar a fatura de cada um). */
+  cardName String?
+  /** Valor real de parcelas ajustadas (juros, entrada): { "3": 171.2 }. Sem ajuste, a parcela é o total dividido. */
+  installmentAmounts Json?
   createdAt    DateTime        @default(now())
 
   @@index([purchaseDate])

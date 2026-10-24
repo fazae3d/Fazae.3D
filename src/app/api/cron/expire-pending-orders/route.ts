@@ -3,6 +3,8 @@ import { getMercadoPagoPayment } from "@/lib/mercadopago";
 import { notifyOrderStatusChange } from "@/lib/order-notifications";
 import { pruneRateLimitBuckets } from "@/server/rate-limit";
 import { getStoreRules } from "@/server/store-rules";
+import { storeDayKey } from "@/lib/store-time";
+import { generateDueRecurringExpenses } from "@/server/repositories/recurring-expense-repository";
 import { applyPaymentUpdate, cancelUnpaidOrder, findStaleUnpaidOrders } from "@/server/repositories/order-repository";
 
 function isAuthorized(request: NextRequest): boolean {
@@ -53,5 +55,10 @@ export async function GET(request: NextRequest) {
   }
 
   const prunedBuckets = await pruneRateLimitBuckets().catch(() => 0);
-  return NextResponse.json({ checked: stale.length, cancelled, recovered, prunedBuckets });
+  // Aproveita a rodada diária para lançar as despesas recorrentes do dia (energia, chip, assinaturas).
+  const recurringCreated = await generateDueRecurringExpenses(storeDayKey(new Date())).catch((error) => {
+    console.error("[cron] falha ao lançar despesas recorrentes", error);
+    return 0;
+  });
+  return NextResponse.json({ checked: stale.length, cancelled, recovered, prunedBuckets, recurringCreated });
 }

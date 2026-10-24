@@ -21,7 +21,9 @@ import { storeDayKey, storeMonthKey } from "@/lib/store-time";
 import { MonthFilter } from "@/components/admin/month-filter";
 import { getAllConsignmentVisits } from "@/server/repositories/consignment-repository";
 import { ExpenseManager } from "@/components/admin/expense-manager";
-import { upcomingInstallments } from "@/lib/installments";
+import { billsByMonth, committedWithin, upcomingInstallments } from "@/lib/installments";
+import { RecurringExpenseManager } from "@/components/admin/recurring-expense-manager";
+import { generateDueRecurringExpenses, getAllRecurringExpenses } from "@/server/repositories/recurring-expense-repository";
 import { InstallmentPayButton } from "@/components/admin/installment-pay-button";
 
 function KpiCard({
@@ -55,12 +57,15 @@ function monthLabel(key: string) {
 export default async function AdminFinancePage({ searchParams }: { searchParams: Promise<{ mes?: string }> }) {
   const { mes } = await searchParams;
   const selectedMonth = mes && /^\d{4}-(0[1-9]|1[0-2])$/.test(mes) ? mes : "";
-  const [salesOrders, allExpenses, visits, payments, settings] = await Promise.all([
+  // Despesas recorrentes (energia, chip...) que já venceram são lançadas aqui também, sem depender do horário do cron.
+  await withReadFallback(() => generateDueRecurringExpenses(storeDayKey(new Date())), 0);
+  const [salesOrders, allExpenses, visits, payments, settings, recurring] = await Promise.all([
     withReadFallback(() => getAllOrders(), fallbackOrders),
     withReadFallback(() => getAllExpenses(), fallbackExpenses),
     withReadFallback(() => getAllConsignmentVisits(), []),
     withReadFallback(() => getAllOrderPayments(), []),
     withReadFallback(() => getSettings(), null),
+    withReadFallback(() => getAllRecurringExpenses(), []),
   ]);
   // O dinheiro recebido dos lojistas em consignação também é receita: entra junto com as vendas.
   const allOrders = [...salesOrders, ...consignmentVisitsAsOrders(visits)];
@@ -91,7 +96,8 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
   const cashFlow = cashFlowByMonth(allOrders, allExpenses, 6, today);
   const upcoming = upcomingInstallments(allExpenses, today);
   const upcomingTotal = round2(upcoming.reduce((sum, i) => sum + i.amount, 0));
-  const upcomingByMonth = upcoming.reduce((map, i) => map.set(i.day.slice(0, 7), round2((map.get(i.day.slice(0, 7)) ?? 0) + i.amount)), new Map<string, number>());
+  const bills = billsByMonth(upcoming);
+  const committed30 = committedWithin(allExpenses, today, 30);
   const categoryBreakdown = expenseCategoryBreakdown(expenses);
   const maxCategoryTotal = Math.max(1, ...categoryBreakdown.map((c) => c.total));
   const cash = cashPosition({
@@ -111,7 +117,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
         comercial com saúde financeira do negócio.
       </p>
 
-      <CashCard position={cash} today={storeDayKey(new Date())} />
+      <CashCard position={cash} today={storeDayKey(new Date())} committed={committed30} />
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border border-mist p-4">
         <MonthFilter value={selectedMonth} options={monthOptions} />
@@ -123,7 +129,11 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
       </div>
 
       <p className="label-caps mb-3 text-[11px] text-graphite">
-        DRE simplificado (regime de caixa){selectedMonth ? `: ${monthLabel(selectedMonth)}` : ""}
+        Resultado simplificado, pela data da compra{selectedMonth ? `: ${monthLabel(selectedMonth)}` : ""}
+      </p>
+      <p className="-mt-1 mb-3 text-xs text-graphite">
+        Cada compra entra inteira no mês em que foi feita, mesmo que seja parcelada. Para ver quando o dinheiro de fato sai, olhe o Em caixa e o fluxo de caixa mais
+        abaixo, que contam parcela por parcela, no vencimento.
       </p>
       <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-3 2xl:grid-cols-6">
         <KpiCard
@@ -239,6 +249,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
       </div>
 
       <p className="label-caps mb-3 text-[11px] text-graphite">Fluxo de caixa (últimos 6 meses)</p>
+      <p className="-mt-1 mb-3 text-xs text-graphite">Compras parceladas saem parcela por parcela, no vencimento (ou no dia em que você marcou como paga).</p>
       <div className="mb-8 overflow-x-auto border border-mist">
         <table className="w-full text-sm">
           <thead>
@@ -273,13 +284,25 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
           <p className="label-caps text-[11px] text-graphite">Parcelas a pagar</p>
           <p className="font-display mt-2 text-2xl">{formatPrice(upcomingTotal)}</p>
           <p className="mt-1 text-xs text-graphite">
-            em {upcoming.length} parcela(s) de compras no cartão. Cada uma sai do caixa e do fluxo no dia do vencimento, sem você precisar marcar nada.
+            em {upcoming.length} parcela(s) e fatura(s) do cartão, por mês e por cartão. Cada uma sai do caixa e do fluxo no dia do vencimento, sem você precisar marcar nada.
           </p>
           <ul className="mt-4 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
-            {[...upcomingByMonth.entries()].map(([key, value]) => (
-              <li key={key} className="flex items-center justify-between border border-mist px-3 py-2">
-                <span className="capitalize">{monthLabel(key)}</span>
-                <span className="font-medium">{formatPrice(value)}</span>
+            {bills.map((bill) => (
+              <li key={bill.month} className="border border-mist px-3 py-2">
+                <div className="flex items-center justify-between">
+                  <span className="capitalize">{monthLabel(bill.month)}</span>
+                  <span className="font-medium">{formatPrice(bill.total)}</span>
+                </div>
+                {bill.byCard.length > 1 || bill.byCard[0]?.card !== "Cartão" ? (
+                  <ul className="mt-1 space-y-0.5 text-xs text-graphite">
+                    {bill.byCard.map((c) => (
+                      <li key={c.card} className="flex justify-between">
+                        <span>{c.card}</span>
+                        <span>{formatPrice(c.total)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -293,7 +316,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
                   </span>
                   <span className="flex shrink-0 items-center gap-3">
                     {formatPrice(i.amount)}
-                    <InstallmentPayButton expenseId={i.expenseId} number={i.number} paid={false} />
+                    <InstallmentPayButton expenseId={i.expenseId} number={i.number} paid={false} today={today} />
                   </span>
                 </li>
               ))}
@@ -322,6 +345,8 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
           </ul>
         </div>
       )}
+
+      <RecurringExpenseManager items={recurring} currentMonth={today.slice(0, 7)} />
 
       <ExpenseManager expenses={expenses} today={today} />
     </div>

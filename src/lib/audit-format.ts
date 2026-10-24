@@ -29,6 +29,7 @@ export const AUDITED_MODELS: Record<string, ModelInfo> = {
   RawMaterial: { label: "Insumo", pk: "id", nameField: "name", restorableUpdate: true, restorableDelete: true },
   AdditionalCost: { label: "Custo extra", pk: "id", nameField: "name", restorableUpdate: true, restorableDelete: true },
   Expense: { label: "Gasto", pk: "id", nameField: "description", restorableUpdate: true, restorableDelete: true },
+  RecurringExpense: { label: "Gasto recorrente", pk: "id", nameField: "description", restorableUpdate: true, restorableDelete: true },
   Customer: { label: "Cliente", pk: "id", nameField: "name", restorableUpdate: true, restorableDelete: false },
   Consignee: { label: "Lojista", pk: "id", nameField: "name", restorableUpdate: true, restorableDelete: false },
   ConsignmentItem: { label: "Peças com o lojista", pk: "id", restorableUpdate: false, restorableDelete: false },
@@ -46,7 +47,7 @@ export const isAuditedModel = (model: string) => model in AUDITED_MODELS;
 export const modelLabel = (model: string) => AUDITED_MODELS[model]?.label ?? model;
 
 /** Campos que nunca entram na comparação (mudam sozinhos ou são só técnicos). */
-const IGNORED_FIELDS = new Set(["updatedAt", "createdAt", "lastWebhookAt"]);
+const IGNORED_FIELDS = new Set(["updatedAt", "createdAt", "lastWebhookAt", "lastGeneratedMonth"]);
 /** Campos secretos: a mudança é registrada, mas o valor nunca é guardado. */
 const MASKED_FIELDS = new Set(["passwordHash", "resetToken", "token", "mpPaymentId", "secret"]);
 const MASK = "(oculto)";
@@ -181,6 +182,12 @@ const FIELD_LABELS: Record<string, string> = {
   installments: "Parcelas no cartão",
   firstDueDate: "Vencimento da 1ª parcela",
   paidInstallments: "Parcelas pagas antes do vencimento",
+  paymentMethod: "Forma de pagamento",
+  cardName: "Cartão",
+  installmentAmounts: "Valor ajustado das parcelas",
+  amount: "Valor por mês",
+  dayOfMonth: "Dia do mês",
+  startMonth: "Começa em",
   category: "Categoria",
   quantity: "Quantidade",
   unitValue: "Valor unitário",
@@ -231,6 +238,7 @@ const MONEY_FIELDS = new Set([
   "cashBalance",
   "totalValue",
   "unitValue",
+  "amount",
   "minSubtotal",
   "printerCostPerHour",
   "energyCostPerHour",
