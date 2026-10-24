@@ -88,7 +88,7 @@ describe("parcela paga antes do vencimento", () => {
   });
 
   it("não aparece mais em parcelas a pagar", () => {
-    const up = upcomingInstallments([{ ...e, id: "e1", description: "Máquina" }] as never, "2026-09-20");
+    const up = upcomingInstallments([e], "2026-09-20");
     expect(up.map((i) => i.number)).toEqual([2, 4]);
   });
 
