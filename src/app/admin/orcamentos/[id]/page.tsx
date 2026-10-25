@@ -157,6 +157,8 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
             freeShipping: savings.freeShipping,
             validUntil: quote.validUntil,
             linkedOrderId: quote.linkedOrderId,
+            lostReason: quote.lostReason,
+            lostNote: quote.lostNote,
           }}
         />
       </div>

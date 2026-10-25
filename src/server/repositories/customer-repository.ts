@@ -3,7 +3,9 @@ import type { Customer, CustomerWithStats, Order } from "../types";
 import type { CustomOrderRequest } from "@/lib/types";
 import type { Prisma } from "@/generated/prisma/client";
 import { round2 } from "@/lib/money";
-import { buildCustomerMetrics, type CustomerMetrics } from "@/lib/customer-insights";
+import { buildCustomerMetrics, phoneKey, type CustomerMetrics } from "@/lib/customer-insights";
+import { isCustomerSource } from "@/lib/customer-source";
+import { normalizePhone } from "@/lib/whatsapp";
 
 type CustomerRow = Prisma.CustomerGetPayload<object>;
 
@@ -12,6 +14,7 @@ function toCustomer(row: CustomerRow): Customer {
     ...row,
     email: row.email ?? undefined,
     notes: row.notes ?? undefined,
+    source: row.source ?? undefined,
     createdAt: row.createdAt.toISOString(),
     lastReminderAt: row.lastReminderAt?.toISOString(),
   };
@@ -96,7 +99,7 @@ export async function getAllCustomersWithStats(): Promise<CustomerWithStats[]> {
   });
 }
 
-export type UpsertCustomerContactInput = { name: string; phone: string; email?: string };
+export type UpsertCustomerContactInput = { name: string; phone: string; email?: string; source?: string };
 
 /**
  * Upsert by phone (the unique CRM key). Existing name/email edited by the
@@ -104,17 +107,61 @@ export type UpsertCustomerContactInput = { name: string; phone: string; email?: 
  * new order/request, only fills in what's currently empty.
  */
 export async function upsertCustomerFromContact(input: UpsertCustomerContactInput): Promise<Customer> {
-  const existing = await db.customer.findUnique({ where: { phone: input.phone } });
-  const patch: Prisma.CustomerUpdateInput = {};
-  if (!existing?.name && input.name) patch.name = input.name;
-  if (!existing?.email && input.email) patch.email = input.email;
+  // O mesmo número escrito de formas diferentes ("(84) 99999-8888", "84999998888", "5584999998888") é o mesmo cliente.
+  const key = phoneKey(input.phone);
+  const existing =
+    (await db.customer.findUnique({ where: { phone: input.phone } })) ??
+    (key ? (await db.customer.findMany({ select: { id: true, phone: true } })).find((c) => phoneKey(c.phone) === key) : undefined);
+  const source = isCustomerSource(input.source) ? input.source : undefined;
 
-  const upserted = await db.customer.upsert({
-    where: { phone: input.phone },
-    create: { name: input.name, phone: input.phone, email: input.email },
-    update: patch,
+  if (existing) {
+    const current = await db.customer.findUnique({ where: { id: existing.id } });
+    const patch: Prisma.CustomerUpdateInput = {};
+    if (!current?.name && input.name) patch.name = input.name;
+    if (!current?.email && input.email) patch.email = input.email;
+    if (!current?.source && source) patch.source = source;
+    const row = Object.keys(patch).length > 0 ? await db.customer.update({ where: { id: existing.id }, data: patch }) : current;
+    return toCustomer(row!);
+  }
+
+  // Cliente novo: guarda o telefone no formato padrão (55 + DDD + número) quando ele é válido.
+  const created = await db.customer.create({
+    data: { name: input.name, phone: normalizePhone(input.phone) ?? input.phone, email: input.email, source },
   });
-  return toCustomer(upserted);
+  return toCustomer(created);
+}
+
+export type UnidentifiedOrder = { id: string; customerName: string; total: number; createdAt: string; channel: string };
+
+/** Pedidos de balcão ou WhatsApp sem telefone (não são do site, que já guarda o e-mail): ficam fora do CRM até alguém identificar o cliente. */
+export async function getUnidentifiedOrders(): Promise<UnidentifiedOrder[]> {
+  const rows = await db.order.findMany({
+    where: { status: { not: "Cancelado" }, channel: { not: "online" }, OR: [{ customerPhone: null }, { customerPhone: "" }] },
+    select: { id: true, customerName: true, total: true, createdAt: true, channel: true },
+    orderBy: { createdAt: "desc" },
+  });
+  return rows.map((r) => ({ id: r.id, customerName: (r.customerName ?? "").trim(), total: r.total, createdAt: r.createdAt.toISOString(), channel: r.channel }));
+}
+
+/** Põe o telefone nos pedidos que não tinham (só os que ainda estão sem) e cadastra o cliente. Devolve quantos pedidos foram atualizados. */
+export async function identifyOrdersCustomer(input: { orderIds: string[]; name: string; phone: string; source?: string }): Promise<{ updated: number; customer: Customer }> {
+  const phone = normalizePhone(input.phone);
+  if (!phone) throw new Error("Telefone inválido.");
+  const customer = await upsertCustomerFromContact({ name: input.name, phone, source: input.source });
+  const result = await db.order.updateMany({
+    where: { id: { in: input.orderIds }, OR: [{ customerPhone: null }, { customerPhone: "" }] },
+    data: { customerPhone: phone },
+  });
+  return { updated: result.count, customer };
+}
+
+/** Procura o cliente pelo telefone, em qualquer formato de escrita. */
+export async function findCustomerByPhone(phone: string): Promise<Customer | undefined> {
+  const key = phoneKey(phone);
+  if (!key) return undefined;
+  const rows = await db.customer.findMany();
+  const row = rows.find((c) => phoneKey(c.phone) === key);
+  return row ? toCustomer(row) : undefined;
 }
 
 export async function updateCustomerCrmInfo(

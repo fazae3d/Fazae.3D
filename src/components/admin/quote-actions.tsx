@@ -16,7 +16,7 @@ import {
   markQuoteSentAction,
   setQuoteStatusAction,
 } from "@/app/admin/orcamentos/actions";
-import { quoteNumberLabel, quoteWhatsAppMessage, validityFromNow, type QuoteStatus } from "@/lib/quote";
+import { QUOTE_LOSS_REASONS, isQuoteExpired, quoteLossLabel, quoteNumberLabel, quoteWhatsAppMessage, validityFromNow, type QuoteStatus } from "@/lib/quote";
 
 const BTN = "flex items-center gap-1.5 rounded-lg border border-mist px-3.5 py-2 text-sm transition-colors hover:border-petrol disabled:opacity-60";
 const BTN_PRIMARY = "flex items-center gap-1.5 rounded-lg bg-petrol px-3.5 py-2 text-sm font-semibold text-[#111] transition-opacity hover:opacity-90 disabled:opacity-60";
@@ -47,6 +47,8 @@ export function QuoteActions({
     freeShipping?: boolean;
     validUntil: string;
     linkedOrderId?: string;
+    lostReason?: string;
+    lostNote?: string;
   };
   publicUrl: string;
   /** Validade de um orçamento novo (duplicar), vinda das Regras da loja. */
@@ -57,6 +59,10 @@ export function QuoteActions({
   const [pending, startTransition] = useTransition();
   const [payment, setPayment] = useState<"pix" | "cartao" | "boleto">("pix");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [losing, setLosing] = useState(false);
+  const [lossReason, setLossReason] = useState("preco");
+  const [lossNote, setLossNote] = useState("");
+  const expired = isQuoteExpired(quote);
 
   const label = quoteNumberLabel(quote.number);
   const link = `${publicUrl}/orcamento/${quote.token}`;
@@ -218,9 +224,9 @@ export function QuoteActions({
                 </button>
               </div>
             )}
-            {quote.status !== "recusado" && (
-              <button type="button" disabled={pending} onClick={() => run(() => setQuoteStatusAction(quote.id, "recusado"), "Marcado como recusado")} className={BTN}>
-                Cliente recusou
+            {quote.status !== "recusado" && !losing && (
+              <button type="button" disabled={pending} onClick={() => setLosing(true)} className={BTN}>
+                {expired ? "Marcar como perdido" : "Cliente recusou"}
               </button>
             )}
             {(quote.status === "recusado" || quote.status === "aprovado") && (
@@ -229,6 +235,51 @@ export function QuoteActions({
               </button>
             )}
           </div>
+          {losing && (
+            <div className="mt-3 flex flex-wrap items-end gap-3 rounded-lg border border-mist p-3">
+              <label className="text-xs text-graphite">
+                Por que perdeu?
+                <div className="mt-1 w-60">
+                  <Select
+                    value={lossReason}
+                    onChange={setLossReason}
+                    options={QUOTE_LOSS_REASONS}
+                    className="rounded-lg border border-mist bg-transparent px-3 py-2 text-sm text-ink focus:border-petrol"
+                  />
+                </div>
+              </label>
+              <label className="min-w-[200px] flex-1 text-xs text-graphite">
+                Observação (opcional)
+                <input
+                  value={lossNote}
+                  onChange={(e) => setLossNote(e.target.value)}
+                  maxLength={300}
+                  placeholder="Ex.: achou 30% mais barato em outro lugar"
+                  className="mt-1 w-full rounded-lg border border-mist bg-transparent px-3 py-2 text-sm text-ink outline-none focus:border-petrol"
+                />
+              </label>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => {
+                  run(() => setQuoteStatusAction(quote.id, "recusado", { reason: lossReason, note: lossNote }), "Perda registrada");
+                  setLosing(false);
+                }}
+                className={BTN_PRIMARY}
+              >
+                Confirmar
+              </button>
+              <button type="button" onClick={() => setLosing(false)} className="text-sm text-graphite hover:text-ink">
+                Cancelar
+              </button>
+            </div>
+          )}
+          {quote.status === "recusado" && (
+            <p className="mt-3 text-sm text-graphite">
+              Motivo da perda: <strong className="text-ink">{quoteLossLabel(quote.lostReason)}</strong>
+              {quote.lostNote ? ` · ${quote.lostNote}` : ""}
+            </p>
+          )}
           <p className="mt-3 text-xs text-graphite">
             Ao converter, o orçamento vira um pedido (canal WhatsApp) já na fila de produção. O estoque não é alterado.
           </p>

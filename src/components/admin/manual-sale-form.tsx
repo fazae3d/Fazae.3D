@@ -7,6 +7,9 @@ import { Select } from "@/components/select";
 import { formatPrice } from "@/lib/format";
 import { CHANNEL_LABELS, computeChannelFee, isMarketplace, type ChannelFees } from "@/lib/channels";
 import { round2 } from "@/lib/money";
+import { CUSTOMER_SOURCES, customerSourceLabel } from "@/lib/customer-source";
+import { phoneKey } from "@/lib/customer-insights";
+import { normalizePhone } from "@/lib/whatsapp";
 import type { Material, Product } from "@/lib/types";
 import type { OrderStatus, PaymentMethod } from "@/server/types";
 
@@ -66,12 +69,17 @@ function emptyItem(products: Product[], manual = false): SaleItem {
   };
 }
 
+export type KnownCustomer = { name: string; phone: string; source?: string };
+
 export function ManualSaleForm({
   products,
   materials = [],
   channelFees = {},
+  customers = [],
 }: {
   products: Product[];
+  /** Clientes já cadastrados: o telefone ou o nome digitado reconhece quem já comprou. */
+  customers?: KnownCustomer[];
   /** Materiais cadastrados (com cores): alimentam os campos do produto manual. */
   materials?: Material[];
   channelFees?: ChannelFees;
@@ -80,6 +88,8 @@ export function ManualSaleForm({
   const [channel, setChannel] = useState<ManualSaleChannel>("presencial");
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [customerSource, setCustomerSource] = useState("");
+  const [phoneSkipped, setPhoneSkipped] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pix");
   const [status, setStatus] = useState<OrderStatus>("Entregue");
   const [productionPending, setProductionPending] = useState(false);
@@ -91,6 +101,25 @@ export function ManualSaleForm({
   const [submitting, setSubmitting] = useState(false);
 
   const productBySlug = (slug: string) => products.find((p) => p.slug === slug);
+
+  // Cadastro rápido: o telefone (em qualquer formato) reconhece o cliente que já comprou; o nome também sugere quem já existe.
+  const typedPhoneKey = phoneKey(customerPhone);
+  const phoneValid = normalizePhone(customerPhone) !== null;
+  const knownByPhone = phoneValid ? customers.find((c) => phoneKey(c.phone) === typedPhoneKey) : undefined;
+  const needsPhone = channel === "presencial" || channel === "whatsapp";
+
+  const handlePhoneChange = (value: string) => {
+    setCustomerPhone(value);
+    const match = normalizePhone(value) ? customers.find((c) => phoneKey(c.phone) === phoneKey(value)) : undefined;
+    // Cliente já cadastrado: completa o nome, sem apagar o que a pessoa já digitou.
+    if (match && !customerName.trim()) setCustomerName(match.name);
+  };
+
+  const handleNameChange = (value: string) => {
+    setCustomerName(value);
+    const match = customers.find((c) => c.name.trim().toLowerCase() === value.trim().toLowerCase());
+    if (match && !customerPhone.trim()) setCustomerPhone(match.phone);
+  };
 
   const updateItem = (index: number, patch: Partial<SaleItem>) => {
     setItems((prev) => prev.map((item, i) => (i === index ? { ...item, ...patch } : item)));
@@ -146,6 +175,14 @@ export function ManualSaleForm({
       setError("Informe o nome do cliente.");
       return;
     }
+    if (customerPhone.trim() && !phoneValid) {
+      setError("Telefone inválido. Use o DDD e o número, por exemplo 84 99999-8888.");
+      return;
+    }
+    if (needsPhone && !phoneValid && !phoneSkipped) {
+      setError("Informe o telefone do cliente ou marque que ele não quis informar.");
+      return;
+    }
     if (items.some((item) => !item.manual && (!item.productSlug || !item.material || !item.color))) {
       setError("Selecione produto, material e cor em todos os itens da loja.");
       return;
@@ -160,7 +197,9 @@ export function ManualSaleForm({
       channel,
       channelFee: marketplace ? round2(channelFee) : undefined,
       customerName: customerName.trim(),
-      customerPhone: customerPhone.trim() || undefined,
+      customerPhone: phoneSkipped ? undefined : customerPhone.trim() || undefined,
+      customerSource: !knownByPhone && customerSource ? customerSource : undefined,
+      customerPhoneSkipped: phoneSkipped || undefined,
       paymentMethod,
       status,
       productionPending,
@@ -214,28 +253,79 @@ export function ManualSaleForm({
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
+          <label className={labelClass()} htmlFor="customerPhone">
+            Telefone do cliente{needsPhone ? "" : " (opcional)"}
+          </label>
+          <input
+            id="customerPhone"
+            value={customerPhone}
+            onChange={(e) => handlePhoneChange(e.target.value)}
+            inputMode="tel"
+            placeholder="(84) 99999-8888"
+            disabled={phoneSkipped}
+            className={inputClass(Boolean(customerPhone.trim()) && !phoneValid) + " disabled:opacity-50"}
+          />
+          {knownByPhone ? (
+            <p className="text-xs text-petrol">
+              Cliente já cadastrado: {knownByPhone.name}
+              {knownByPhone.source ? ` (veio de ${customerSourceLabel(knownByPhone.source)})` : ""}.
+            </p>
+          ) : customerPhone.trim() && !phoneValid ? (
+            <p className="text-xs text-red-500">Use o DDD e o número, por exemplo 84 99999-8888.</p>
+          ) : phoneValid ? (
+            <p className="text-xs text-graphite">Cliente novo: ele será cadastrado ao salvar a venda.</p>
+          ) : (
+            <p className="text-xs text-graphite">É com o telefone que o sistema reconhece quem já comprou e avisa de novas peças.</p>
+          )}
+          {needsPhone ? (
+            <label className="mt-1 flex items-center gap-2 text-xs text-graphite">
+              <input
+                type="checkbox"
+                checked={phoneSkipped}
+                onChange={(e) => {
+                  setPhoneSkipped(e.target.checked);
+                  if (e.target.checked) setCustomerPhone("");
+                }}
+                className="h-3.5 w-3.5 accent-ink"
+              />
+              O cliente não quis informar o telefone
+            </label>
+          ) : null}
+        </div>
+        <div className="flex flex-col gap-1.5">
           <label className={labelClass()} htmlFor="customerName">
             Nome do cliente
           </label>
           <input
             id="customerName"
+            list="known-customers"
             value={customerName}
-            onChange={(e) => setCustomerName(e.target.value)}
+            onChange={(e) => handleNameChange(e.target.value)}
+            autoComplete="off"
             className={inputClass()}
           />
+          <datalist id="known-customers">
+            {customers.map((c) => (
+              <option key={c.phone} value={c.name} />
+            ))}
+          </datalist>
         </div>
-        <div className="flex flex-col gap-1.5">
-          <label className={labelClass()} htmlFor="customerPhone">
-            Telefone (opcional)
-          </label>
-          <input
-            id="customerPhone"
-            value={customerPhone}
-            onChange={(e) => setCustomerPhone(e.target.value)}
-            placeholder="84999999999"
-            className={inputClass()}
-          />
-        </div>
+        {!knownByPhone && phoneValid && !phoneSkipped ? (
+          <div className="flex flex-col gap-1.5 sm:col-span-2 sm:max-w-sm">
+            <label className={labelClass()} htmlFor="customerSource">
+              Como nos conheceu (opcional)
+            </label>
+            <Select
+              id="customerSource"
+              value={customerSource}
+              onChange={setCustomerSource}
+              className={inputClass()}
+              placeholder="Não informado"
+              options={[{ value: "", label: "Não informado" }, ...CUSTOMER_SOURCES]}
+            />
+            <p className="text-xs text-graphite">Mostra qual canal traz clientes de verdade (Instagram, indicação, feira...).</p>
+          </div>
+        ) : null}
       </div>
 
       <div>

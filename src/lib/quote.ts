@@ -41,6 +41,9 @@ export type Quote = {
   sentAt?: string;
   decidedAt?: string;
   lastFollowUpAt?: string;
+  /** Por que o orçamento foi perdido (chave de QUOTE_LOSS_REASONS) e uma observação livre. */
+  lostReason?: string;
+  lostNote?: string;
   linkedRequestId?: string;
   linkedOrderId?: string;
   createdAt: string;
@@ -54,6 +57,21 @@ export const QUOTE_STATUS_LABELS: Record<QuoteDisplayStatus, string> = {
   recusado: "Recusado",
   vencido: "Vencido",
 };
+
+/** Motivos de perda de um orçamento (o que o dono escolhe ao marcar "cliente recusou"). */
+export const QUOTE_LOSS_REASONS: { value: string; label: string }[] = [
+  { value: "preco", label: "Preço alto" },
+  { value: "prazo", label: "Prazo de entrega" },
+  { value: "concorrente", label: "Fechou com outro fornecedor" },
+  { value: "sem_resposta", label: "Parou de responder" },
+  { value: "adiou", label: "Vai decidir mais tarde" },
+  { value: "desistiu", label: "Desistiu do projeto" },
+  { value: "outro", label: "Outro motivo" },
+];
+
+export function quoteLossLabel(reason?: string) {
+  return QUOTE_LOSS_REASONS.find((r) => r.value === reason)?.label ?? "Motivo não informado";
+}
 
 /** Padrões de um orçamento novo; as Regras da loja (painel) sobrescrevem. */
 export const DEFAULT_QUOTE_VALIDITY_DAYS = 7;

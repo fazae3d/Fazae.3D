@@ -142,6 +142,10 @@ export const manualSaleFormSchema = z.object({
   channelFee: z.number("Informe uma taxa válida.").min(0, "A taxa não pode ser negativa.").optional(),
   customerName: z.string().min(1, "Informe o nome do cliente."),
   customerPhone: z.string().optional(),
+  /** Como o cliente conheceu a loja (lib/customer-source); só vale para cliente novo. */
+  customerSource: z.string().optional(),
+  /** Venda presencial ou de WhatsApp sem telefone: precisa ser marcado de propósito. */
+  customerPhoneSkipped: z.boolean().optional(),
   paymentMethod: z.enum(["pix", "cartao", "boleto"]),
   status: z.enum([
     "Pedido recebido",

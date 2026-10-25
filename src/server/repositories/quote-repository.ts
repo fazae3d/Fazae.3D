@@ -30,6 +30,8 @@ function toQuote(row: Row): Quote {
     sentAt: row.sentAt?.toISOString(),
     decidedAt: row.decidedAt?.toISOString(),
     lastFollowUpAt: row.lastFollowUpAt?.toISOString(),
+    lostReason: row.lostReason ?? undefined,
+    lostNote: row.lostNote ?? undefined,
     linkedRequestId: row.linkedRequestId ?? undefined,
     linkedOrderId: row.linkedOrderId ?? undefined,
     createdAt: row.createdAt.toISOString(),
@@ -88,7 +90,10 @@ export async function updateQuote(id: string, input: QuoteInput): Promise<Quote 
   return toQuote(await db.quote.update({ where: { id }, data: toData(input) }));
 }
 
-export async function setQuoteStatus(id: string, status: QuoteStatus): Promise<Quote | null> {
+export type QuoteLoss = { reason?: string; note?: string };
+
+/** Muda a situação do orçamento. O motivo da perda só vale para "recusado"; em qualquer outra situação ele é limpo. */
+export async function setQuoteStatus(id: string, status: QuoteStatus, loss?: QuoteLoss): Promise<Quote | null> {
   const existing = await db.quote.findUnique({ where: { id }, select: { id: true } });
   if (!existing) return null;
   const now = new Date();
@@ -99,13 +104,15 @@ export async function setQuoteStatus(id: string, status: QuoteStatus): Promise<Q
         status,
         sentAt: status === "enviado" ? now : undefined,
         decidedAt: status === "aprovado" || status === "recusado" ? now : null,
+        lostReason: status === "recusado" ? (loss?.reason ?? null) : null,
+        lostNote: status === "recusado" ? (loss?.note?.trim() ? loss.note.trim() : null) : null,
       },
     }),
   );
 }
 
 export async function linkQuoteToOrder(id: string, orderId: string): Promise<void> {
-  await db.quote.update({ where: { id }, data: { linkedOrderId: orderId, status: "aprovado", decidedAt: new Date() } });
+  await db.quote.update({ where: { id }, data: { linkedOrderId: orderId, status: "aprovado", decidedAt: new Date(), lostReason: null, lostNote: null } });
 }
 
 export async function deleteQuote(id: string): Promise<void> {

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PageHeader, StatusBadge } from "@/components/admin/page-header";
-import { getCustomersWithMetrics, type CustomerWithMetrics } from "@/server/repositories/customer-repository";
+import { getCustomersWithMetrics, getUnidentifiedOrders, type CustomerWithMetrics } from "@/server/repositories/customer-repository";
+import { customerSourceLabel, isCustomerSource, sourceBreakdown } from "@/lib/customer-source";
 import { formatPrice } from "@/lib/format";
 import { isInactive } from "@/lib/customer-insights";
 import { getStoreRules } from "@/server/store-rules";
@@ -23,7 +24,11 @@ export default async function AdminCustomersPage({
   const params = await searchParams;
   const query = params.q?.trim().toLowerCase() ?? "";
 
-  const customers = await withReadFallback(() => getCustomersWithMetrics(), fallbackCustomers);
+  const [customers, unidentified] = await Promise.all([
+    withReadFallback(() => getCustomersWithMetrics(), fallbackCustomers),
+    withReadFallback(() => getUnidentifiedOrders(), []),
+  ]);
+  const origins = sourceBreakdown(customers);
   const now = new Date();
   const { reactivationDays } = (await getStoreRules()).automation;
 
@@ -53,6 +58,29 @@ export default async function AdminCustomersPage({
           </>
         }
       />
+
+      {unidentified.length > 0 ? (
+        <Link
+          href="/admin/clientes/sem-cadastro"
+          className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm transition-colors hover:border-amber-500"
+        >
+          <span>
+            <strong>{unidentified.length} pedido(s)</strong> ficaram sem telefone e não entram no CRM.
+          </span>
+          <span className="font-medium text-petrol">Identificar clientes →</span>
+        </Link>
+      ) : null}
+
+      {customers.length > 0 ? (
+        <div className="mb-4 flex flex-wrap items-center gap-2 text-xs text-graphite">
+          <span>Como nos conheceram:</span>
+          {origins.map((o) => (
+            <span key={o.value || "nenhum"} className="rounded-full border border-mist px-2.5 py-1">
+              {o.label} <strong className="text-ink">{o.count}</strong>
+            </span>
+          ))}
+        </div>
+      ) : null}
 
       <form className="mb-6 flex flex-wrap gap-3" action="/admin/clientes">
         <input
@@ -101,6 +129,7 @@ export default async function AdminCustomersPage({
                   <td className="px-4 py-3 text-graphite">
                     <p>{customer.phone}</p>
                     <p className="text-xs">{customer.email ?? "sem e-mail"}</p>
+                    {isCustomerSource(customer.source) ? <p className="text-xs">Veio de: {customerSourceLabel(customer.source)}</p> : null}
                   </td>
                   <td className="px-4 py-3">
                     {customer.tags.length === 0 ? (

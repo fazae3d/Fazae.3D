@@ -12,6 +12,8 @@ import { getProduct, updateProduct } from "@/server/repositories/product-reposit
 import type { Order } from "@/server/types";
 import { withMutationFallback } from "@/lib/db-fallback";
 import { logAdminAction } from "@/server/audit";
+import { upsertCustomerFromContact } from "@/server/repositories/customer-repository";
+import { normalizePhone } from "@/lib/whatsapp";
 
 async function requireAdmin() {
   if (ADMIN_AUTH_DISABLED) return true;
@@ -30,7 +32,18 @@ export async function createManualSaleAction(input: ManualSaleFormInput): Promis
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
   }
-  const { channel, channelFee, customerName, customerPhone, paymentMethod, status, items, productionPending, shipping } = parsed.data;
+  const { channel, channelFee, customerName, paymentMethod, status, items, productionPending, shipping, customerSource, customerPhoneSkipped } = parsed.data;
+
+  // Telefone: é a chave do CRM (recompra, reativação, WhatsApp). Em venda presencial ou de WhatsApp ele é obrigatório, a menos que
+  // se marque de propósito que o cliente não quis informar. Fica sempre no formato padrão (55 + DDD + número).
+  const typedPhone = parsed.data.customerPhone?.trim();
+  const customerPhone = typedPhone ? (normalizePhone(typedPhone) ?? undefined) : undefined;
+  if (typedPhone && !customerPhone) {
+    return { success: false, error: "Telefone inválido. Use o DDD e o número, por exemplo 84 99999-8888." };
+  }
+  if ((channel === "presencial" || channel === "whatsapp") && !customerPhone && !customerPhoneSkipped) {
+    return { success: false, error: "Informe o telefone do cliente (ou marque que ele não quis informar). Sem ele não dá para avisar, cobrar nem chamar de volta." };
+  }
 
   // TODO(fase DB): remove o try/catch quando a Fazaê tiver o próprio banco, hoje a escrita real falharia sem Supabase configurado.
   const result = await withMutationFallback(async () => {
@@ -110,6 +123,8 @@ export async function createManualSaleAction(input: ManualSaleFormInput): Promis
     // reservado: cancelar essa venda depois devolve as peças.
     try {
       const created = await addOrder(order, { forceProductionPending: productionPending, reserveStock: true });
+      // O pedido já cadastra o cliente pelo telefone; aqui só completa a origem ("como nos conheceu"), se ele ainda não tiver.
+      if (customerPhone) await upsertCustomerFromContact({ name: customerName, phone: customerPhone, source: customerSource }).catch(() => null);
       return { success: true, order: created };
     } catch (error) {
       if (error instanceof OutOfStockError) return { success: false, error: error.message };
@@ -119,6 +134,7 @@ export async function createManualSaleAction(input: ManualSaleFormInput): Promis
 
   if (result.success) {
     await logAdminAction("venda.manual", "Order", result.order.id, { canal: channel, cliente: customerName, total: result.order.total, itens: items.length });
+    revalidatePath("/admin/clientes");
     revalidatePath("/admin/pedidos");
     revalidatePath("/admin/estoque");
     revalidatePath("/admin/produtos");

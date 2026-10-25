@@ -5,7 +5,9 @@ import { auth } from "@/auth";
 import { ADMIN_AUTH_DISABLED } from "@/lib/dev-flags";
 import { customerCreateSchema, customerCrmSchema, type CustomerCreateInput, type CustomerCrmInput } from "@/lib/admin-validation";
 import { logAdminAction } from "@/server/audit";
+import { normalizePhone } from "@/lib/whatsapp";
 import {
+  identifyOrdersCustomer,
   markCustomerReminded,
   updateCustomerCrmInfo,
   upsertCustomerFromContact,
@@ -79,6 +81,28 @@ export async function createCustomerAction(input: CustomerCreateInput): Promise<
     });
     revalidateCustomerPaths(created.id);
     return { success: true, customer: customer ?? created };
+  });
+}
+
+/** Identifica o cliente de pedidos que ficaram sem telefone: grava o telefone nos pedidos e cadastra (ou completa) o cliente. */
+export async function identifyOrdersAction(input: {
+  orderIds: string[];
+  name: string;
+  phone: string;
+  source?: string;
+}): Promise<{ success: true; updated: number } | { success: false; error: string }> {
+  if (!(await requireAdmin())) return { success: false, error: "Acesso restrito ao administrador." };
+  const name = input.name.trim();
+  if (!name) return { success: false, error: "Informe o nome do cliente." };
+  if (!normalizePhone(input.phone)) return { success: false, error: "Telefone inválido. Use o DDD e o número, por exemplo 84 99999-8888." };
+  if (input.orderIds.length === 0 || input.orderIds.length > 200) return { success: false, error: "Nenhum pedido selecionado." };
+  return withMutationFallback(async () => {
+    const { updated, customer } = await identifyOrdersCustomer({ orderIds: input.orderIds, name, phone: input.phone, source: input.source });
+    await logAdminAction("pedido.identificar", "Customer", customer.id, { cliente: customer.name, pedidos: updated });
+    revalidatePath("/admin/clientes", "layout");
+    revalidatePath("/admin/pedidos");
+    revalidatePath("/admin");
+    return { success: true, updated } as const;
   });
 }
 

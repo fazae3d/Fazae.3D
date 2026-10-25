@@ -187,6 +187,8 @@ model Customer {
   notes     String?
   tags      String[] @default([])
   createdAt DateTime @default(now())
+  /** Como o cliente conheceu a loja (instagram, indicacao, presencial, google, whatsapp, site, outro). Vazio = não informado. */
+  source    String?
   /** Último lembrete de reativação (cliente que não compra há muito tempo) enviado pelo painel. */
   lastReminderAt DateTime?
 }
@@ -674,6 +676,9 @@ model Quote {
   linkedOrderId    String?
   /** Último contato de acompanhamento ("viu o orçamento?") feito pelo painel. */
   lastFollowUpAt   DateTime?
+  /** Quando o cliente recusa ou o orçamento é dado como perdido: motivo (chave de QUOTE_LOSS_REASONS) e uma observação livre. */
+  lostReason       String?
+  lostNote         String?
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
 

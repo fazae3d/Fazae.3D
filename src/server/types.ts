@@ -222,6 +222,8 @@ export type Customer = {
   notes?: string;
   tags: string[];
   createdAt: string;
+  /** Como o cliente conheceu a loja (lib/customer-source); vazio = não informado. */
+  source?: string;
   /** Último lembrete de reativação enviado pelo painel. */
   lastReminderAt?: string;
 };

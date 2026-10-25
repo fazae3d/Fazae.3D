@@ -8,6 +8,7 @@ import { formatPrice } from "@/lib/format";
 import { round2 } from "@/lib/money";
 import { buildCustomerMetrics, daysSince, isInactive, phoneKey } from "@/lib/customer-insights";
 import { getStoreRules } from "@/server/store-rules";
+import { customerSourceLabel } from "@/lib/customer-source";
 import { QUOTE_STATUS_LABELS, formatStoreDate, quoteDisplayStatus, quoteNumberLabel } from "@/lib/quote";
 import { withReadFallback } from "@/lib/db-fallback";
 import { fallbackCustomers, fallbackOrders, fallbackCustomOrderRequests } from "@/server/demo-fallback";
@@ -106,6 +107,7 @@ export default async function AdminCustomerDetailPage({ params }: { params: Prom
               <span>
                 {customer.phone}
                 {customer.email ? ` · ${customer.email}` : ""} · cliente desde {formatDate(customer.createdAt)}
+                {customer.source ? ` · veio de ${customerSourceLabel(customer.source)}` : ""}
               </span>
             </span>
           }

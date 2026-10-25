@@ -9,7 +9,7 @@ import { escapeHtml, sendEmail } from "@/lib/email";
 import { getEmailContactUrl, renderEmailLayout } from "@/lib/email-template";
 import { formatPrice } from "@/lib/format";
 import { round2 } from "@/lib/money";
-import { computeQuoteTotals, formatStoreDate, quoteNumberLabel, quoteSavings, quoteWhatsAppMessage, validityEndOfDay, type Quote, type QuoteStatus } from "@/lib/quote";
+import { QUOTE_LOSS_REASONS, computeQuoteTotals, formatStoreDate, quoteLossLabel, quoteNumberLabel, quoteSavings, quoteWhatsAppMessage, validityEndOfDay, type Quote, type QuoteStatus } from "@/lib/quote";
 import { normalizePhone } from "@/lib/whatsapp";
 import { registerQuoteSent, sendConversationMedia, sendConversationText, startConversation, syncStageFromQuote } from "@/server/repositories/whatsapp-repository";
 import { SITE_URL } from "@/lib/site-config";
@@ -106,12 +106,15 @@ export async function saveQuoteAction(id: string | null, input: QuoteFormInput):
   });
 }
 
-export async function setQuoteStatusAction(id: string, status: QuoteStatus): Promise<SimpleResult> {
+/** Muda a situação do orçamento. Ao marcar como recusado, registra o motivo (e uma observação) para o funil de perdas. */
+export async function setQuoteStatusAction(id: string, status: QuoteStatus, loss?: { reason?: string; note?: string }): Promise<SimpleResult> {
   if (!(await requireAdmin())) return DENIED;
+  if (loss?.reason && !QUOTE_LOSS_REASONS.some((r) => r.value === loss.reason)) return { success: false, error: "Motivo inválido." };
+  if (loss?.note && loss.note.length > 300) return { success: false, error: "A observação passa de 300 caracteres." };
   return withMutationFallback(async (): Promise<SimpleResult> => {
-    const updated = await setQuoteStatus(id, status);
+    const updated = await setQuoteStatus(id, status, loss);
     if (!updated) return { success: false, error: "Orçamento não encontrado." };
-    await logAdminAction("orcamento.status", "Quote", id, { number: updated.number, status });
+    await logAdminAction("orcamento.status", "Quote", id, { number: updated.number, status, motivo: status === "recusado" ? quoteLossLabel(loss?.reason) : undefined });
     if (status === "recusado") await syncStageFromQuote(updated.customerPhone, "perdido").catch(() => null);
     revalidateQuotes(id);
     return { success: true };
