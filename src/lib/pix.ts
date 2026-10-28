@@ -38,6 +38,32 @@ export function pixTxid(value: string): string {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** Lê os campos de um trecho do BR Code (id → valor); para no primeiro campo malformado. */
+function readFields(text: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  let i = 0;
+  while (i + 4 <= text.length) {
+    const id = text.slice(i, i + 2);
+    const len = Number(text.slice(i + 2, i + 4));
+    if (!Number.isInteger(len) || i + 4 + len > text.length) break;
+    out[id] = text.slice(i + 4, i + 4 + len);
+    i += 4 + len;
+  }
+  return out;
+}
+
+/** O texto colado parece um Pix "copia e cola" inteiro (começa com 000201) em vez de uma chave? */
+export function looksLikeBrCode(text: string): boolean {
+  return /^000201/.test(text.trim());
+}
+
+/** Tira a chave de dentro de um "copia e cola" de chave estática; devolve null quando o código não traz a chave (QR de maquininha, loja ou cobrança). */
+export function pixKeyFromBrCode(text: string): string | null {
+  const account = readFields(text.trim())["26"];
+  const key = account ? readFields(account)["01"] : undefined;
+  return key ? normalizePixKey(key) : null;
+}
+
 /** Deixa a chave no formato do Pix: CPF e CNPJ só com números, telefone com +55, e-mail e chave aleatória como estão. */
 export function normalizePixKey(raw: string): string {
   const text = raw.trim();

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_RULES, validateRulesInput } from "./store-rules";
 import { quoteCardTerms } from "./quote";
-import { crc16, isValidPixKey, normalizePixKey, pixPayload, pixText, quotePix } from "./pix";
+import { crc16, isValidPixKey, looksLikeBrCode, normalizePixKey, pixKeyFromBrCode, pixPayload, pixText, quotePix } from "./pix";
 
 /** Lê o BR Code de volta em campos (id → valor), para conferir a estrutura. */
 function parse(payload: string): Record<string, string> {
@@ -69,6 +69,21 @@ describe("chave Pix", () => {
   it("aceita só os formatos que o banco aceita", () => {
     for (const ok of ["12345678909", "12345678000190", "+5584999998888", "loja@email.com", "123e4567-e12b-12d1-a456-426655440000"]) expect(isValidPixKey(ok)).toBe(true);
     for (const bad of ["", "12345", "84999998888x", "sem arroba", "5584999998888"]) expect(isValidPixKey(bad)).toBe(false);
+  });
+
+  it("colar o copia e cola no lugar da chave: usa a chave de dentro, ou explica que precisa da chave", () => {
+    const comChave = pixPayload({ key: "123e4567-e12b-12d1-a456-426655440000", name: "Loja", city: "Natal" });
+    expect(looksLikeBrCode(comChave)).toBe(true);
+    expect(pixKeyFromBrCode(comChave)).toBe("123e4567-e12b-12d1-a456-426655440000");
+    // QR de loja do Mercado Pago: traz um endereço (campo 25) e nenhuma chave
+    const semChave = "0002010102112645" + "0014BR.GOV.BCB.PIX" + "2523pixqr.example.com/ol/v2/AB" + "5204000053039865802BR5904Loja6004Natal62070503***6304ABCD";
+    expect(pixKeyFromBrCode(semChave)).toBeNull();
+    const input = (key: string) => ({ ...JSON.parse(JSON.stringify(DEFAULT_RULES)), pix: { key, depositPct: 50 } });
+    const ok = validateRulesInput(input(comChave));
+    expect(ok.ok && ok.rules.pix.key).toBe("123e4567-e12b-12d1-a456-426655440000");
+    const bad = validateRulesInput(input(semChave));
+    expect(bad.ok).toBe(false);
+    expect(!bad.ok && bad.error).toContain("Minhas chaves");
   });
 
   it("nas Regras da loja: vazio é permitido, formato errado é recusado, pontuação é limpa", () => {

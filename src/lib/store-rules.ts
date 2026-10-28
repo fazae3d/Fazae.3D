@@ -1,4 +1,4 @@
-import { isValidPixKey, normalizePixKey } from "@/lib/pix";
+import { isValidPixKey, looksLikeBrCode, normalizePixKey, pixKeyFromBrCode } from "@/lib/pix";
 
 /**
  * Regras da loja editáveis em /admin/configuracoes/regras: números, prazos, textos padrão e dados da empresa que antes ficavam fixos
@@ -135,7 +135,7 @@ export const RULE_FIELDS: FieldSpec[] = [
   { path: "payments.welcomeCouponCode", group: "pagamento", label: "Cupom de boas-vindas (código)", hint: "Precisa existir em Cupons. Deixe vazio para não divulgar nenhum cupom.", kind: "text", maxLength: 30, optional: true },
   { path: "payments.welcomeCouponText", group: "pagamento", label: "Cupom de boas-vindas (o que ele dá)", hint: "Ex.: 10% OFF na primeira compra", kind: "text", maxLength: 80, optional: true },
 
-  { path: "pix.key", group: "pagamento", label: "Chave Pix da loja", hint: "Sai no orçamento com QR code e “copia e cola”. Pode ser CPF ou CNPJ (só números), telefone com +55, e-mail ou chave aleatória. Copie direto do app do banco. Vazio = o orçamento sai sem Pix.", kind: "text", maxLength: 77, optional: true },
+  { path: "pix.key", group: "pagamento", label: "Chave Pix da loja", hint: "Sai no orçamento com QR code e “copia e cola”. Pode ser CPF ou CNPJ (só números), telefone com +55, e-mail ou chave aleatória. Copie a chave no app do banco (Pix, Minhas chaves); não é o código “copia e cola” de um QR. Vazio = o orçamento sai sem Pix.", kind: "text", maxLength: 400, optional: true },
   { path: "pix.depositPct", group: "pagamento", label: "Quanto do orçamento o QR já cobra", hint: "50 = o QR vem com o valor do sinal (metade). 100 = o valor total. 0 = QR sem valor, o cliente digita quanto vai pagar.", kind: "number", min: 0, max: 100, integer: true, unit: "%" },
 
   { path: "storefront.lowStockThreshold", group: "vitrine", label: "Estoque baixo a partir de", hint: "Peças com estoque até esse número entram em “estoque baixo” no painel.", kind: "number", min: 1, max: 100, integer: true, unit: "peças" },
@@ -214,6 +214,15 @@ export function validateField(spec: FieldSpec, raw: unknown): { ok: true; value:
     return { ok: true, value: text.toUpperCase() };
   }
   if (spec.path === "pix.key") {
+    // Colou o "copia e cola" no lugar da chave: se o código traz a chave, usa; senão explica onde achar a chave.
+    if (looksLikeBrCode(text)) {
+      const fromCode = pixKeyFromBrCode(text);
+      if (fromCode && isValidPixKey(fromCode)) return { ok: true, value: fromCode };
+      return {
+        ok: false,
+        error: `${name}: isso é um código “Pix copia e cola” (de um QR da loja ou de uma cobrança), não a chave. Esse tipo de código não aceita o valor de cada orçamento. Use a chave Pix da conta: no app do banco, abra Pix, Minhas chaves, e copie a chave aleatória (algo como 123e4567-e89b-12d3-a456-426614174000), o CPF/CNPJ, o telefone ou o e-mail cadastrado.`,
+      };
+    }
     const key = normalizePixKey(text);
     if (!isValidPixKey(key)) return { ok: false, error: `${name}: formato inválido. Use CPF ou CNPJ só com números, telefone com +55, e-mail ou chave aleatória.` };
     return { ok: true, value: key };
