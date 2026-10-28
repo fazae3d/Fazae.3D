@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { formatPrice } from "@/lib/format";
-import { QUOTE_STATUS_LABELS, daysUntil, formatStoreDate, quoteDisplayStatus, quoteNumberLabel, quoteSavings } from "@/lib/quote";
+import { QUOTE_STATUS_LABELS, daysUntil, formatStoreDate, quoteCardTerms, quoteDisplayStatus, quoteNumberLabel, quoteSavings } from "@/lib/quote";
 import { DEFAULT_WHATSAPP_NUMBER, getWhatsAppLink } from "@/lib/site-config";
 import { quotePix } from "@/lib/pix";
 import { QuotePixCard } from "@/components/quote-pix-card";
@@ -35,6 +35,7 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
 
   // Pix com QR code: só enquanto o orçamento vale (ou já foi aprovado e falta pagar) e se a chave estiver nas Regras da loja.
   const pix = settings && (status === "enviado" || status === "rascunho" || status === "aprovado") ? quotePix(quote, settings.rules) : null;
+  const cardTerms = status === "enviado" || status === "rascunho" || status === "aprovado" ? quoteCardTerms(quote) : null;
   const pixQr = pix ? await pixQrDataUrl(pix.payload).catch(() => null) : null;
   const proofHref = pix
     ? getWhatsAppLink(
@@ -150,6 +151,40 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
 
       {pix && pixQr ? (
         <QuotePixCard pix={pix} qr={pixQr} notice={settings?.rules.company.pixNotice} receiver={settings?.rules.company.legalName ?? "Fazaê 3D"} proofHref={proofHref} />
+      ) : null}
+
+      {cardTerms ? (
+        <section className="mt-8 border border-petrol/40 p-5 sm:p-6" aria-labelledby="card-title">
+          <h2 id="card-title" className="font-display text-xl">
+            Pagamento no cartão
+          </h2>
+          <dl className="mt-3 space-y-1.5 text-sm">
+            {cardTerms.surcharge > 0 ? (
+              <div className="flex justify-between text-graphite">
+                <dt>Acréscimo do cartão</dt>
+                <dd>{formatPrice(cardTerms.surcharge)}</dd>
+              </div>
+            ) : (
+              <div className="flex justify-between text-petrol">
+                <dt>Acréscimo do cartão</dt>
+                <dd>Sem acréscimo</dd>
+              </div>
+            )}
+            <div className="flex justify-between text-lg font-semibold">
+              <dt>Total no cartão</dt>
+              <dd className="text-petrol">{formatPrice(cardTerms.total)}</dd>
+            </div>
+            {cardTerms.installments > 1 ? (
+              <div className="flex justify-between text-graphite">
+                <dt>Parcelamento</dt>
+                <dd>
+                  {cardTerms.installments}x de {formatPrice(cardTerms.perInstallment)}
+                </dd>
+              </div>
+            ) : null}
+          </dl>
+          <p className="mt-3 text-xs text-graphite">Aprove pelo WhatsApp e combinamos o pagamento no cartão com você.</p>
+        </section>
       ) : null}
 
       <div className="mt-10 flex flex-wrap gap-3">

@@ -265,6 +265,13 @@ export const quoteFormSchema = z.object({
   deliveryTime: z.string().optional(),
   paymentTerms: z.string().optional(),
   notes: z.string().optional(),
+  /** Quanto do total o QR do Pix cobra (0 a 100). */
+  pixDepositPct: z.number().int().min(0, "A porcentagem do Pix vai de 0 a 100.").max(100, "A porcentagem do Pix vai de 0 a 100.").optional(),
+  /** Como o cliente vai pagar. */
+  paymentMethod: z.enum(["pix", "cartao"]).optional(),
+  /** No cartão: acréscimo em R$ (vazio = isento) e parcelas. */
+  cardSurcharge: z.number("Informe um acréscimo válido.").min(0, "O acréscimo não pode ser negativo.").max(1_000_000, "Acréscimo alto demais.").optional(),
+  cardInstallments: z.number().int("Use um número inteiro de parcelas.").min(1, "Use pelo menos 1 parcela.").max(24, "No máximo 24 parcelas.").optional(),
   linkedRequestId: z.string().optional(),
 });
 

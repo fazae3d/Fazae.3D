@@ -70,6 +70,11 @@ function buildInput(data: QuoteFormInput): QuoteInput {
     deliveryTime: clean(data.deliveryTime),
     paymentTerms: clean(data.paymentTerms),
     notes: clean(data.notes),
+    pixDepositPct: data.pixDepositPct,
+    // Cartão: acréscimo e parcelas só valem quando o pagamento é no cartão; acréscimo vazio ou 0 = isento.
+    paymentMethod: data.paymentMethod,
+    cardSurcharge: data.paymentMethod === "cartao" && data.cardSurcharge && data.cardSurcharge > 0 ? round2(data.cardSurcharge) : undefined,
+    cardInstallments: data.paymentMethod === "cartao" ? data.cardInstallments : undefined,
     linkedRequestId: clean(data.linkedRequestId),
   };
 }
@@ -156,6 +161,10 @@ export async function duplicateQuoteAction(id: string, validUntil: string): Prom
       deliveryTime: original.deliveryTime,
       paymentTerms: original.paymentTerms,
       notes: original.notes,
+      pixDepositPct: original.pixDepositPct,
+      paymentMethod: original.paymentMethod,
+      cardSurcharge: original.cardSurcharge,
+      cardInstallments: original.cardInstallments,
     });
     await logAdminAction("orcamento.duplicar", "Quote", created.id, { from: original.number, number: created.number });
     revalidateQuotes();

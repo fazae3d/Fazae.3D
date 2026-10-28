@@ -44,6 +44,13 @@ export type Quote = {
   /** Por que o orçamento foi perdido (chave de QUOTE_LOSS_REASONS) e uma observação livre. */
   lostReason?: string;
   lostNote?: string;
+  /** Quanto do total o QR do Pix cobra neste orçamento (50, 100 ou 0 = sem valor); vazio = padrão das Regras da loja. */
+  pixDepositPct?: number;
+  /** "pix" (padrão, com QR code) ou "cartao". */
+  paymentMethod?: "pix" | "cartao";
+  /** No cartão: acréscimo cobrado do cliente (vazio = isento) e número de parcelas. */
+  cardSurcharge?: number;
+  cardInstallments?: number;
   linkedRequestId?: string;
   linkedOrderId?: string;
   createdAt: string;
@@ -57,6 +64,25 @@ export const QUOTE_STATUS_LABELS: Record<QuoteDisplayStatus, string> = {
   recusado: "Recusado",
   vencido: "Vencido",
 };
+
+export type QuoteCardTerms = {
+  /** Acréscimo do cartão em reais (0 = isento). */
+  surcharge: number;
+  /** Total que o cliente paga no cartão (orçamento + acréscimo). */
+  total: number;
+  installments: number;
+  /** Valor de cada parcela, com o acréscimo. */
+  perInstallment: number;
+};
+
+/** Condições do cartão de um orçamento: acréscimo (vazio = isento), total no cartão e parcelas. Só existe quando o pagamento é no cartão. */
+export function quoteCardTerms(quote: Pick<Quote, "total" | "paymentMethod" | "cardSurcharge" | "cardInstallments">): QuoteCardTerms | null {
+  if (quote.paymentMethod !== "cartao") return null;
+  const surcharge = round2(Math.max(0, quote.cardSurcharge ?? 0));
+  const installments = Math.max(1, Math.floor(quote.cardInstallments ?? 1));
+  const total = round2(quote.total + surcharge);
+  return { surcharge, total, installments, perInstallment: round2(total / installments) };
+}
 
 /** Motivos de perda de um orçamento (o que o dono escolhe ao marcar "cliente recusou"). */
 export const QUOTE_LOSS_REASONS: { value: string; label: string }[] = [

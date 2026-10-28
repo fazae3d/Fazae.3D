@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_RULES, validateRulesInput } from "./store-rules";
+import { quoteCardTerms } from "./quote";
 import { crc16, isValidPixKey, normalizePixKey, pixPayload, pixText, quotePix } from "./pix";
 
 /** Lê o BR Code de volta em campos (id → valor), para conferir a estrutura. */
@@ -98,6 +99,20 @@ describe("Pix do orçamento", () => {
     expect(parse(parse(p.payload)["62"])["05"]).toBe("ORC0007");
   });
 
+  it("a porcentagem escolhida no orçamento vale mais que a das Regras da loja", () => {
+    const p = quotePix({ ...quote, pixDepositPct: 100 }, rules("12345678909", 50))!;
+    expect(p.amount).toBe(301.5);
+    expect(p.pct).toBe(100);
+    const sem = quotePix({ ...quote, pixDepositPct: 0 }, rules("12345678909", 50))!;
+    expect(sem.amount).toBe(0);
+    expect(quotePix({ ...quote, pixDepositPct: undefined }, rules("12345678909", 50))!.amount).toBe(150.75);
+  });
+
+  it("orçamento no cartão não leva QR do Pix", () => {
+    expect(quotePix({ ...quote, paymentMethod: "cartao" }, rules("12345678909", 50))).toBeNull();
+    expect(quotePix({ ...quote, paymentMethod: "pix" }, rules("12345678909", 50))).not.toBeNull();
+  });
+
   it("100% cobra o total; 0% manda o QR sem valor", () => {
     const full = quotePix(quote, rules("12345678909", 100))!;
     expect(full.amount).toBe(301.5);
@@ -105,5 +120,23 @@ describe("Pix do orçamento", () => {
     const free = quotePix(quote, rules("12345678909", 0))!;
     expect(free.amount).toBe(0);
     expect(parse(free.payload)["54"]).toBeUndefined();
+  });
+});
+
+describe("cartão no orçamento", () => {
+  const base = { total: 300 };
+
+  it("só existe quando o pagamento é no cartão", () => {
+    expect(quoteCardTerms({ ...base, paymentMethod: "pix" })).toBeNull();
+    expect(quoteCardTerms({ ...base })).toBeNull();
+  });
+
+  it("acréscimo em branco é isento: o total no cartão é o do orçamento", () => {
+    expect(quoteCardTerms({ ...base, paymentMethod: "cartao" })).toEqual({ surcharge: 0, total: 300, installments: 1, perInstallment: 300 });
+    expect(quoteCardTerms({ ...base, paymentMethod: "cartao", cardInstallments: 3 })).toEqual({ surcharge: 0, total: 300, installments: 3, perInstallment: 100 });
+  });
+
+  it("com acréscimo soma ao total e divide nas parcelas", () => {
+    expect(quoteCardTerms({ ...base, paymentMethod: "cartao", cardSurcharge: 21, cardInstallments: 3 })).toEqual({ surcharge: 21, total: 321, installments: 3, perInstallment: 107 });
   });
 });

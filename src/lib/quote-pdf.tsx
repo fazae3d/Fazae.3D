@@ -3,7 +3,7 @@ import { SITE_URL } from "@/lib/site-config";
 import { companyAddress, DEFAULT_RULES, type StoreRules } from "@/lib/store-rules";
 import { formatPrice } from "@/lib/format";
 import { formatPhone } from "@/lib/br-format";
-import { daysUntil, formatStoreDate, quoteNumberLabel, quoteSavings, type Quote } from "@/lib/quote";
+import { daysUntil, formatStoreDate, quoteCardTerms, quoteNumberLabel, quoteSavings, type Quote } from "@/lib/quote";
 import { QUOTE_PDF_LOGO } from "@/lib/quote-pdf-logo";
 import type { QuotePix } from "@/lib/pix";
 
@@ -76,6 +76,7 @@ export type QuotePdfContext = {
 export function QuotePdf({ quote, context }: { quote: Quote; context: QuotePdfContext }) {
   const label = quoteNumberLabel(quote.number);
   const savings = quoteSavings(quote);
+  const cardTerms = quoteCardTerms(quote);
   const winParts = [
     savings.discount > 0 ? `desconto de ${savings.discountPct > 0 ? `${savings.discountPct}% (${formatPrice(savings.discount)})` : formatPrice(savings.discount)}` : "",
     savings.freeShipping ? "frete grátis" : "",
@@ -246,6 +247,18 @@ export function QuotePdf({ quote, context }: { quote: Quote; context: QuotePdfCo
                 <Text style={s.small}>Chave Pix: {context.pix.data.key}</Text>
                 <Text style={s.small}>Recebedor: {COMPANY.legalName}</Text>
                 <Text style={[s.small, { marginTop: 3 }]}>Para copiar o código do Pix, abra o link do orçamento enviado a você.</Text>
+              </View>
+            </View>
+          ) : null}
+
+          {cardTerms ? (
+            <View style={s.pixBox} wrap={false}>
+              <View style={{ flex: 1 }}>
+                <Text style={s.label}>PAGAMENTO NO CARTÃO</Text>
+                <Text style={s.pixAmount}>Total no cartão: {formatPrice(cardTerms.total)}</Text>
+                <Text style={s.small}>{cardTerms.surcharge > 0 ? `Acréscimo do cartão: ${formatPrice(cardTerms.surcharge)}` : "Sem acréscimo no cartão"}</Text>
+                {cardTerms.installments > 1 ? <Text style={s.small}>Parcelamento: {cardTerms.installments}x de {formatPrice(cardTerms.perInstallment)}</Text> : null}
+                <Text style={[s.small, { marginTop: 3 }]}>Aprove pelo WhatsApp e combinamos o pagamento no cartão.</Text>
               </View>
             </View>
           ) : null}

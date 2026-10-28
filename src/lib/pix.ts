@@ -104,16 +104,18 @@ export type QuotePix = {
 };
 
 /**
- * Pix de um orçamento: o QR já vem com o valor do sinal (a porcentagem das Regras da loja) ou com o total; com 0% vai sem valor e o
- * cliente digita. Sem chave configurada, não há Pix no orçamento (devolve null).
+ * Pix de um orçamento: o QR já vem com o valor do sinal ou com o total (a porcentagem escolhida no orçamento, ou a das Regras da loja);
+ * com 0% vai sem valor e o cliente digita. Sem chave configurada, não há Pix no orçamento (devolve null).
  */
 export function quotePix(
-  quote: { number: number; total: number },
+  quote: { number: number; total: number; pixDepositPct?: number; paymentMethod?: string },
   rules: { pix: { key: string; depositPct: number }; company: { legalName: string; city: string } },
 ): QuotePix | null {
+  if (quote.paymentMethod === "cartao") return null;
   const key = rules.pix.key.trim();
   if (!key || !isValidPixKey(key) || !(quote.total > 0)) return null;
-  const pct = Math.min(100, Math.max(0, Math.round(rules.pix.depositPct)));
+  // Cada orçamento pode escolher a sua porcentagem; sem escolha, vale a das Regras da loja.
+  const pct = Math.min(100, Math.max(0, Math.round(quote.pixDepositPct ?? rules.pix.depositPct)));
   const amount = pct > 0 ? round2((quote.total * pct) / 100) : 0;
   const payload = pixPayload({
     key,

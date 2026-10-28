@@ -3,6 +3,7 @@ import { QuoteForm, type QuoteFormInitial } from "@/components/admin/quote-form"
 import { withReadFallback } from "@/lib/db-fallback";
 import { validityFromNow } from "@/lib/quote";
 import { getStoreRules } from "@/server/store-rules";
+import { isValidPixKey } from "@/lib/pix";
 import { getCustomOrderRequest } from "@/server/repositories/custom-order-request-repository";
 import { getAllCustomers, getCustomer } from "@/server/repositories/customer-repository";
 import { getConversation } from "@/server/repositories/whatsapp-repository";
@@ -23,7 +24,7 @@ export default async function NewQuotePage({ searchParams }: PageProps<"/admin/o
     ? (await withReadFallback(() => getAllCustomers(), [])).find((c) => phoneKey(c.phone) === phoneKey(conversation.phone))
     : undefined;
   const { products, customers } = await loadQuoteFormOptions();
-  const { quote: quoteRules } = await getStoreRules();
+  const { quote: quoteRules, pix: pixRules } = await getStoreRules();
 
   const initial: QuoteFormInitial = {
     customerName: lead?.name ?? known?.name ?? conversation?.name ?? knownFromChat?.name ?? "",
@@ -48,6 +49,8 @@ export default async function NewQuotePage({ searchParams }: PageProps<"/admin/o
     deliveryTime: quoteRules.deliveryText,
     paymentTerms: quoteRules.paymentText,
     notes: quoteRules.notesText,
+    pixDepositPct: pixRules.depositPct,
+    paymentMethod: "pix",
     linkedRequestId: lead?.id,
   };
 
@@ -63,7 +66,7 @@ export default async function NewQuotePage({ searchParams }: PageProps<"/admin/o
               : "Monte a proposta, salve e gere o PDF para enviar ao cliente."
         }
       />
-      <QuoteForm quoteId={null} initial={initial} products={products} customers={customers} />
+      <QuoteForm quoteId={null} initial={initial} products={products} customers={customers} pixKeyConfigured={isValidPixKey(pixRules.key)} />
     </div>
   );
 }

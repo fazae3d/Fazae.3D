@@ -32,6 +32,10 @@ function toQuote(row: Row): Quote {
     lastFollowUpAt: row.lastFollowUpAt?.toISOString(),
     lostReason: row.lostReason ?? undefined,
     lostNote: row.lostNote ?? undefined,
+    pixDepositPct: row.pixDepositPct ?? undefined,
+    paymentMethod: row.paymentMethod === "cartao" ? "cartao" : row.paymentMethod === "pix" ? "pix" : undefined,
+    cardSurcharge: row.cardSurcharge ?? undefined,
+    cardInstallments: row.cardInstallments ?? undefined,
     linkedRequestId: row.linkedRequestId ?? undefined,
     linkedOrderId: row.linkedOrderId ?? undefined,
     createdAt: row.createdAt.toISOString(),
@@ -57,6 +61,10 @@ export type QuoteInput = {
   deliveryTime?: string;
   paymentTerms?: string;
   notes?: string;
+  pixDepositPct?: number;
+  paymentMethod?: string;
+  cardSurcharge?: number;
+  cardInstallments?: number;
   linkedRequestId?: string;
 };
 

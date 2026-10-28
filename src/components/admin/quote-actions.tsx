@@ -49,6 +49,8 @@ export function QuoteActions({
     linkedOrderId?: string;
     lostReason?: string;
     lostNote?: string;
+    /** Como o orçamento foi combinado: já sugere a forma de pagamento ao converter em pedido. */
+    paymentMethod?: "pix" | "cartao";
   };
   publicUrl: string;
   /** Validade de um orçamento novo (duplicar), vinda das Regras da loja. */
@@ -57,7 +59,7 @@ export function QuoteActions({
   const router = useRouter();
   const { toast } = useToast();
   const [pending, startTransition] = useTransition();
-  const [payment, setPayment] = useState<"pix" | "cartao" | "boleto">("pix");
+  const [payment, setPayment] = useState<"pix" | "cartao" | "boleto">(quote.paymentMethod === "cartao" ? "cartao" : "pix");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [losing, setLosing] = useState(false);
   const [lossReason, setLossReason] = useState("preco");

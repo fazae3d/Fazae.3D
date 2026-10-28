@@ -31,6 +31,13 @@ export type QuoteFormInitial = {
   deliveryTime: string;
   paymentTerms: string;
   notes: string;
+  /** Quanto do total o QR do Pix cobra: 50 (sinal), 100 (total) ou 0 (sem valor). */
+  pixDepositPct: number;
+  /** Como o cliente vai pagar: Pix (com QR code) ou cartão. */
+  paymentMethod: "pix" | "cartao";
+  /** No cartão: acréscimo em R$ (0 = isento) e parcelas (vazio = não informado). */
+  cardSurcharge?: number;
+  cardInstallments?: number;
   linkedRequestId?: string;
 };
 
@@ -76,11 +83,14 @@ export function QuoteForm({
   initial,
   products,
   customers,
+  pixKeyConfigured = false,
 }: {
   quoteId: string | null;
   initial: QuoteFormInitial;
   products: QuoteProductOption[];
   customers: QuoteCustomerOption[];
+  /** A chave Pix da loja já está nas Regras da loja? Sem ela, o orçamento sai sem QR code. */
+  pixKeyConfigured?: boolean;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -110,6 +120,10 @@ export function QuoteForm({
   const [deliveryTime, setDeliveryTime] = useState(initial.deliveryTime);
   const [paymentTerms, setPaymentTerms] = useState(initial.paymentTerms);
   const [notes, setNotes] = useState(initial.notes);
+  const [pixDepositPct, setPixDepositPct] = useState(initial.pixDepositPct);
+  const [paymentMethod, setPaymentMethod] = useState<"pix" | "cartao">(initial.paymentMethod);
+  const [cardSurchargeInput, setCardSurchargeInput] = useState(moneyText(initial.cardSurcharge ?? 0));
+  const [cardInstallmentsInput, setCardInstallmentsInput] = useState(initial.cardInstallments ? String(initial.cardInstallments) : "");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -119,7 +133,8 @@ export function QuoteForm({
   const draftReady = useRef(false);
   const draftState = {
     customerName, customerPhone, customerEmail, customerDocument, customerAddress, title, items,
-    discountMode, discountInput, shippingInput, freeShipping, shippingOriginalInput, validUntil, deliveryTime, paymentTerms, notes,
+    discountMode, discountInput, shippingInput, freeShipping, shippingOriginalInput, validUntil, deliveryTime, paymentTerms, notes, pixDepositPct,
+    paymentMethod, cardSurchargeInput, cardInstallmentsInput,
   };
   const draftJson = JSON.stringify(draftState);
 
@@ -159,6 +174,9 @@ export function QuoteForm({
       setFreeShipping(d.freeShipping ?? false); setShippingOriginalInput(d.shippingOriginalInput ?? "");
       if (d.validUntil) setValidUntil(d.validUntil);
       setDeliveryTime(d.deliveryTime ?? ""); setPaymentTerms(d.paymentTerms ?? ""); setNotes(d.notes ?? "");
+      if (typeof d.pixDepositPct === "number") setPixDepositPct(d.pixDepositPct);
+      if (d.paymentMethod === "cartao" || d.paymentMethod === "pix") setPaymentMethod(d.paymentMethod);
+      setCardSurchargeInput(d.cardSurchargeInput ?? ""); setCardInstallmentsInput(d.cardInstallmentsInput ?? "");
     } catch {
       // rascunho corrompido: descarta
     }
@@ -232,6 +250,10 @@ export function QuoteForm({
       deliveryTime,
       paymentTerms,
       notes,
+      pixDepositPct,
+      paymentMethod,
+      cardSurcharge: paymentMethod === "cartao" && parseMoney(cardSurchargeInput) > 0 ? parseMoney(cardSurchargeInput) : undefined,
+      cardInstallments: paymentMethod === "cartao" && Number(cardInstallmentsInput) >= 1 ? Math.floor(Number(cardInstallmentsInput)) : undefined,
       linkedRequestId: initial.linkedRequestId,
     });
     setSaving(false);
@@ -372,6 +394,61 @@ export function QuoteForm({
             <Field label="Condições de pagamento">
               <textarea className={`${INPUT} min-h-[84px]`} value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} />
             </Field>
+            <Field label="Como o cliente vai pagar">
+              <div className="flex flex-wrap gap-2">
+                {([["pix", "Pix (com QR code)"], ["cartao", "Cartão"]] as const).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setPaymentMethod(value)}
+                    className={`rounded-full border px-4 py-1.5 text-sm transition-colors ${paymentMethod === value ? "admin-chip-active" : "border-mist text-graphite hover:border-petrol hover:text-ink"}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </Field>
+            {paymentMethod === "cartao" ? (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field label="Acréscimo do cartão (R$)">
+                  <input className={INPUT} value={cardSurchargeInput} onChange={(e) => setCardSurchargeInput(e.target.value)} placeholder="Em branco = isento" inputMode="decimal" />
+                </Field>
+                <Field label="Parcelas">
+                  <input className={INPUT} type="number" min={1} max={24} value={cardInstallmentsInput} onChange={(e) => setCardInstallmentsInput(e.target.value)} placeholder="Ex.: 3" inputMode="numeric" />
+                </Field>
+                <p className="text-xs text-graphite sm:col-span-2">
+                  {parseMoney(cardSurchargeInput) > 0
+                    ? `O cliente paga ${formatPrice(round2(totals.total + parseMoney(cardSurchargeInput)))} no cartão${Number(cardInstallmentsInput) > 1 ? `, em ${Math.floor(Number(cardInstallmentsInput))}x de ${formatPrice(round2((totals.total + parseMoney(cardSurchargeInput)) / Math.floor(Number(cardInstallmentsInput))))}` : ""}.`
+                    : `Sem acréscimo: o cliente paga ${formatPrice(totals.total)}${Number(cardInstallmentsInput) > 1 ? `, em ${Math.floor(Number(cardInstallmentsInput))}x de ${formatPrice(round2(totals.total / Math.floor(Number(cardInstallmentsInput))))}` : ""}. Deixe o acréscimo em branco para isentar a taxa do cartão.`}
+                  {" "}O orçamento não leva QR code do Pix.
+                </p>
+              </div>
+            ) : null}
+            {paymentMethod === "pix" ? (
+            <Field label="Cobrar no Pix (QR code do orçamento)">
+              <div className="flex flex-wrap gap-2">
+                {[...new Set([50, 100, 0, pixDepositPct])]
+                  .sort((a, b) => (a === 0 ? 1 : b === 0 ? -1 : a - b))
+                  .map((pct) => (
+                    <button
+                      key={pct}
+                      type="button"
+                      onClick={() => setPixDepositPct(pct)}
+                      className={`rounded-full border px-4 py-1.5 text-sm transition-colors ${pixDepositPct === pct ? "admin-chip-active" : "border-mist text-graphite hover:border-petrol hover:text-ink"}`}
+                    >
+                      {pct === 0 ? "Sem valor" : pct === 100 ? "Total (100%)" : pct === 50 ? "Sinal (50%)" : `${pct}%`}
+                    </button>
+                  ))}
+              </div>
+              <p className="mt-1.5 text-xs text-graphite">
+                {pixKeyConfigured
+                  ? pixDepositPct > 0
+                    ? `O QR já vem com ${formatPrice(round2((totals.total * pixDepositPct) / 100))}${pixDepositPct < 100 ? ` e o cliente paga o restante (${formatPrice(round2(totals.total - (totals.total * pixDepositPct) / 100))}) antes do envio` : ""}.`
+                    : "O QR vai sem valor: o cliente digita quanto vai pagar."
+                  : "Falta a chave Pix da loja em Configurações, Regras da loja. Sem ela, o orçamento sai sem QR code."}
+              </p>
+            </Field>
+            ) : null}
             <Field label="Observações">
               <textarea className={`${INPUT} min-h-[84px]`} value={notes} onChange={(e) => setNotes(e.target.value)} />
             </Field>

@@ -11,6 +11,7 @@ import { findConversationIdByPhone } from "@/server/repositories/whatsapp-reposi
 import { withReadFallback } from "@/lib/db-fallback";
 import { getStoreRules } from "@/server/store-rules";
 import { quotePix } from "@/lib/pix";
+import { quoteCardTerms } from "@/lib/quote";
 
 export default async function QuoteDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -23,6 +24,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
   const conversationId = await withReadFallback(() => findConversationIdByPhone(quote.customerPhone), null);
   const rules = await getStoreRules();
   const pix = quotePix(quote, rules);
+  const cardTerms = quoteCardTerms(quote);
 
   return (
     <div>
@@ -135,8 +137,13 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
                 </div>
               ) : null}
               <div>
-                <p className="mb-0.5 text-xs font-medium text-graphite">Pix no orçamento</p>
-                {pix ? (
+                <p className="mb-0.5 text-xs font-medium text-graphite">{cardTerms ? "Pagamento no cartão" : "Pix no orçamento"}</p>
+                {cardTerms ? (
+                  <p>
+                    {cardTerms.surcharge > 0 ? `Acréscimo de ${formatPrice(cardTerms.surcharge)} (total de ${formatPrice(cardTerms.total)})` : "Sem acréscimo (taxa do cartão isenta)"}
+                    {quote.cardInstallments ? `, em ${cardTerms.installments}x de ${formatPrice(cardTerms.perInstallment)}` : ", parcelas não informadas"}. Sem QR code do Pix.
+                  </p>
+                ) : pix ? (
                   <p>
                     {pix.amount > 0 ? `QR code de ${formatPrice(pix.amount)}${pix.pct < 100 ? ` (sinal de ${pix.pct}%)` : " (valor total)"}` : "QR code sem valor (o cliente digita)"}, chave {pix.key}. Aparece na página do
                     orçamento e no PDF.
@@ -179,6 +186,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
             linkedOrderId: quote.linkedOrderId,
             lostReason: quote.lostReason,
             lostNote: quote.lostNote,
+            paymentMethod: quote.paymentMethod,
           }}
         />
       </div>

@@ -679,6 +679,13 @@ model Quote {
   /** Quando o cliente recusa ou o orçamento é dado como perdido: motivo (chave de QUOTE_LOSS_REASONS) e uma observação livre. */
   lostReason       String?
   lostNote         String?
+  /** Quanto do total o QR do Pix cobra neste orçamento (50 = sinal, 100 = total, 0 = sem valor). Vazio = padrão das Regras da loja. */
+  pixDepositPct    Int?
+  /** Como o cliente vai pagar: "pix" (QR code) ou "cartao". Vazio = pix. */
+  paymentMethod    String?
+  /** No cartão: acréscimo cobrado do cliente (R$; vazio = isento) e em quantas vezes (para o controle da loja). */
+  cardSurcharge    Float?
+  cardInstallments Int?
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
 
