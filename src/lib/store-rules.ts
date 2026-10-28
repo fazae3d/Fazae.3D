@@ -1,3 +1,5 @@
+import { isValidPixKey, normalizePixKey } from "@/lib/pix";
+
 /**
  * Regras da loja editáveis em /admin/configuracoes/regras: números, prazos, textos padrão e dados da empresa que antes ficavam fixos
  * no código. Tudo tem um valor padrão igual ao que a loja já usava, então nada muda até alguém editar.
@@ -20,6 +22,8 @@ export type StoreRules = {
   shipping: { standardCost: number; standardEta: string; expressCost: number; expressEta: string };
   localDelivery: { cities: string[]; state: string; etaText: string };
   payments: { installments: number; welcomeCouponCode: string; welcomeCouponText: string };
+  /** Pix que sai no orçamento (QR code e copia e cola): chave da loja e quanto do total o QR já cobra (sinal). */
+  pix: { key: string; depositPct: number };
   storefront: { lowStockThreshold: number; scarcityThreshold: number; returnDays: number };
   automation: {
     abandonedCartHours: number;
@@ -52,6 +56,7 @@ export const DEFAULT_RULES: StoreRules = {
   shipping: { standardCost: 24.9, standardEta: "5 a 8 dias úteis", expressCost: 39.9, expressEta: "2 a 3 dias úteis" },
   localDelivery: { cities: ["Natal", "Parnamirim"], state: "RN", etaText: "Entrega em até 48h" },
   payments: { installments: 3, welcomeCouponCode: "FAZAE10", welcomeCouponText: "10% OFF na primeira compra" },
+  pix: { key: "", depositPct: 50 },
   storefront: { lowStockThreshold: 5, scarcityThreshold: 2, returnDays: 7 },
   automation: { abandonedCartHours: 2, abandonedCartSecondDays: 3, pendingOrderExpireDays: 4, reactivationDays: 120, reminderCooldownDays: 30 },
   reviews: { rewardValue: 5, rewardMinSubtotal: 30 },
@@ -130,6 +135,9 @@ export const RULE_FIELDS: FieldSpec[] = [
   { path: "payments.welcomeCouponCode", group: "pagamento", label: "Cupom de boas-vindas (código)", hint: "Precisa existir em Cupons. Deixe vazio para não divulgar nenhum cupom.", kind: "text", maxLength: 30, optional: true },
   { path: "payments.welcomeCouponText", group: "pagamento", label: "Cupom de boas-vindas (o que ele dá)", hint: "Ex.: 10% OFF na primeira compra", kind: "text", maxLength: 80, optional: true },
 
+  { path: "pix.key", group: "pagamento", label: "Chave Pix da loja", hint: "Sai no orçamento com QR code e “copia e cola”. Pode ser CPF ou CNPJ (só números), telefone com +55, e-mail ou chave aleatória. Copie direto do app do banco. Vazio = o orçamento sai sem Pix.", kind: "text", maxLength: 77, optional: true },
+  { path: "pix.depositPct", group: "pagamento", label: "Quanto do orçamento o QR já cobra", hint: "50 = o QR vem com o valor do sinal (metade). 100 = o valor total. 0 = QR sem valor, o cliente digita quanto vai pagar.", kind: "number", min: 0, max: 100, integer: true, unit: "%" },
+
   { path: "storefront.lowStockThreshold", group: "vitrine", label: "Estoque baixo a partir de", hint: "Peças com estoque até esse número entram em “estoque baixo” no painel.", kind: "number", min: 1, max: 100, integer: true, unit: "peças" },
   { path: "storefront.scarcityThreshold", group: "vitrine", label: "Selo “Últimas peças” até", hint: "Quanto menor, mais honesto o selo. Acima de 3 ele aparece em quase tudo.", kind: "number", min: 1, max: 20, integer: true, unit: "peças" },
   { path: "storefront.returnDays", group: "vitrine", label: "Prazo de troca e devolução", hint: "A lei garante 7 dias de arrependimento nas compras online; aumente só se for oferecer mais.", kind: "number", min: 7, max: 90, integer: true, unit: "dias" },
@@ -204,6 +212,11 @@ export function validateField(spec: FieldSpec, raw: unknown): { ok: true; value:
   if (spec.path === "company.state" || spec.path === "localDelivery.state") {
     if (!/^[A-Za-z]{2}$/.test(text)) return { ok: false, error: `${name}: use a sigla com 2 letras (ex.: RN).` };
     return { ok: true, value: text.toUpperCase() };
+  }
+  if (spec.path === "pix.key") {
+    const key = normalizePixKey(text);
+    if (!isValidPixKey(key)) return { ok: false, error: `${name}: formato inválido. Use CPF ou CNPJ só com números, telefone com +55, e-mail ou chave aleatória.` };
+    return { ok: true, value: key };
   }
   if (spec.path === "company.zip" && !/^\d{5}-?\d{3}$/.test(text)) return { ok: false, error: `${name}: use o formato 00000-000.` };
   return { ok: true, value: text };

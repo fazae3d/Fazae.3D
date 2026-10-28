@@ -3,6 +3,9 @@ import { notFound } from "next/navigation";
 import { formatPrice } from "@/lib/format";
 import { QUOTE_STATUS_LABELS, daysUntil, formatStoreDate, quoteDisplayStatus, quoteNumberLabel, quoteSavings } from "@/lib/quote";
 import { DEFAULT_WHATSAPP_NUMBER, getWhatsAppLink } from "@/lib/site-config";
+import { quotePix } from "@/lib/pix";
+import { QuotePixCard } from "@/components/quote-pix-card";
+import { pixQrDataUrl } from "@/server/pix-qr";
 import { getQuoteByToken } from "@/server/repositories/quote-repository";
 import { getSettings } from "@/server/repositories/settings-repository";
 
@@ -29,6 +32,16 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
     `Olá! Quero aprovar o orçamento ${label} (${formatPrice(quote.total)}${savings.total > 0 ? `, com economia de ${formatPrice(savings.total)}` : ""}).`,
   );
   const pdfHref = `/orcamento/${quote.token}/pdf`;
+
+  // Pix com QR code: só enquanto o orçamento vale (ou já foi aprovado e falta pagar) e se a chave estiver nas Regras da loja.
+  const pix = settings && (status === "enviado" || status === "rascunho" || status === "aprovado") ? quotePix(quote, settings.rules) : null;
+  const pixQr = pix ? await pixQrDataUrl(pix.payload).catch(() => null) : null;
+  const proofHref = pix
+    ? getWhatsAppLink(
+        settings?.whatsappNumber ?? DEFAULT_WHATSAPP_NUMBER,
+        `Olá! Paguei o Pix do orçamento ${label}${pix.amount > 0 ? ` (${formatPrice(pix.amount)})` : ""}. Segue o comprovante.`,
+      )
+    : undefined;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
@@ -134,6 +147,10 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
           ) : null}
         </dl>
       )}
+
+      {pix && pixQr ? (
+        <QuotePixCard pix={pix} qr={pixQr} notice={settings?.rules.company.pixNotice} receiver={settings?.rules.company.legalName ?? "Fazaê 3D"} proofHref={proofHref} />
+      ) : null}
 
       <div className="mt-10 flex flex-wrap gap-3">
         <a

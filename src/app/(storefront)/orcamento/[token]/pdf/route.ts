@@ -1,7 +1,9 @@
 import { getSettings } from "@/server/repositories/settings-repository";
 import { getQuoteByToken } from "@/server/repositories/quote-repository";
 import { renderQuotePdf } from "@/lib/quote-pdf";
-import { quoteNumberLabel } from "@/lib/quote";
+import { quoteDisplayStatus, quoteNumberLabel } from "@/lib/quote";
+import { quotePix } from "@/lib/pix";
+import { pixQrDataUrl } from "@/server/pix-qr";
 import { DEFAULT_WHATSAPP_NUMBER } from "@/lib/site-config";
 
 export const runtime = "nodejs";
@@ -14,7 +16,15 @@ export async function GET(_request: Request, { params }: { params: Promise<{ tok
   if (!quote) return new Response("Orçamento não encontrado.", { status: 404 });
 
   const settings = await getSettings().catch(() => null);
-  const pdf = await renderQuotePdf(quote, { whatsappNumber: settings?.whatsappNumber ?? DEFAULT_WHATSAPP_NUMBER, company: settings?.rules.company });
+  // Pix com QR code no PDF: só enquanto o orçamento vale (ou já foi aprovado) e se a chave estiver nas Regras da loja.
+  const status = quoteDisplayStatus(quote);
+  const pixData = settings && (status === "enviado" || status === "rascunho" || status === "aprovado") ? quotePix(quote, settings.rules) : null;
+  const qr = pixData ? await pixQrDataUrl(pixData.payload, 400).catch(() => null) : null;
+  const pdf = await renderQuotePdf(quote, {
+    whatsappNumber: settings?.whatsappNumber ?? DEFAULT_WHATSAPP_NUMBER,
+    company: settings?.rules.company,
+    pix: pixData && qr ? { data: pixData, qr } : undefined,
+  });
 
   return new Response(new Uint8Array(pdf), {
     headers: {

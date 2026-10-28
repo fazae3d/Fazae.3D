@@ -5,6 +5,7 @@ import { formatPrice } from "@/lib/format";
 import { formatPhone } from "@/lib/br-format";
 import { daysUntil, formatStoreDate, quoteNumberLabel, quoteSavings, type Quote } from "@/lib/quote";
 import { QUOTE_PDF_LOGO } from "@/lib/quote-pdf-logo";
+import type { QuotePix } from "@/lib/pix";
 
 const INK = "#111111";
 const LIME = "#B6FF00";
@@ -52,6 +53,9 @@ const s = StyleSheet.create({
   strike: { textDecoration: "line-through", color: MUTED },
   block: { marginTop: 18 },
   blockText: { fontSize: 9.5, lineHeight: 1.5 },
+  pixBox: { marginTop: 18, borderWidth: 1, borderColor: LIME, borderRadius: 4, padding: 12, flexDirection: "row", alignItems: "center" },
+  pixQr: { width: 100, height: 100, marginRight: 14 },
+  pixAmount: { fontFamily: "Helvetica-Bold", fontSize: 13, color: OLIVE, marginBottom: 3 },
   accept: { marginTop: 22, borderWidth: 1, borderColor: LINE, borderRadius: 4, padding: 12, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   footer: { position: "absolute", bottom: 22, left: 40, right: 40, borderTopWidth: 0.5, borderTopColor: LINE, paddingTop: 8, flexDirection: "row", justifyContent: "space-between" },
   footText: { fontSize: 7.5, color: MUTED },
@@ -65,6 +69,8 @@ export type QuotePdfContext = {
   whatsappNumber: string;
   /** Dados da empresa (Regras da loja); sem eles, os padrões. */
   company?: StoreRules["company"];
+  /** Pix do orçamento (QR code já gerado em imagem); sem ele, o PDF sai sem a área de Pix. */
+  pix?: { data: QuotePix; qr: string };
 };
 
 export function QuotePdf({ quote, context }: { quote: Quote; context: QuotePdfContext }) {
@@ -215,6 +221,32 @@ export function QuotePdf({ quote, context }: { quote: Quote; context: QuotePdfCo
             <View style={s.block} wrap={false}>
               <Text style={s.label}>OBSERVAÇÕES</Text>
               <Text style={s.blockText}>{quote.notes}</Text>
+            </View>
+          ) : null}
+
+          {context.pix ? (
+            <View style={s.pixBox} wrap={false}>
+              {/* eslint-disable-next-line jsx-a11y/alt-text */}
+              <Image src={context.pix.qr} style={s.pixQr} />
+              <View style={{ flex: 1 }}>
+                <Text style={s.label}>PAGAMENTO POR PIX</Text>
+                {context.pix.data.amount > 0 ? (
+                  <>
+                    <Text style={s.pixAmount}>
+                      {context.pix.data.pct >= 100 ? "Valor total" : `Sinal de ${context.pix.data.pct}%`}: {formatPrice(context.pix.data.amount)}
+                    </Text>
+                    {context.pix.data.pct < 100 && context.pix.data.remaining > 0 ? (
+                      <Text style={s.small}>Restante de {formatPrice(context.pix.data.remaining)} antes do envio ou da retirada.</Text>
+                    ) : null}
+                  </>
+                ) : (
+                  <Text style={s.pixAmount}>Digite o valor combinado no app</Text>
+                )}
+                <Text style={[s.small, { marginTop: 4 }]}>Aponte a câmera do app do seu banco para o QR code.</Text>
+                <Text style={s.small}>Chave Pix: {context.pix.data.key}</Text>
+                <Text style={s.small}>Recebedor: {COMPANY.legalName}</Text>
+                <Text style={[s.small, { marginTop: 3 }]}>Para copiar o código do Pix, abra o link do orçamento enviado a você.</Text>
+              </View>
             </View>
           ) : null}
 

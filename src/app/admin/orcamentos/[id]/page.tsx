@@ -10,6 +10,7 @@ import { getQuote } from "@/server/repositories/quote-repository";
 import { findConversationIdByPhone } from "@/server/repositories/whatsapp-repository";
 import { withReadFallback } from "@/lib/db-fallback";
 import { getStoreRules } from "@/server/store-rules";
+import { quotePix } from "@/lib/pix";
 
 export default async function QuoteDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -20,6 +21,8 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
   const label = quoteNumberLabel(quote.number);
   const savings = quoteSavings(quote);
   const conversationId = await withReadFallback(() => findConversationIdByPhone(quote.customerPhone), null);
+  const rules = await getStoreRules();
+  const pix = quotePix(quote, rules);
 
   return (
     <div>
@@ -131,6 +134,23 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
                   <p>{quote.paymentTerms}</p>
                 </div>
               ) : null}
+              <div>
+                <p className="mb-0.5 text-xs font-medium text-graphite">Pix no orçamento</p>
+                {pix ? (
+                  <p>
+                    {pix.amount > 0 ? `QR code de ${formatPrice(pix.amount)}${pix.pct < 100 ? ` (sinal de ${pix.pct}%)` : " (valor total)"}` : "QR code sem valor (o cliente digita)"}, chave {pix.key}. Aparece na página do
+                    orçamento e no PDF.
+                  </p>
+                ) : (
+                  <p className="text-graphite">
+                    Sem Pix: informe a chave em{" "}
+                    <Link href="/admin/configuracoes/regras" className="text-petrol underline underline-offset-2">
+                      Regras da loja
+                    </Link>{" "}
+                    para o orçamento sair com QR code.
+                  </p>
+                )}
+              </div>
               {quote.notes ? (
                 <div>
                   <p className="mb-0.5 text-xs font-medium text-graphite">Observações</p>
@@ -143,7 +163,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
 
         <QuoteActions
           publicUrl={SITE_URL}
-          validityDays={(await getStoreRules()).quote.validityDays}
+          validityDays={rules.quote.validityDays}
           quote={{
             id: quote.id,
             number: quote.number,
