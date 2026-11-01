@@ -21,7 +21,7 @@ import { storeDayKey, storeMonthKey } from "@/lib/store-time";
 import { MonthFilter } from "@/components/admin/month-filter";
 import { getAllConsignmentVisits } from "@/server/repositories/consignment-repository";
 import { ExpenseManager } from "@/components/admin/expense-manager";
-import { billsByMonth, committedWithin, monthBills, upcomingInstallments } from "@/lib/installments";
+import { billsByMonth, billsOverview, committedWithin, upcomingInstallments } from "@/lib/installments";
 import { MonthBills } from "@/components/admin/month-bills";
 import { RecurringExpenseManager } from "@/components/admin/recurring-expense-manager";
 import { generateDueRecurringExpenses, getAllRecurringExpenses } from "@/server/repositories/recurring-expense-repository";
@@ -100,7 +100,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
   const upcoming = upcomingInstallments(allExpenses, today, autoPay);
   // Contas do mês: o mês do filtro (ou o atual), por vencimento, com todas as despesas (não só as compradas naquele mês).
   const billsMonth = selectedMonth || today.slice(0, 7);
-  const monthRows = monthBills(allExpenses, billsMonth, today, autoPay);
+  const overview = billsOverview(allExpenses, billsMonth, today, autoPay);
   const upcomingTotal = round2(upcoming.reduce((sum, i) => sum + i.amount, 0));
   const bills = billsByMonth(upcoming);
   const committed30 = committedWithin(allExpenses, today, 30, autoPay);
@@ -135,7 +135,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
         </p>
       </div>
 
-      <MonthBills rows={monthRows} monthName={monthLabel(billsMonth)} today={today} autoPay={autoPay} />
+      <MonthBills overview={overview} month={billsMonth} today={today} autoPay={autoPay} />
 
       <p className="label-caps mb-3 text-[11px] text-graphite">
         Resultado simplificado, pela data da compra{selectedMonth ? `: ${monthLabel(selectedMonth)}` : ""}

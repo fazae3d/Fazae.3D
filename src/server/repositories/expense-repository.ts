@@ -93,7 +93,7 @@ export async function updateExpense(id: string, input: CreateExpenseInput): Prom
   if (!existing) return { success: false, error: "Despesa não encontrada." };
   const count = Math.max(1, input.installments ?? 1);
   const hasDue = Boolean(input.firstDueDate);
-  const scheduled = count > 1 || hasDue;
+  const scheduled = count > 1 || hasDue || input.paymentMethod === "cartao";
   const kept = Object.fromEntries(Object.entries(parsePaid(existing.paidInstallments) ?? {}).filter(([n]) => scheduled && Number(n) <= count));
   const sameShape = existing.totalValue === input.totalValue && existing.installments === count;
   const amounts = sameShape ? parseAmounts(existing.installmentAmounts) : undefined;

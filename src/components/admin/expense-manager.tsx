@@ -14,6 +14,7 @@ import {
   installmentInterest,
   installmentSummary,
   isInstallmentPaid,
+  defaultCardDueDay,
   paymentMethodLabel,
 } from "@/lib/installments";
 import type { Expense, ExpenseCategory } from "@/server/types";
@@ -227,11 +228,7 @@ export function ExpenseManager({ expenses, today, autoPay = true }: { expenses: 
               <input id="exp-first-due" type="date" value={firstDueDate} onChange={(e) => setFirstDueDate(e.target.value)} className={INPUT} />
               <p className="text-[11px] text-graphite">
                 {previewEach ? `${installmentsNumber}x de ${formatPrice(previewEach)}. ` : ""}
-                {firstDueDate
-                  ? "Sai do caixa sozinho em cada vencimento."
-                  : parcelado
-                    ? "Em branco: a 1ª parcela vence no dia da compra."
-                    : "Em branco: conta no dia da compra."}
+                {firstDueDate ? "Aparece nas Contas do mês no vencimento." : `Em branco: vence em ${dayLabel(defaultCardDueDay(purchaseDate))}, no mesmo dia do mês seguinte.`}
               </p>
             </div>
           </>

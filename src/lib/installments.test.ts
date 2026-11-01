@@ -8,6 +8,8 @@ import {
   expenseInstallments,
   hasSchedule,
   installmentInterest,
+  billsOverview,
+  defaultCardDueDay,
   installmentSummary,
   monthBills,
   monthsBetween,
@@ -221,5 +223,59 @@ describe("contas do mês", () => {
     expect(rows[0]).toMatchObject({ number: 2, paid: false, overdue: true });
     expect(monthBills([sem], "2026-10", "2026-10-20", true)[0]).toMatchObject({ paid: true, overdue: false });
     expect(monthBills([sem], "2026-11", "2026-10-20", false)).toEqual([]);
+  });
+});
+
+describe("compra no cartão vence no mês seguinte", () => {
+  const base = { openingBalance: 5000, openingDate: "2026-10-01", payments: [], orders: [] };
+  const cartao1x = expense({ id: "c", description: "Filamento", totalValue: 80, paymentMethod: "cartao", purchaseDate: "2026-10-28T00:00:00.000Z" });
+
+  it("sem vencimento informado, cartão em 1x vence no mesmo dia do mês seguinte", () => {
+    expect(hasSchedule(cartao1x)).toBe(true);
+    expect(expenseInstallments(cartao1x)).toMatchObject([{ day: "2026-11-28", immediate: false }]);
+    expect(defaultCardDueDay("2026-10-28")).toBe("2026-11-28");
+    expect(defaultCardDueDay("2026-01-31")).toBe("2026-02-28");
+  });
+
+  it("não sai do caixa no dia da compra, só no vencimento", () => {
+    expect(cashPosition({ ...base, expenses: [cartao1x], today: "2026-10-28" }).spent).toBe(0);
+    expect(cashPosition({ ...base, expenses: [cartao1x], today: "2026-11-28" }).spent).toBe(80);
+  });
+
+  it("parcelado no cartão sem vencimento: a 1ª parcela também vence no mês seguinte", () => {
+    const p = expense({ totalValue: 300, installments: 3, paymentMethod: "cartao", purchaseDate: "2026-10-28T00:00:00.000Z" });
+    expect(expenseInstallments(p).map((i) => i.day)).toEqual(["2026-11-28", "2026-12-28", "2027-01-28"]);
+  });
+
+  it("Pix e dinheiro continuam saindo na hora, e vencimento informado vale", () => {
+    const pix = expense({ totalValue: 50, paymentMethod: "pix" });
+    expect(hasSchedule(pix)).toBe(false);
+    const informado = expense({ totalValue: 80, paymentMethod: "cartao", firstDueDate: "2026-11-05T00:00:00.000Z", purchaseDate: "2026-10-28T00:00:00.000Z" });
+    expect(expenseInstallments(informado)[0].day).toBe("2026-11-05");
+  });
+});
+
+describe("visão das contas em torno de um mês", () => {
+  const impressora = expense({ id: "i", description: "Impressora", totalValue: 400, installments: 4, purchaseDate: "2026-09-12T00:00:00.000Z", firstDueDate: "2026-10-07T00:00:00.000Z" });
+
+  it("com pagamento manual: atrasadas de antes, o que vence no mês e os próximos meses em aberto", () => {
+    // hoje 2026-11-02, nada marcado: out (07/10) ficou atrasada; nov (07/11) vence no mês; dez e jan seguem em aberto
+    const v = billsOverview([impressora], "2026-11", "2026-11-02", false);
+    expect(v.before.map((r) => [r.day, r.overdue])).toEqual([["2026-10-07", true]]);
+    expect(v.current.map((r) => [r.day, r.paid])).toEqual([["2026-11-07", false]]);
+    expect(v.after.map((m) => [m.month, m.total])).toEqual([["2026-12", 100], ["2027-01", 100]]);
+  });
+
+  it("marcar a atrasada como paga tira ela da lista de atrasadas", () => {
+    const marcada = expense({ id: "i", description: "Impressora", totalValue: 400, installments: 4, purchaseDate: "2026-09-12T00:00:00.000Z", firstDueDate: "2026-10-07T00:00:00.000Z", paidInstallments: { "1": "2026-10-09" } });
+    const v = billsOverview([marcada], "2026-11", "2026-11-02", false);
+    expect(v.before).toEqual([]);
+  });
+
+  it("com pagamento automático, o que já venceu conta como pago e não há atrasadas", () => {
+    const v = billsOverview([impressora], "2026-11", "2026-11-02", true);
+    expect(v.before).toEqual([]);
+    expect(v.current[0]).toMatchObject({ paid: false });
+    expect(v.after.map((m) => m.month)).toEqual(["2026-12", "2027-01"]);
   });
 });

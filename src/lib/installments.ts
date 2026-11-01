@@ -8,7 +8,7 @@ import type { Expense } from "@/server/types";
  */
 export type Installment = { number: number; of: number; day: string; amount: number; paidOn?: string; immediate: boolean; adjusted: boolean };
 
-type InstallmentExpense = Pick<Expense, "totalValue" | "purchaseDate" | "installments" | "firstDueDate" | "paidInstallments" | "installmentAmounts">;
+type InstallmentExpense = Pick<Expense, "totalValue" | "purchaseDate" | "installments" | "firstDueDate" | "paidInstallments" | "installmentAmounts" | "paymentMethod">;
 
 export const PAYMENT_METHODS = [
   { value: "pix", label: "Pix" },
@@ -60,9 +60,24 @@ export function installmentCount(expense: Pick<Expense, "installments">) {
   return Math.max(1, Math.floor(expense.installments ?? 1));
 }
 
-/** Tem cronograma próprio (parcelada, ou à vista no cartão com vencimento da fatura)? Senão é um gasto simples, na data da compra. */
-export function hasSchedule(expense: Pick<Expense, "installments" | "firstDueDate">) {
-  return installmentCount(expense) > 1 || Boolean(expense.firstDueDate);
+/** Tem cronograma próprio (parcelada, ou no cartão, que sempre vence depois)? Senão é um gasto simples, na data da compra (Pix, dinheiro, débito). */
+export function hasSchedule(expense: Pick<Expense, "installments" | "firstDueDate" | "paymentMethod">) {
+  return installmentCount(expense) > 1 || Boolean(expense.firstDueDate) || expense.paymentMethod === "cartao";
+}
+
+/**
+ * Vencimento da 1ª parcela (ou da fatura). Se foi informado, vale. Compra no cartão sem vencimento informado vence no mesmo dia do mês
+ * seguinte (a fatura só fecha depois; o dinheiro não sai na hora como no Pix). Os demais casos não têm vencimento próprio.
+ */
+function firstDueOf(expense: Pick<Expense, "firstDueDate" | "purchaseDate" | "paymentMethod">): string | undefined {
+  if (expense.firstDueDate) return expense.firstDueDate.slice(0, 10);
+  if (expense.paymentMethod === "cartao") return addMonthsToDay(expense.purchaseDate.slice(0, 10), 1);
+  return undefined;
+}
+
+/** Vencimento que o sistema usa quando o campo fica em branco numa compra no cartão (para mostrar no formulário). */
+export function defaultCardDueDay(purchaseDay: string): string {
+  return addMonthsToDay(purchaseDay, 1);
 }
 
 /**
@@ -78,10 +93,10 @@ export function expenseInstallments(expense: InstallmentExpense): Installment[] 
     return adjusted !== undefined ? { amount: round2(adjusted), adjusted: true } : { amount, adjusted: false };
   };
   if (of === 1) {
-    const due = expense.firstDueDate?.slice(0, 10);
+    const due = firstDueOf(expense);
     return [{ number: 1, of, day: due ?? purchaseDay, ...override(1, round2(expense.totalValue)), paidOn: expense.paidInstallments?.["1"], immediate: !due }];
   }
-  const first = (expense.firstDueDate ?? expense.purchaseDate).slice(0, 10);
+  const first = firstDueOf(expense) ?? expense.purchaseDate.slice(0, 10);
   const each = Math.floor((expense.totalValue / of) * 100) / 100;
   return Array.from({ length: of }, (_, i) => ({
     number: i + 1,
@@ -191,19 +206,46 @@ export type MonthBillRow = {
   overdue: boolean;
 };
 
-/** Contas de um mês (AAAA-MM): todas as parcelas e faturas que vencem nele, pagas ou não, na ordem do vencimento. */
-export function monthBills(expenses: UpcomingSource[], month: string, today: string, autoPay = true): MonthBillRow[] {
+/** Todas as parcelas e faturas (pagas ou não) como linhas, na ordem do vencimento. */
+function allBillRows(expenses: UpcomingSource[], today: string, autoPay: boolean): MonthBillRow[] {
   return expenses
     .filter(hasSchedule)
     .flatMap((e) =>
-      expenseInstallments(e)
-        .filter((i) => i.day.slice(0, 7) === month)
-        .map((i) => {
-          const paid = isInstallmentPaid(i, today, autoPay);
-          return { expenseId: e.id, description: e.description, cardName: e.cardName, number: i.number, of: i.of, day: i.day, amount: i.amount, paid, paidOn: i.paidOn, overdue: !paid && i.day < today };
-        }),
+      expenseInstallments(e).map((i) => {
+        const paid = isInstallmentPaid(i, today, autoPay);
+        return { expenseId: e.id, description: e.description, cardName: e.cardName, number: i.number, of: i.of, day: i.day, amount: i.amount, paid, paidOn: i.paidOn, overdue: !paid && i.day < today };
+      }),
     )
     .sort((a, b) => a.day.localeCompare(b.day) || a.description.localeCompare(b.description));
+}
+
+/** Contas de um mês (AAAA-MM): todas as parcelas e faturas que vencem nele, pagas ou não, na ordem do vencimento. */
+export function monthBills(expenses: UpcomingSource[], month: string, today: string, autoPay = true): MonthBillRow[] {
+  return allBillRows(expenses, today, autoPay).filter((r) => r.day.slice(0, 7) === month);
+}
+
+export type BillsOverview = {
+  /** Em aberto de meses anteriores ao mês mostrado (só existe com o pagamento automático desligado ou ao olhar um mês passado). */
+  before: MonthBillRow[];
+  /** O que vence no mês mostrado, pago ou não. */
+  current: MonthBillRow[];
+  /** O que ainda está em aberto nos meses seguintes, mês a mês. */
+  after: { month: string; total: number; rows: MonthBillRow[] }[];
+};
+
+/** Visão das contas em torno de um mês: o que ficou para trás, o que vence nele e o que vem nos meses seguintes. */
+export function billsOverview(expenses: UpcomingSource[], month: string, today: string, autoPay = true): BillsOverview {
+  const rows = allBillRows(expenses, today, autoPay);
+  const after = new Map<string, MonthBillRow[]>();
+  for (const r of rows) {
+    const key = r.day.slice(0, 7);
+    if (key > month && !r.paid) after.set(key, [...(after.get(key) ?? []), r]);
+  }
+  return {
+    before: rows.filter((r) => !r.paid && r.day.slice(0, 7) < month),
+    current: rows.filter((r) => r.day.slice(0, 7) === month),
+    after: [...after.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([m, list]) => ({ month: m, total: round2(list.reduce((s, r) => s + r.amount, 0)), rows: list })),
+  };
 }
 
 export type MonthlyBill = { month: string; total: number; byCard: { card: string; total: number }[] };
