@@ -349,7 +349,7 @@ model Settings {
   channelFees                Json  @default("{}")
   /** Meta de faturamento mensal (R$). 0 = sem meta. */
   monthlyGoal               Float @default(0)
-  /** Saldo em conta na data `cashBalanceDate` (R$). Vendas recebidas e despesas a partir dessa data movimentam o "Em caixa". */
+  /** Saldo em conta na data `cashBalanceDate` (R$). Vendas recebidas e despesas DEPOIS dessa data movimentam o "Em caixa" (o saldo vale para o fim do dia). */
   cashBalance               Float     @default(0)
   cashBalanceDate           DateTime?
   /** Regras da loja editáveis (frete padrão, prazos, textos, dados da empresa...). Formato e padrões em src/lib/store-rules.ts; vazio = tudo no padrão. */

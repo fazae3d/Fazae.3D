@@ -26,7 +26,8 @@ export type CashPosition = {
 };
 
 /**
- * "Em caixa" = saldo informado pelo dono + vendas recebidas − taxas − todas as despesas, tudo a partir do dia do saldo.
+ * "Em caixa" = saldo informado pelo dono + vendas recebidas − taxas − todas as despesas, tudo DEPOIS do dia do saldo (o saldo vale
+ * para o fim daquele dia, então o que aconteceu nele já está incluído).
  * Venda do site conta quando o pagamento é aprovado (dia do pedido); venda lançada no painel conta no dia em que foi marcada como
  * paga (ou em cada parcela). Pedido que já estava pago antes de existir o registro de parcelas conta no dia em que foi lançado.
  * Desfazer um pagamento nunca deixa um pedido contribuir com valor negativo.
@@ -45,7 +46,8 @@ export function cashPosition(input: {
   const { openingBalance, openingDate, orders, payments, expenses } = input;
   const today = input.today ?? storeDayKey(new Date());
   const since = openingDate;
-  const afterStart = (day: string) => since !== null && day >= since;
+  // O saldo informado é o do fim do dia: o que aconteceu naquele próprio dia já está nele; só conta o que vem depois.
+  const afterStart = (day: string) => since !== null && day > since;
 
   const eventsByOrder = new Map<string, OrderPaymentEvent[]>();
   for (const p of payments) {

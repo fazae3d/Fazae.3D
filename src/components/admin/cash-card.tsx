@@ -52,7 +52,7 @@ export function CashCard({ position, today, committed = 0 }: { position: CashPos
         <>
           <p className={`font-display mt-2 text-3xl sm:text-4xl ${position.balance < 0 ? "text-red-500" : "text-petrol"}`}>{formatPrice(position.balance)}</p>
           <p className="mt-1 text-xs text-graphite">
-            Saldo de {formatPrice(position.opening)} em {formatDay(position.since!)}, mais as vendas pagas e menos todos os gastos desde então.
+            Saldo de {formatPrice(position.opening)} em {formatDay(position.since!)}, mais as vendas pagas e menos todos os gastos depois dessa data.
           </p>
           <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">
             <div>
@@ -123,8 +123,8 @@ export function CashCard({ position, today, committed = 0 }: { position: CashPos
             )}
           </div>
           <p className="mt-2 text-xs text-graphite">
-            Vale o saldo da conta nesse dia. Vendas pagas e gastos a partir dessa data (inclusive) mexem no valor; o que veio antes já está no saldo.
-            Para acertar com o extrato depois, é só informar o novo saldo com a data de hoje.
+            Vale o saldo da conta no fim desse dia: tudo o que aconteceu nele (vendas pagas, contas pagas) já está no saldo. Só o que vier depois dessa data mexe no valor.
+            Para acertar com o extrato, informe o saldo atual com a data de hoje; o que você pagar ou receber ainda hoje, depois de informar, entra amanhã (ou informe o saldo de novo no fim do dia).
           </p>
           {error ? <p className="mt-1.5 text-xs text-red-500">{error}</p> : null}
         </div>

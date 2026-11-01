@@ -320,6 +320,16 @@ describe("Em caixa", () => {
     expect(r.spent).toBe(40);
     expect(r.balance).toBe(1060);
   });
+  it("o que aconteceu no próprio dia do saldo já está nele: não conta de novo", () => {
+    const r = cashPosition({
+      ...base,
+      orders: [order({ id: "G", createdAt: at(D), paymentStatus: "approved", total: 100 })],
+      expenses: [expense(D, 40)],
+    });
+    expect(r.received).toBe(0);
+    expect(r.spent).toBe(0);
+    expect(r.balance).toBe(1000);
+  });
   it("venda do painel entra no dia em que foi marcada como paga, em parcelas", () => {
     const o = order({ id: "E", channel: "whatsapp", createdAt: at("2026-10-01"), paymentStatus: "pending", depositAmount: 100, total: 200 });
     const r = cashPosition({ ...base, orders: [o], payments: [{ orderId: "E", amount: 100, paidAt: at("2026-10-14") }] });
