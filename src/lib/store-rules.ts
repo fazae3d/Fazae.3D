@@ -33,7 +33,7 @@ export type StoreRules = {
     reminderCooldownDays: number;
   };
   reviews: { rewardValue: number; rewardMinSubtotal: number };
-  finance: { growthMultiplier: number; growthMonths: number };
+  finance: { growthMultiplier: number; growthMonths: number; autoPayInstallments: boolean };
   quote: { validityDays: number; deliveryText: string; paymentText: string; notesText: string };
   owner: { email: string };
   texts: { whatsappMessage: string; customOrderIntro: string };
@@ -60,7 +60,7 @@ export const DEFAULT_RULES: StoreRules = {
   storefront: { lowStockThreshold: 5, scarcityThreshold: 2, returnDays: 7 },
   automation: { abandonedCartHours: 2, abandonedCartSecondDays: 3, pendingOrderExpireDays: 4, reactivationDays: 120, reminderCooldownDays: 30 },
   reviews: { rewardValue: 5, rewardMinSubtotal: 30 },
-  finance: { growthMultiplier: 5, growthMonths: 12 },
+  finance: { growthMultiplier: 5, growthMonths: 12, autoPayInstallments: true },
   quote: {
     validityDays: 7,
     deliveryText: "7 a 10 dias úteis após a confirmação do pagamento.",
@@ -85,13 +85,13 @@ export const RULE_GROUPS: { key: RuleGroupKey; title: string; description: strin
   { key: "vitrine", title: "Vitrine", description: "Quando aparecem os selos de estoque e o prazo de troca citado no site." },
   { key: "automacao", title: "Lembretes e prazos automáticos", description: "Carrinho abandonado, Pix parado, pedidos sem pagamento e clientes que sumiram." },
   { key: "clientes", title: "Avaliações e recompensa", description: "Cupom que o cliente ganha ao avaliar um pedido." },
-  { key: "financas", title: "Metas de crescimento", description: "Usado na tela de Finanças para calcular a meta de crescimento." },
+  { key: "financas", title: "Finanças", description: "Meta de crescimento e como as parcelas do cartão são contadas no caixa." },
   { key: "orcamento", title: "Orçamento padrão", description: "Valores que já vêm preenchidos ao criar um orçamento novo (dá para mudar em cada um)." },
   { key: "textos", title: "Textos do site", description: "Mensagem que abre o WhatsApp e a introdução da página de peça sob encomenda." },
   { key: "avisos", title: "Avisos para você", description: "Para onde vão os avisos de pedido, pagamento e contato do site." },
 ];
 
-export type FieldKind = "number" | "money" | "percent" | "text" | "textarea" | "list" | "email" | "url";
+export type FieldKind = "number" | "money" | "percent" | "text" | "textarea" | "list" | "email" | "url" | "toggle";
 
 export type FieldSpec = {
   path: string;
@@ -153,6 +153,7 @@ export const RULE_FIELDS: FieldSpec[] = [
 
   { path: "finance.growthMultiplier", group: "financas", label: "Crescer o faturamento mensal em", hint: "Ex.: 5 significa chegar a 5 vezes o faturamento do começo.", kind: "number", min: 1.1, max: 100, step: 0.1, unit: "vezes" },
   { path: "finance.growthMonths", group: "financas", label: "No prazo de", kind: "number", min: 1, max: 60, integer: true, unit: "meses" },
+  { path: "finance.autoPayInstallments", group: "financas", label: "Parcela vencida conta como paga sozinha", hint: "Ligado: no dia do vencimento a parcela sai do caixa automaticamente. Desligado: ela fica “vencida” até você marcar como paga em Finanças (Contas do mês), e só então sai do caixa.", kind: "toggle" },
 
   { path: "quote.validityDays", group: "orcamento", label: "Validade", kind: "number", min: 1, max: 90, integer: true, unit: "dias" },
   { path: "quote.deliveryText", group: "orcamento", label: "Prazo de entrega", kind: "textarea", maxLength: 300 },
@@ -187,6 +188,11 @@ function clone<T>(value: T): T {
 /** Valida um valor contra o campo. Devolve o valor limpo ou a mensagem de erro (em português, citando o campo). */
 export function validateField(spec: FieldSpec, raw: unknown): { ok: true; value: unknown } | { ok: false; error: string } {
   const name = spec.label;
+  if (spec.kind === "toggle") {
+    if (typeof raw === "boolean") return { ok: true, value: raw };
+    if (raw === "true" || raw === "false") return { ok: true, value: raw === "true" };
+    return { ok: false, error: `${name}: escolha ligado ou desligado.` };
+  }
   if (spec.kind === "list") {
     const items = (Array.isArray(raw) ? raw : typeof raw === "string" ? raw.split(/\r?\n/) : [])
       .map((v) => String(v).trim())

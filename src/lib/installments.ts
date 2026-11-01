@@ -97,8 +97,8 @@ export function expenseInstallments(expense: InstallmentExpense): Installment[] 
  * Gasto simples conta no dia da compra, como sempre. Parcela (ou fatura com vencimento) conta como paga quando foi marcada como paga
  * (antecipada) ou quando o vencimento chega.
  */
-export function isInstallmentPaid(installment: Installment, today: string) {
-  return installment.immediate || Boolean(installment.paidOn) || installment.day <= today;
+export function isInstallmentPaid(installment: Installment, today: string, autoPay = true) {
+  return installment.immediate || Boolean(installment.paidOn) || (autoPay && installment.day <= today);
 }
 
 /** Dia em que o dinheiro sai: o dia em que foi marcada como paga, ou o vencimento. */
@@ -107,10 +107,10 @@ export function installmentCashDay(installment: Installment) {
 }
 
 /** Saídas de dinheiro de verdade (dia e valor): gasto simples na data da compra, parcelas e faturas pagas ou vencidas. */
-export function expenseCashOutflows(expenses: InstallmentExpense[], today: string): { day: string; amount: number }[] {
+export function expenseCashOutflows(expenses: InstallmentExpense[], today: string, autoPay = true): { day: string; amount: number }[] {
   return expenses.flatMap((e) =>
     expenseInstallments(e)
-      .filter((i) => isInstallmentPaid(i, today))
+      .filter((i) => isInstallmentPaid(i, today, autoPay))
       .map((i) => ({ day: installmentCashDay(i), amount: i.amount })),
   );
 }
@@ -131,10 +131,10 @@ export type InstallmentSummary = {
   nextAmount: number | null;
 };
 
-export function installmentSummary(expense: InstallmentExpense, today: string): InstallmentSummary {
+export function installmentSummary(expense: InstallmentExpense, today: string, autoPay = true): InstallmentSummary {
   const all = expenseInstallments(expense);
-  const paid = all.filter((i) => isInstallmentPaid(i, today));
-  const pending = all.filter((i) => !isInstallmentPaid(i, today));
+  const paid = all.filter((i) => isInstallmentPaid(i, today, autoPay));
+  const pending = all.filter((i) => !isInstallmentPaid(i, today, autoPay));
   return {
     of: all.length,
     paid: paid.length,
@@ -159,21 +159,51 @@ export type UpcomingInstallment = {
 type UpcomingSource = InstallmentExpense & { id: string; description: string; cardName?: string };
 
 /** Parcelas e faturas que ainda vão vencer e não foram pagas, da mais próxima para a mais distante. */
-export function upcomingInstallments(expenses: UpcomingSource[], today: string): UpcomingInstallment[] {
+export function upcomingInstallments(expenses: UpcomingSource[], today: string, autoPay = true): UpcomingInstallment[] {
   return expenses
     .filter(hasSchedule)
     .flatMap((e) =>
       expenseInstallments(e)
-        .filter((i) => !isInstallmentPaid(i, today))
+        .filter((i) => !isInstallmentPaid(i, today, autoPay))
         .map((i) => ({ expenseId: e.id, description: e.description, number: i.number, of: i.of, day: i.day, amount: i.amount, cardName: e.cardName })),
     )
     .sort((a, b) => a.day.localeCompare(b.day) || a.number - b.number);
 }
 
 /** Quanto vence nos próximos `days` dias (a partir de hoje) em parcelas e faturas ainda não pagas. */
-export function committedWithin(expenses: UpcomingSource[], today: string, days: number) {
+export function committedWithin(expenses: UpcomingSource[], today: string, days: number, autoPay = true) {
   const limit = addDaysToDay(today, days);
-  return round2(upcomingInstallments(expenses, today).filter((i) => i.day <= limit).reduce((sum, i) => sum + i.amount, 0));
+  return round2(upcomingInstallments(expenses, today, autoPay).filter((i) => i.day <= limit).reduce((sum, i) => sum + i.amount, 0));
+}
+
+export type MonthBillRow = {
+  expenseId: string;
+  description: string;
+  cardName?: string;
+  number: number;
+  of: number;
+  day: string;
+  amount: number;
+  paid: boolean;
+  /** Dia em que foi marcada como paga antes ou depois do vencimento. */
+  paidOn?: string;
+  /** Não paga e o vencimento já passou (só acontece com o pagamento automático desligado). */
+  overdue: boolean;
+};
+
+/** Contas de um mês (AAAA-MM): todas as parcelas e faturas que vencem nele, pagas ou não, na ordem do vencimento. */
+export function monthBills(expenses: UpcomingSource[], month: string, today: string, autoPay = true): MonthBillRow[] {
+  return expenses
+    .filter(hasSchedule)
+    .flatMap((e) =>
+      expenseInstallments(e)
+        .filter((i) => i.day.slice(0, 7) === month)
+        .map((i) => {
+          const paid = isInstallmentPaid(i, today, autoPay);
+          return { expenseId: e.id, description: e.description, cardName: e.cardName, number: i.number, of: i.of, day: i.day, amount: i.amount, paid, paidOn: i.paidOn, overdue: !paid && i.day < today };
+        }),
+    )
+    .sort((a, b) => a.day.localeCompare(b.day) || a.description.localeCompare(b.description));
 }
 
 export type MonthlyBill = { month: string; total: number; byCard: { card: string; total: number }[] };

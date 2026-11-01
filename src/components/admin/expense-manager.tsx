@@ -36,7 +36,7 @@ function dayLabel(day: string) {
   return new Date(`${day}T00:00:00.000Z`).toLocaleDateString("pt-BR", { timeZone: "UTC" });
 }
 
-export function ExpenseManager({ expenses, today }: { expenses: Expense[]; today: string }) {
+export function ExpenseManager({ expenses, today, autoPay = true }: { expenses: Expense[]; today: string; autoPay?: boolean }) {
   const router = useRouter();
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<ExpenseCategory>("material");
@@ -264,7 +264,7 @@ export function ExpenseManager({ expenses, today }: { expenses: Expense[]; today
         <ul className="mt-6 max-h-[32rem] divide-y divide-mist overflow-y-auto border-t border-mist">
           {expenses.map((expense) => {
             const scheduled = hasSchedule(expense);
-            const plan = scheduled ? installmentSummary(expense, today) : null;
+            const plan = scheduled ? installmentSummary(expense, today, autoPay) : null;
             const interest = scheduled ? installmentInterest(expense) : 0;
             const method = paymentMethodLabel(expense.paymentMethod);
             const many = plan ? plan.of > 1 : false;
@@ -299,14 +299,14 @@ export function ExpenseManager({ expenses, today }: { expenses: Expense[]; today
                       <summary className="cursor-pointer text-petrol">{many ? "Ver parcelas" : "Ver fatura"}</summary>
                       <ul className="mt-1 space-y-1.5">
                         {expenseInstallments(expense).map((i) => {
-                          const paid = isInstallmentPaid(i, today);
+                          const paid = isInstallmentPaid(i, today, autoPay);
                           const early = Boolean(i.paidOn);
                           return (
                             <li key={i.number} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                               <span className={paid ? "text-graphite" : "text-ink"}>
                                 {many ? `${i.number}/${i.of} · ` : ""}vence {dayLabel(i.day)} · {formatPrice(i.amount)}
                                 {i.adjusted ? " (ajustada)" : ""}
-                                {early ? ` · paga em ${dayLabel(i.paidOn!)} (antecipada)` : paid ? " · paga" : " · a pagar"}
+                                {early ? ` · paga em ${dayLabel(i.paidOn!)}${i.paidOn! < i.day ? " (antecipada)" : ""}` : paid ? " · paga" : i.day < today ? " · vencida" : " · a pagar"}
                               </span>
                               <span className="flex flex-wrap items-center gap-3">
                                 <InstallmentAmountEditor expenseId={expense.id} number={i.number} amount={i.amount} adjusted={i.adjusted} />

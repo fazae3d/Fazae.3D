@@ -39,6 +39,8 @@ export function cashPosition(input: {
   expenses: Expense[];
   /** Dia de hoje (AAAA-MM-DD): parcelas que vencem depois ainda não saíram do caixa. */
   today?: string;
+  /** Parcela vencida conta como paga sozinha (padrão). Desligado: só sai do caixa quando marcada como paga. */
+  autoPayInstallments?: boolean;
 }): CashPosition {
   const { openingBalance, openingDate, orders, payments, expenses } = input;
   const today = input.today ?? storeDayKey(new Date());
@@ -78,7 +80,7 @@ export function cashPosition(input: {
     if (net > 0 && order.total > 0) fees += (order.paymentFee ?? 0) * Math.min(1, net / order.total);
   }
 
-  const spent = since === null ? 0 : expenseCashOutflows(expenses, today).filter((o) => afterStart(o.day)).reduce((sum, o) => sum + o.amount, 0);
+  const spent = since === null ? 0 : expenseCashOutflows(expenses, today, input.autoPayInstallments ?? true).filter((o) => afterStart(o.day)).reduce((sum, o) => sum + o.amount, 0);
 
   return {
     configured: since !== null,

@@ -9,6 +9,7 @@ import {
   hasSchedule,
   installmentInterest,
   installmentSummary,
+  monthBills,
   monthsBetween,
   occurrenceDay,
   upcomingInstallments,
@@ -175,5 +176,50 @@ describe("despesa recorrente", () => {
     expect(occurrenceDay("2026-04", 31)).toBe("2026-04-30");
     expect(occurrenceDay("2028-02", 30)).toBe("2028-02-29");
     expect(occurrenceDay("2026-10", 5)).toBe("2026-10-05");
+  });
+});
+
+describe("pagamento automático desligado", () => {
+  const base = { openingBalance: 5000, openingDate: "2026-09-01", payments: [], orders: [] };
+  const e = expense({ id: "x", description: "Máquina", totalValue: 300, installments: 3 });
+
+  it("parcela vencida só conta como paga depois de marcada", () => {
+    // hoje 2026-10-20: a 1ª venceu em 09-10 e a 2ª em 10-10
+    expect(cashPosition({ ...base, expenses: [e], today: "2026-10-20" }).spent).toBe(200);
+    expect(cashPosition({ ...base, expenses: [e], today: "2026-10-20", autoPayInstallments: false }).spent).toBe(0);
+    const marcada = expense({ totalValue: 300, installments: 3, paidInstallments: { "1": "2026-09-12" } });
+    expect(cashPosition({ ...base, expenses: [marcada], today: "2026-10-20", autoPayInstallments: false }).spent).toBe(100);
+  });
+
+  it("as vencidas aparecem em aberto e entram no que vence", () => {
+    const up = upcomingInstallments([e], "2026-10-20", false);
+    expect(up.map((i) => i.number)).toEqual([1, 2, 3]);
+    expect(committedWithin([e], "2026-10-20", 30, false)).toBe(300);
+    expect(installmentSummary(e, "2026-10-20", false).paid).toBe(0);
+  });
+
+  it("à vista sem vencimento continua contando no dia da compra", () => {
+    expect(cashPosition({ ...base, expenses: [expense({ totalValue: 80 })], today: "2026-09-10", autoPayInstallments: false }).spent).toBe(80);
+  });
+});
+
+describe("contas do mês", () => {
+  const maquina = expense({ id: "m", description: "Máquina", totalValue: 300, installments: 3, cardName: "Nubank", paidInstallments: { "2": "2026-10-03" } });
+  const avista = expense({ id: "a", description: "Filamento", totalValue: 50 });
+
+  it("lista todas as parcelas que vencem no mês, pagas ou não, na ordem do vencimento", () => {
+    const rows = monthBills([maquina, avista], "2026-10", "2026-10-05", true);
+    expect(rows.map((r) => [r.description, r.number, r.day, r.paid, r.overdue])).toEqual([["Máquina", 2, "2026-10-10", true, false]]);
+    expect(rows[0].paidOn).toBe("2026-10-03");
+    expect(rows[0].cardName).toBe("Nubank");
+  });
+
+  it("com pagamento automático desligado a parcela vencida do mês aparece como vencida", () => {
+    const sem = expense({ id: "s", description: "Impressora", totalValue: 200, installments: 2 });
+    const rows = monthBills([sem], "2026-10", "2026-10-20", false);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ number: 2, paid: false, overdue: true });
+    expect(monthBills([sem], "2026-10", "2026-10-20", true)[0]).toMatchObject({ paid: true, overdue: false });
+    expect(monthBills([sem], "2026-11", "2026-10-20", false)).toEqual([]);
   });
 });

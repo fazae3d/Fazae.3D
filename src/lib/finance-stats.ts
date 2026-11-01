@@ -66,7 +66,7 @@ export type CashFlowMonth = { key: string; label: string; inflow: number; outflo
  * é dinheiro que saiu de verdade; compra parcelada conta por parcela vencida), diferente do DRE, que trata equipamento
  * como investimento e não como despesa operacional.
  */
-export function cashFlowByMonth(orders: Order[], expenses: Expense[], months = 6, today = storeDayKey(new Date())): CashFlowMonth[] {
+export function cashFlowByMonth(orders: Order[], expenses: Expense[], months = 6, today = storeDayKey(new Date()), autoPay = true): CashFlowMonth[] {
   const buckets = lastNMonths(months);
   const inflowByMonth = new Map<string, number>();
   const outflowByMonth = new Map<string, number>();
@@ -77,7 +77,7 @@ export function cashFlowByMonth(orders: Order[], expenses: Expense[], months = 6
     inflowByMonth.set(key, (inflowByMonth.get(key) ?? 0) + order.total);
   }
   // Compra parcelada sai do caixa parcela a parcela, no vencimento (a compra à vista, no dia da compra).
-  for (const { day, amount } of expenseCashOutflows(expenses, today)) {
+  for (const { day, amount } of expenseCashOutflows(expenses, today, autoPay)) {
     const key = day.slice(0, 7);
     outflowByMonth.set(key, (outflowByMonth.get(key) ?? 0) + amount);
   }

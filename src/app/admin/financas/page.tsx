@@ -21,7 +21,8 @@ import { storeDayKey, storeMonthKey } from "@/lib/store-time";
 import { MonthFilter } from "@/components/admin/month-filter";
 import { getAllConsignmentVisits } from "@/server/repositories/consignment-repository";
 import { ExpenseManager } from "@/components/admin/expense-manager";
-import { billsByMonth, committedWithin, upcomingInstallments } from "@/lib/installments";
+import { billsByMonth, committedWithin, monthBills, upcomingInstallments } from "@/lib/installments";
+import { MonthBills } from "@/components/admin/month-bills";
 import { RecurringExpenseManager } from "@/components/admin/recurring-expense-manager";
 import { generateDueRecurringExpenses, getAllRecurringExpenses } from "@/server/repositories/recurring-expense-repository";
 import { InstallmentPayButton } from "@/components/admin/installment-pay-button";
@@ -93,11 +94,16 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
   const payback = investmentPayback(allOrders, allExpenses);
   const goal = growthGoal(allOrders, settings?.rules.finance.growthMultiplier ?? 5, settings?.rules.finance.growthMonths ?? 12);
   const today = storeDayKey(new Date());
-  const cashFlow = cashFlowByMonth(allOrders, allExpenses, 6, today);
-  const upcoming = upcomingInstallments(allExpenses, today);
+  // Parcela vencida conta como paga sozinha? (Regras da loja > Finanças). Desligado: só sai do caixa quando marcada como paga.
+  const autoPay = settings?.rules.finance.autoPayInstallments ?? true;
+  const cashFlow = cashFlowByMonth(allOrders, allExpenses, 6, today, autoPay);
+  const upcoming = upcomingInstallments(allExpenses, today, autoPay);
+  // Contas do mês: o mês do filtro (ou o atual), por vencimento, com todas as despesas (não só as compradas naquele mês).
+  const billsMonth = selectedMonth || today.slice(0, 7);
+  const monthRows = monthBills(allExpenses, billsMonth, today, autoPay);
   const upcomingTotal = round2(upcoming.reduce((sum, i) => sum + i.amount, 0));
   const bills = billsByMonth(upcoming);
-  const committed30 = committedWithin(allExpenses, today, 30);
+  const committed30 = committedWithin(allExpenses, today, 30, autoPay);
   const categoryBreakdown = expenseCategoryBreakdown(expenses);
   const maxCategoryTotal = Math.max(1, ...categoryBreakdown.map((c) => c.total));
   const cash = cashPosition({
@@ -107,6 +113,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
     payments,
     expenses: allExpenses,
     today,
+    autoPayInstallments: autoPay,
   });
 
   return (
@@ -127,6 +134,8 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
             : "Mostrando todos os meses. Escolha um mês para ver o custo e o resultado só dele."}
         </p>
       </div>
+
+      <MonthBills rows={monthRows} monthName={monthLabel(billsMonth)} today={today} autoPay={autoPay} />
 
       <p className="label-caps mb-3 text-[11px] text-graphite">
         Resultado simplificado, pela data da compra{selectedMonth ? `: ${monthLabel(selectedMonth)}` : ""}
@@ -312,7 +321,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
               {upcoming.map((i) => (
                 <li key={`${i.expenseId}-${i.number}`} className="flex items-center justify-between gap-3 py-1.5">
                   <span className="min-w-0 truncate">
-                    {new Date(`${i.day}T00:00:00.000Z`).toLocaleDateString("pt-BR", { timeZone: "UTC" })} · {i.description} ({i.number}/{i.of})
+                    {new Date(`${i.day}T00:00:00.000Z`).toLocaleDateString("pt-BR", { timeZone: "UTC" })} · {i.description} ({i.number}/{i.of}){i.day < today ? " · vencida" : ""}
                   </span>
                   <span className="flex shrink-0 items-center gap-3">
                     {formatPrice(i.amount)}
@@ -348,7 +357,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
 
       <RecurringExpenseManager items={recurring} currentMonth={today.slice(0, 7)} />
 
-      <ExpenseManager expenses={expenses} today={today} />
+      <ExpenseManager expenses={expenses} today={today} autoPay={autoPay} />
     </div>
   );
 }

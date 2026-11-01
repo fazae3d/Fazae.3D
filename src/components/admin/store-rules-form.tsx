@@ -22,6 +22,7 @@ function toText(spec: FieldSpec, value: unknown) {
 
 function defaultLabel(spec: FieldSpec) {
   const value = getPath(DEFAULT_RULES, spec.path);
+  if (typeof value === "boolean") return value ? "ligado" : "desligado";
   if (spec.kind === "money" && typeof value === "number") return formatPrice(value);
   if (Array.isArray(value)) return value.join(", ");
   const text = toText(spec, value);
@@ -119,7 +120,7 @@ export function StoreRulesForm({ initial }: { initial: StoreRules }) {
               {fields.map((spec) => {
                 const id = `rule-${spec.path}`;
                 const error = errors[spec.path];
-                const wide = spec.kind === "textarea" || spec.kind === "list" || spec.kind === "url";
+                const wide = spec.kind === "textarea" || spec.kind === "list" || spec.kind === "url" || spec.kind === "toggle";
                 const numeric = spec.kind === "number" || spec.kind === "money" || spec.kind === "percent";
                 return (
                   <div key={spec.path} className={wide ? "sm:col-span-2" : ""}>
@@ -127,7 +128,18 @@ export function StoreRulesForm({ initial }: { initial: StoreRules }) {
                       {spec.label}
                       {spec.unit ? <span className="font-normal"> ({spec.unit})</span> : null}
                     </label>
-                    {spec.kind === "textarea" || spec.kind === "list" ? (
+                    {spec.kind === "toggle" ? (
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          id={id}
+                          type="checkbox"
+                          checked={values[spec.path] === "true"}
+                          onChange={(e) => setValue(spec.path, e.target.checked ? "true" : "false")}
+                          className="h-4 w-4 accent-ink"
+                        />
+                        {values[spec.path] === "true" ? "Ligado" : "Desligado"}
+                      </label>
+                    ) : spec.kind === "textarea" || spec.kind === "list" ? (
                       <textarea
                         id={id}
                         rows={spec.kind === "list" ? 3 : 3}
