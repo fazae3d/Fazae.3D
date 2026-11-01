@@ -2,11 +2,27 @@ import { Prisma } from "@/generated/prisma/client";
 import { db } from "../db";
 import type { Expense, ExpenseCategory } from "../types";
 
-/** Lê o JSON salvo (número da parcela → dia) ignorando o que não tiver o formato esperado. */
-function parsePaid(value: unknown): Record<string, string> | undefined {
+/** Valor guardado de uma parcela paga: "AAAA-MM-DD" (antigo) ou "AAAA-MM-DD|2026-11-01T18:03:00.000Z" (dia e hora em que foi marcada). */
+const PAID_VALUE = /^\d{4}-\d{2}-\d{2}(\|\d{4}-\d{2}-\d{2}T[\d:.]+Z)?$/;
+
+/** Lê o JSON salvo (número da parcela → valor) ignorando o que não tiver o formato esperado. */
+function parsePaidRaw(value: unknown): Record<string, string> | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
-  const entries = Object.entries(value as Record<string, unknown>).filter(([k, v]) => /^\d+$/.test(k) && typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v));
+  const entries = Object.entries(value as Record<string, unknown>).filter(([k, v]) => /^\d+$/.test(k) && typeof v === "string" && PAID_VALUE.test(v));
   return entries.length > 0 ? (Object.fromEntries(entries) as Record<string, string>) : undefined;
+}
+
+/** Separa o dia (paidInstallments) da hora em que foi marcada (paidInstallmentsAt). */
+function splitPaid(raw: Record<string, string> | undefined) {
+  if (!raw) return { days: undefined, ats: undefined };
+  const days: Record<string, string> = {};
+  const ats: Record<string, string> = {};
+  for (const [n, value] of Object.entries(raw)) {
+    const [day, at] = value.split("|");
+    days[n] = day;
+    if (at) ats[n] = at;
+  }
+  return { days, ats: Object.keys(ats).length > 0 ? ats : undefined };
 }
 
 /** Lê o JSON salvo (número da parcela → valor ajustado) ignorando o que não tiver o formato esperado. */
@@ -44,7 +60,8 @@ function toExpense(row: {
     notes: row.notes ?? undefined,
     installments: row.installments,
     firstDueDate: row.firstDueDate?.toISOString(),
-    paidInstallments: parsePaid(row.paidInstallments),
+    paidInstallments: splitPaid(parsePaidRaw(row.paidInstallments)).days,
+    paidInstallmentsAt: splitPaid(parsePaidRaw(row.paidInstallments)).ats,
     paymentMethod: row.paymentMethod ?? undefined,
     cardName: row.cardName ?? undefined,
     installmentAmounts: parseAmounts(row.installmentAmounts),
@@ -94,7 +111,7 @@ export async function updateExpense(id: string, input: CreateExpenseInput): Prom
   const count = Math.max(1, input.installments ?? 1);
   const hasDue = Boolean(input.firstDueDate);
   const scheduled = count > 1 || hasDue || input.paymentMethod === "cartao";
-  const kept = Object.fromEntries(Object.entries(parsePaid(existing.paidInstallments) ?? {}).filter(([n]) => scheduled && Number(n) <= count));
+  const kept = Object.fromEntries(Object.entries(parsePaidRaw(existing.paidInstallments) ?? {}).filter(([n]) => scheduled && Number(n) <= count));
   const sameShape = existing.totalValue === input.totalValue && existing.installments === count;
   const amounts = sameShape ? parseAmounts(existing.installmentAmounts) : undefined;
   const row = await db.expense.update({
@@ -123,8 +140,9 @@ export async function setInstallmentPaid(id: string, number: number, paidOn: str
   const existing = await db.expense.findUnique({ where: { id } });
   if (!existing) return { success: false, error: "Despesa não encontrada." };
   if (!Number.isInteger(number) || number < 1 || number > existing.installments) return { success: false, error: "Parcela inexistente." };
-  const paid = { ...(parsePaid(existing.paidInstallments) ?? {}) };
-  if (paidOn) paid[String(number)] = paidOn;
+  const paid = { ...(parsePaidRaw(existing.paidInstallments) ?? {}) };
+  // Guarda também a hora em que foi marcada: o Em caixa usa isso para não contar o que já estava no saldo informado.
+  if (paidOn) paid[String(number)] = `${paidOn}|${new Date().toISOString()}`;
   else delete paid[String(number)];
   const row = await db.expense.update({
     where: { id },

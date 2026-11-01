@@ -2,8 +2,23 @@ import { db } from "../db";
 import type { StoreSettings } from "../types";
 import { parseChannelFees } from "@/lib/channels";
 import { parseStoreRules, type StoreRules } from "@/lib/store-rules";
+import { storeDayKey } from "@/lib/store-time";
 
 const SETTINGS_ID = 1;
+
+/**
+ * O saldo do Em caixa fica numa coluna só (cashBalanceDate). Saldos novos guardam o instante exato em que foram informados; saldos
+ * antigos guardam só a data (meia-noite UTC) e valem para o fim daquele dia.
+ */
+function cashBalanceMoment(stored: Date | null): { cashBalanceDate?: string; cashBalanceAt?: string } {
+  if (!stored) return {};
+  const dateOnly = stored.getUTCHours() === 0 && stored.getUTCMinutes() === 0 && stored.getUTCSeconds() === 0 && stored.getUTCMilliseconds() === 0;
+  if (dateOnly) {
+    const day = stored.toISOString().slice(0, 10);
+    return { cashBalanceDate: day, cashBalanceAt: new Date(`${day}T23:59:59.999-03:00`).toISOString() };
+  }
+  return { cashBalanceDate: storeDayKey(stored), cashBalanceAt: stored.toISOString() };
+}
 
 function toSettings(row: {
   freeShippingThreshold: number;
@@ -42,7 +57,7 @@ function toSettings(row: {
     channelFees: parseChannelFees(row.channelFees),
     monthlyGoal: row.monthlyGoal,
     cashBalance: row.cashBalance,
-    cashBalanceDate: row.cashBalanceDate?.toISOString().slice(0, 10),
+    ...cashBalanceMoment(row.cashBalanceDate),
     rules: parseStoreRules(row.rules),
   };
 }
@@ -81,9 +96,15 @@ export async function updateStoreRules(rules: StoreRules): Promise<StoreSettings
   return toSettings(row);
 }
 
+/** Saldo informado hoje vale a partir de agora; saldo de um dia anterior vale para o fim daquele dia. */
+function cashBalanceInstant(day: string, now = new Date()): Date {
+  if (day >= storeDayKey(now)) return new Date(Math.floor(now.getTime() / 1000) * 1000 + 1);
+  return new Date(`${day}T23:59:59.001-03:00`);
+}
+
 /** Define o saldo em conta (e o dia a que ele se refere) a partir do qual o "Em caixa" é calculado. `date` = AAAA-MM-DD. */
 export async function setCashBalance(balance: number, date: string): Promise<StoreSettings> {
-  const row = await db.settings.update({ where: { id: SETTINGS_ID }, data: { cashBalance: balance, cashBalanceDate: new Date(`${date}T00:00:00.000Z`) } });
+  const row = await db.settings.update({ where: { id: SETTINGS_ID }, data: { cashBalance: balance, cashBalanceDate: cashBalanceInstant(date) } });
   settingsCache = null;
   return toSettings(row);
 }

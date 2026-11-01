@@ -18,9 +18,11 @@ export type Installment = {
   paidBefore?: boolean;
   /** Dia em que a parcela seguinte foi marcada como paga: a anterior estava paga, no mais tardar, nesse dia. */
   paidBeforeOn?: string;
+  /** Hora (ISO) em que o dinheiro saiu, quando se sabe: lançamento da compra à vista ou marcação da parcela como paga. */
+  cashAt?: string;
 };
 
-type InstallmentExpense = Pick<Expense, "totalValue" | "purchaseDate" | "installments" | "firstDueDate" | "paidInstallments" | "installmentAmounts" | "paymentMethod">;
+type InstallmentExpense = Pick<Expense, "totalValue" | "purchaseDate" | "installments" | "firstDueDate" | "paidInstallments" | "paidInstallmentsAt" | "installmentAmounts" | "paymentMethod"> & { createdAt?: string };
 
 export const PAYMENT_METHODS = [
   { value: "pix", label: "Pix" },
@@ -106,7 +108,19 @@ export function expenseInstallments(expense: InstallmentExpense): Installment[] 
   };
   if (of === 1) {
     const due = firstDueOf(expense);
-    return [{ number: 1, of, day: due ?? purchaseDay, ...override(1, round2(expense.totalValue)), paidOn: expense.paidInstallments?.["1"], immediate: !due }];
+    const markedOn = expense.paidInstallments?.["1"];
+    return [
+      {
+        number: 1,
+        of,
+        day: due ?? purchaseDay,
+        ...override(1, round2(expense.totalValue)),
+        paidOn: markedOn,
+        immediate: !due,
+        // À vista: saiu quando foi lançada; no cartão marcado como pago: quando foi marcado.
+        cashAt: markedOn ? expense.paidInstallmentsAt?.["1"] : !due ? expense.createdAt : undefined,
+      },
+    ];
   }
   const first = firstDueOf(expense) ?? expense.purchaseDate.slice(0, 10);
   const each = Math.floor((expense.totalValue / of) * 100) / 100;
@@ -114,6 +128,7 @@ export function expenseInstallments(expense: InstallmentExpense): Installment[] 
   const markedNumbers = Object.keys(expense.paidInstallments ?? {}).map(Number).filter((n) => n >= 1 && n <= of);
   const lastMarked = markedNumbers.length > 0 ? Math.max(...markedNumbers) : 0;
   const lastMarkedOn = lastMarked > 0 ? expense.paidInstallments?.[String(lastMarked)] : undefined;
+  const lastMarkedAt = lastMarked > 0 ? expense.paidInstallmentsAt?.[String(lastMarked)] : undefined;
   return Array.from({ length: of }, (_, i) => {
     const paidOn = expense.paidInstallments?.[String(i + 1)];
     return {
@@ -123,6 +138,7 @@ export function expenseInstallments(expense: InstallmentExpense): Installment[] 
       ...override(i + 1, i === of - 1 ? round2(expense.totalValue - each * (of - 1)) : each),
       paidOn,
       immediate: false,
+      cashAt: paidOn ? expense.paidInstallmentsAt?.[String(i + 1)] : !paidOn && i + 1 < lastMarked ? lastMarkedAt : undefined,
       ...(!paidOn && i + 1 < lastMarked ? { paidBefore: true, paidBeforeOn: lastMarkedOn } : {}),
     };
   });
@@ -145,11 +161,11 @@ export function installmentCashDay(installment: Installment) {
 }
 
 /** Saídas de dinheiro de verdade (dia e valor): gasto simples na data da compra, parcelas e faturas pagas ou vencidas. */
-export function expenseCashOutflows(expenses: InstallmentExpense[], today: string, autoPay = true): { day: string; amount: number }[] {
+export function expenseCashOutflows(expenses: InstallmentExpense[], today: string, autoPay = true): { day: string; amount: number; at?: string }[] {
   return expenses.flatMap((e) =>
     expenseInstallments(e)
       .filter((i) => isInstallmentPaid(i, today, autoPay))
-      .map((i) => ({ day: installmentCashDay(i), amount: i.amount })),
+      .map((i) => ({ day: installmentCashDay(i), amount: i.amount, at: i.cashAt })),
   );
 }
 

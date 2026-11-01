@@ -109,6 +109,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
   const cash = cashPosition({
     openingBalance: settings?.cashBalance ?? 0,
     openingDate: settings?.cashBalanceDate ?? null,
+    openingAt: settings?.cashBalanceAt ?? null,
     orders: allOrders,
     payments,
     expenses: allExpenses,

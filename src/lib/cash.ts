@@ -11,8 +11,10 @@ export type OrderPaymentEvent = { orderId: string; amount: number; paidAt: strin
 export type CashPosition = {
   /** O dono já informou o saldo inicial? Sem isso o "Em caixa" não faz sentido. */
   configured: boolean;
-  /** Dia (AAAA-MM-DD) a partir do qual vendas e despesas movimentam o caixa. */
+  /** Dia (AAAA-MM-DD) do saldo informado. */
   since: string | null;
+  /** Instante exato do saldo (ISO): o que veio antes já está nele. */
+  sinceAt: string | null;
   opening: number;
   /** Vendas recebidas desde o saldo inicial, antes de descontar taxas. */
   received: number;
@@ -26,8 +28,9 @@ export type CashPosition = {
 };
 
 /**
- * "Em caixa" = saldo informado pelo dono + vendas recebidas − taxas − todas as despesas, tudo DEPOIS do dia do saldo (o saldo vale
- * para o fim daquele dia, então o que aconteceu nele já está incluído).
+ * "Em caixa" = saldo informado pelo dono + vendas recebidas − taxas − todas as despesas, tudo DEPOIS do momento do saldo. O que
+ * aconteceu antes dele já está no saldo; o que aconteceu no mesmo dia mas depois da hora em que ele foi informado conta na hora.
+ * Sem a hora (saldo antigo), vale o fim do dia.
  * Venda do site conta quando o pagamento é aprovado (dia do pedido); venda lançada no painel conta no dia em que foi marcada como
  * paga (ou em cada parcela). Pedido que já estava pago antes de existir o registro de parcelas conta no dia em que foi lançado.
  * Desfazer um pagamento nunca deixa um pedido contribuir com valor negativo.
@@ -35,6 +38,8 @@ export type CashPosition = {
 export function cashPosition(input: {
   openingBalance: number;
   openingDate: string | null;
+  /** Instante (ISO) em que o saldo foi informado; sem ele, o saldo vale para o fim do dia de `openingDate`. */
+  openingAt?: string | null;
   orders: Order[];
   payments: OrderPaymentEvent[];
   expenses: Expense[];
@@ -46,8 +51,11 @@ export function cashPosition(input: {
   const { openingBalance, openingDate, orders, payments, expenses } = input;
   const today = input.today ?? storeDayKey(new Date());
   const since = openingDate;
-  // O saldo informado é o do fim do dia: o que aconteceu naquele próprio dia já está nele; só conta o que vem depois.
-  const afterStart = (day: string) => since !== null && day > since;
+  const sinceMs = input.openingAt ? Date.parse(input.openingAt) : null;
+  // Conta o que veio depois do saldo: dias seguintes, ou o mesmo dia mas depois da hora em que o saldo foi informado (se a hora do
+  // lançamento for conhecida). O que não tem hora e cai no dia do saldo já está nele.
+  const afterStart = (day: string, at?: string) =>
+    since !== null && (day > since || (day === since && sinceMs !== null && at !== undefined && Date.parse(at) > sinceMs));
 
   const eventsByOrder = new Map<string, OrderPaymentEvent[]>();
   for (const p of payments) {
@@ -67,26 +75,27 @@ export function cashPosition(input: {
     const createdDay = storeDayKey(new Date(order.createdAt));
     let net = 0;
     if (order.id.startsWith(CONSIGNMENT_ID_PREFIX)) {
-      if (afterStart(createdDay)) net = order.total;
+      if (afterStart(createdDay, order.createdAt)) net = order.total;
     } else if (order.channel === "online") {
-      if (afterStart(createdDay)) net = receivedAmount(order);
+      if (afterStart(createdDay, order.createdAt)) net = receivedAmount(order);
     } else {
       const events = eventsByOrder.get(order.id) ?? [];
       const eventsTotal = events.reduce((sum, e) => sum + e.amount, 0);
       const legacy = round2(receivedAmount(order) - eventsTotal);
-      if (legacy !== 0 && afterStart(createdDay)) net += legacy;
-      for (const e of events) if (afterStart(storeDayKey(new Date(e.paidAt)))) net += e.amount;
+      if (legacy !== 0 && afterStart(createdDay, order.createdAt)) net += legacy;
+      for (const e of events) if (afterStart(storeDayKey(new Date(e.paidAt)), e.paidAt)) net += e.amount;
     }
     net = Math.max(0, round2(net));
     received += net;
     if (net > 0 && order.total > 0) fees += (order.paymentFee ?? 0) * Math.min(1, net / order.total);
   }
 
-  const spent = since === null ? 0 : expenseCashOutflows(expenses, today, input.autoPayInstallments ?? true).filter((o) => afterStart(o.day)).reduce((sum, o) => sum + o.amount, 0);
+  const spent = since === null ? 0 : expenseCashOutflows(expenses, today, input.autoPayInstallments ?? true).filter((o) => afterStart(o.day, o.at)).reduce((sum, o) => sum + o.amount, 0);
 
   return {
     configured: since !== null,
     since,
+    sinceAt: since === null ? null : (input.openingAt ?? null),
     opening: round2(openingBalance),
     received: round2(received),
     fees: round2(fees),

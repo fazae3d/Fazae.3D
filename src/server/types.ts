@@ -148,6 +148,8 @@ export type StoreSettings = {
   /** Saldo em conta informado pelo dono e o dia (AAAA-MM-DD) a que ele se refere; sem data = "Em caixa" ainda não configurado. */
   cashBalance?: number;
   cashBalanceDate?: string;
+  /** Instante exato do saldo (ISO): o que aconteceu antes dele já está no saldo; só conta o que veio depois. */
+  cashBalanceAt?: string;
   /** Regras da loja (sempre completas: o que não foi editado vem do padrão). Ver lib/store-rules. */
   rules: import("@/lib/store-rules").StoreRules;
 };
@@ -180,6 +182,8 @@ export type Expense = {
   firstDueDate?: string;
   /** Parcelas pagas antes do vencimento: número da parcela → dia (AAAA-MM-DD) em que saiu do caixa. */
   paidInstallments?: Record<string, string>;
+  /** Quando cada parcela foi marcada como paga (data e hora), para saber se veio antes ou depois do saldo informado em Em caixa. */
+  paidInstallmentsAt?: Record<string, string>;
   /** Como foi pago (pix, dinheiro, debito ou cartao) e, no cartão, qual. */
   paymentMethod?: string;
   cardName?: string;

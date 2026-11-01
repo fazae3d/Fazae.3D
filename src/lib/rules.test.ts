@@ -330,6 +330,46 @@ describe("Em caixa", () => {
     expect(r.spent).toBe(0);
     expect(r.balance).toBe(1000);
   });
+  it("com a hora do saldo, o que acontece no mesmo dia depois dela conta na hora", () => {
+    const openingAt = `${D}T15:00:00.000Z`;
+    const r = cashPosition({
+      ...base,
+      openingAt,
+      orders: [
+        order({ id: "H1", createdAt: `${D}T12:00:00.000Z`, paymentStatus: "approved", total: 100 }), // antes do saldo: já está nele
+        order({ id: "H2", createdAt: `${D}T18:00:00.000Z`, paymentStatus: "approved", total: 70 }), // depois: conta
+      ],
+      expenses: [
+        { id: "x1", description: "antes", category: "material", totalValue: 40, purchaseDate: `${D}T00:00:00.000Z`, createdAt: `${D}T10:00:00.000Z` },
+        { id: "x2", description: "depois", category: "material", totalValue: 25, purchaseDate: `${D}T00:00:00.000Z`, createdAt: `${D}T19:00:00.000Z` },
+      ] as never[],
+    });
+    expect(r.received).toBe(70);
+    expect(r.spent).toBe(25);
+    expect(r.balance).toBe(1045);
+  });
+  it("conta de cartão marcada como paga depois do saldo, no mesmo dia, sai do caixa na hora; a marcada antes não", () => {
+    const openingAt = `${D}T15:00:00.000Z`;
+    const parcela = (id: string, at?: string) =>
+      ({
+        id,
+        description: id,
+        category: "material",
+        totalValue: 60,
+        purchaseDate: "2026-09-12T00:00:00.000Z",
+        createdAt: "2026-09-12T12:00:00.000Z",
+        paymentMethod: "cartao",
+        firstDueDate: `${D}T00:00:00.000Z`,
+        paidInstallments: { "1": D },
+        ...(at ? { paidInstallmentsAt: { "1": at } } : {}),
+      }) as never;
+    const r = cashPosition({ ...base, openingAt, orders: [], expenses: [parcela("depois", `${D}T18:00:00.000Z`), parcela("antes", `${D}T09:00:00.000Z`), parcela("sem-hora")], today: D });
+    expect(r.spent).toBe(60);
+  });
+  it("saldo sem hora (antigo) vale para o fim do dia", () => {
+    const r = cashPosition({ ...base, orders: [], expenses: [{ id: "y", description: "y", category: "material", totalValue: 30, purchaseDate: `${D}T00:00:00.000Z`, createdAt: `${D}T23:00:00.000Z` }] as never[] });
+    expect(r.spent).toBe(0);
+  });
   it("venda do painel entra no dia em que foi marcada como paga, em parcelas", () => {
     const o = order({ id: "E", channel: "whatsapp", createdAt: at("2026-10-01"), paymentStatus: "pending", depositAmount: 100, total: 200 });
     const r = cashPosition({ ...base, orders: [o], payments: [{ orderId: "E", amount: 100, paidAt: at("2026-10-14") }] });
