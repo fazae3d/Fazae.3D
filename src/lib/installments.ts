@@ -6,7 +6,19 @@ import type { Expense } from "@/server/types";
  * `paidOn` aparece quando ela foi marcada como paga antes do vencimento (o dia em que o dinheiro saiu).
  * `immediate` é a compra à vista sem vencimento informado (Pix, dinheiro, débito): sai do caixa no dia da compra.
  */
-export type Installment = { number: number; of: number; day: string; amount: number; paidOn?: string; immediate: boolean; adjusted: boolean };
+export type Installment = {
+  number: number;
+  of: number;
+  day: string;
+  amount: number;
+  paidOn?: string;
+  immediate: boolean;
+  adjusted: boolean;
+  /** Paga porque uma parcela seguinte da mesma compra já foi marcada como paga (não se paga a 2ª sem ter pago a 1ª). */
+  paidBefore?: boolean;
+  /** Dia em que a parcela seguinte foi marcada como paga: a anterior estava paga, no mais tardar, nesse dia. */
+  paidBeforeOn?: string;
+};
 
 type InstallmentExpense = Pick<Expense, "totalValue" | "purchaseDate" | "installments" | "firstDueDate" | "paidInstallments" | "installmentAmounts" | "paymentMethod">;
 
@@ -98,14 +110,22 @@ export function expenseInstallments(expense: InstallmentExpense): Installment[] 
   }
   const first = firstDueOf(expense) ?? expense.purchaseDate.slice(0, 10);
   const each = Math.floor((expense.totalValue / of) * 100) / 100;
-  return Array.from({ length: of }, (_, i) => ({
-    number: i + 1,
-    of,
-    day: addMonthsToDay(first, i),
-    ...override(i + 1, i === of - 1 ? round2(expense.totalValue - each * (of - 1)) : each),
-    paidOn: expense.paidInstallments?.[String(i + 1)],
-    immediate: false,
-  }));
+  // Marcou a parcela N como paga: as anteriores já estavam pagas (a maior parcela marcada manda).
+  const markedNumbers = Object.keys(expense.paidInstallments ?? {}).map(Number).filter((n) => n >= 1 && n <= of);
+  const lastMarked = markedNumbers.length > 0 ? Math.max(...markedNumbers) : 0;
+  const lastMarkedOn = lastMarked > 0 ? expense.paidInstallments?.[String(lastMarked)] : undefined;
+  return Array.from({ length: of }, (_, i) => {
+    const paidOn = expense.paidInstallments?.[String(i + 1)];
+    return {
+      number: i + 1,
+      of,
+      day: addMonthsToDay(first, i),
+      ...override(i + 1, i === of - 1 ? round2(expense.totalValue - each * (of - 1)) : each),
+      paidOn,
+      immediate: false,
+      ...(!paidOn && i + 1 < lastMarked ? { paidBefore: true, paidBeforeOn: lastMarkedOn } : {}),
+    };
+  });
 }
 
 /**
@@ -113,12 +133,15 @@ export function expenseInstallments(expense: InstallmentExpense): Installment[] 
  * (antecipada) ou quando o vencimento chega.
  */
 export function isInstallmentPaid(installment: Installment, today: string, autoPay = true) {
-  return installment.immediate || Boolean(installment.paidOn) || (autoPay && installment.day <= today);
+  return installment.immediate || Boolean(installment.paidOn) || Boolean(installment.paidBefore) || (autoPay && installment.day <= today);
 }
 
 /** Dia em que o dinheiro sai: o dia em que foi marcada como paga, ou o vencimento. */
 export function installmentCashDay(installment: Installment) {
-  return installment.paidOn ?? installment.day;
+  if (installment.paidOn) return installment.paidOn;
+  // Paga por ter uma parcela posterior paga: no vencimento ou, se a posterior foi paga antes disso, nesse dia.
+  if (installment.paidBefore && installment.paidBeforeOn && installment.paidBeforeOn < installment.day) return installment.paidBeforeOn;
+  return installment.day;
 }
 
 /** Saídas de dinheiro de verdade (dia e valor): gasto simples na data da compra, parcelas e faturas pagas ou vencidas. */
@@ -202,6 +225,8 @@ export type MonthBillRow = {
   paid: boolean;
   /** Dia em que foi marcada como paga antes ou depois do vencimento. */
   paidOn?: string;
+  /** Paga porque uma parcela seguinte da mesma compra já foi marcada como paga. */
+  paidBefore?: boolean;
   /** Não paga e o vencimento já passou (só acontece com o pagamento automático desligado). */
   overdue: boolean;
 };
@@ -213,7 +238,7 @@ function allBillRows(expenses: UpcomingSource[], today: string, autoPay: boolean
     .flatMap((e) =>
       expenseInstallments(e).map((i) => {
         const paid = isInstallmentPaid(i, today, autoPay);
-        return { expenseId: e.id, description: e.description, cardName: e.cardName, number: i.number, of: i.of, day: i.day, amount: i.amount, paid, paidOn: i.paidOn, overdue: !paid && i.day < today };
+        return { expenseId: e.id, description: e.description, cardName: e.cardName, number: i.number, of: i.of, day: i.day, amount: i.amount, paid, paidOn: i.paidOn, paidBefore: i.paidBefore, overdue: !paid && i.day < today };
       }),
     )
     .sort((a, b) => a.day.localeCompare(b.day) || a.description.localeCompare(b.description));

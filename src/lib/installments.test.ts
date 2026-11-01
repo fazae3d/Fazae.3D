@@ -8,6 +8,7 @@ import {
   expenseInstallments,
   hasSchedule,
   installmentInterest,
+  isInstallmentPaid,
   billsOverview,
   defaultCardDueDay,
   installmentSummary,
@@ -96,14 +97,14 @@ describe("parcela paga antes do vencimento", () => {
   it("conta como paga e sai do caixa no dia marcado, não no vencimento", () => {
     const list = expenseInstallments(e);
     expect(list[2].paidOn).toBe("2026-09-15");
-    expect(installmentSummary(e, "2026-09-20").paid).toBe(2);
-    // 1ª venceu em 09-10 (100) e a 3ª foi paga em 09-15 (100): 200 já saíram
-    expect(cashPosition({ ...base, expenses: [e], today: "2026-09-20" }).spent).toBe(200);
+    expect(installmentSummary(e, "2026-09-20").paid).toBe(3);
+    // 3ª paga em 09-15 (100); a 1ª venceu em 09-10 (100); a 2ª, anterior à 3ª, conta como paga no dia em que a 3ª foi (100)
+    expect(cashPosition({ ...base, expenses: [e], today: "2026-09-20" }).spent).toBe(300);
   });
 
   it("não aparece mais em parcelas a pagar", () => {
     const up = upcomingInstallments([e], "2026-09-20");
-    expect(up.map((i) => i.number)).toEqual([2, 4]);
+    expect(up.map((i) => i.number)).toEqual([4]);
   });
 
   it("no vencimento não conta de novo", () => {
@@ -277,5 +278,39 @@ describe("visão das contas em torno de um mês", () => {
     expect(v.before).toEqual([]);
     expect(v.current[0]).toMatchObject({ paid: false });
     expect(v.after.map((m) => m.month)).toEqual(["2026-12", "2027-01"]);
+  });
+});
+
+describe("marcar a parcela seguinte paga quita as anteriores", () => {
+  const base = { openingBalance: 5000, openingDate: "2026-09-01", payments: [], orders: [] };
+  // impressora em 4x: 07/10, 07/11, 07/12, 07/01; só a 2ª foi marcada (paga em 01/11)
+  const e = expense({ id: "i", description: "Impressora", totalValue: 400, installments: 4, purchaseDate: "2026-09-12T00:00:00.000Z", firstDueDate: "2026-10-07T00:00:00.000Z", paidInstallments: { "2": "2026-11-01" } });
+
+  it("a 1ª conta como paga sem precisar marcar, e as seguintes continuam em aberto", () => {
+    const list = expenseInstallments(e);
+    expect(list.map((i) => Boolean(isInstallmentPaid(i, "2026-11-02", false)))).toEqual([true, true, false, false]);
+    expect(list[0].paidBefore).toBe(true);
+    expect(list[1].paidBefore).toBeUndefined();
+  });
+
+  it("não aparece como atrasada nem em parcelas a pagar; entra no caixa no vencimento dela", () => {
+    const v = billsOverview([e], "2026-11", "2026-11-02", false);
+    expect(v.before).toEqual([]);
+    expect(upcomingInstallments([e], "2026-11-02", false).map((i) => i.number)).toEqual([3, 4]);
+    // 1ª (07/10, 100) e 2ª (marcada em 01/11, 100): 200 já saíram
+    expect(cashPosition({ ...base, expenses: [e], today: "2026-11-02", autoPayInstallments: false }).spent).toBe(200);
+  });
+
+  it("se a parcela seguinte foi paga antes do vencimento da anterior, a anterior sai nesse dia", () => {
+    const adiantada = expense({ totalValue: 400, installments: 4, purchaseDate: "2026-09-12T00:00:00.000Z", firstDueDate: "2026-12-07T00:00:00.000Z", paidInstallments: { "2": "2026-11-01" } });
+    const list = expenseInstallments(adiantada);
+    expect(list[0].paidBeforeOn).toBe("2026-11-01");
+    expect(cashPosition({ ...base, expenses: [adiantada], today: "2026-11-02", autoPayInstallments: false }).spent).toBe(200);
+  });
+
+  it("desfazer a marcação traz a anterior de volta como atrasada", () => {
+    const sem = expense({ id: "i", description: "Impressora", totalValue: 400, installments: 4, purchaseDate: "2026-09-12T00:00:00.000Z", firstDueDate: "2026-10-07T00:00:00.000Z" });
+    const v = billsOverview([sem], "2026-11", "2026-11-02", false);
+    expect(v.before.map((r) => r.number)).toEqual([1]);
   });
 });

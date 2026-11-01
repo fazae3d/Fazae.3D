@@ -303,7 +303,7 @@ export function ExpenseManager({ expenses, today, autoPay = true }: { expenses: 
                               <span className={paid ? "text-graphite" : "text-ink"}>
                                 {many ? `${i.number}/${i.of} · ` : ""}vence {dayLabel(i.day)} · {formatPrice(i.amount)}
                                 {i.adjusted ? " (ajustada)" : ""}
-                                {early ? ` · paga em ${dayLabel(i.paidOn!)}${i.paidOn! < i.day ? " (antecipada)" : ""}` : paid ? " · paga" : i.day < today ? " · vencida" : " · a pagar"}
+                                {early ? ` · paga em ${dayLabel(i.paidOn!)}${i.paidOn! < i.day ? " (antecipada)" : ""}` : i.paidBefore ? " · paga (a parcela seguinte já foi paga)" : paid ? " · paga" : i.day < today ? " · vencida" : " · a pagar"}
                               </span>
                               <span className="flex flex-wrap items-center gap-3">
                                 <InstallmentAmountEditor expenseId={expense.id} number={i.number} amount={i.amount} adjusted={i.adjusted} />

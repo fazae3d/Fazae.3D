@@ -29,7 +29,7 @@ function Row({ row, today }: { row: MonthBillRow; today: string }) {
         <p className="text-xs text-graphite">
           Vence {dayLabel(row.day)}
           {row.cardName ? ` · ${row.cardName}` : ""}
-          {row.paidOn ? ` · paga em ${dayLabel(row.paidOn)}${row.paidOn < row.day ? " (antecipada)" : ""}` : row.paid ? " · paga no vencimento" : row.overdue ? " · vencida" : " · em aberto"}
+          {row.paidOn ? ` · paga em ${dayLabel(row.paidOn)}${row.paidOn < row.day ? " (antecipada)" : ""}` : row.paidBefore ? " · paga (a parcela seguinte já foi paga)" : row.paid ? " · paga no vencimento" : row.overdue ? " · vencida" : " · em aberto"}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-4">
