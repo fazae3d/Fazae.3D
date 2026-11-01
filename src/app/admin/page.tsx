@@ -16,7 +16,8 @@ import {
   orderBalanceDue,
 } from "@/lib/admin-stats";
 import { daysUntil, needsFollowUp, quoteDisplayStatus } from "@/lib/quote";
-import { monthGoalProgress } from "@/lib/finance-stats";
+import { monthGoalProgress, monthlyRevenue } from "@/lib/finance-stats";
+import { MonthlyRevenue } from "@/components/admin/monthly-revenue";
 import { isInactive, wasRecentlyReminded } from "@/lib/customer-insights";
 import { getCustomersWithMetrics } from "@/server/repositories/customer-repository";
 import { getSettings } from "@/server/repositories/settings-repository";
@@ -159,6 +160,7 @@ export default async function AdminDashboardPage() {
   );
   const goal = settings?.monthlyGoal ?? 0;
   const goalProgress = goal > 0 ? monthGoalProgress(orders, goal) : null;
+  const monthHistory = monthlyRevenue(orders, goal);
 
   const attention: AttentionItem[] = [
     {
@@ -349,6 +351,8 @@ export default async function AdminDashboardPage() {
           )}
         </Panel>
       </div>
+
+      <MonthlyRevenue rows={monthHistory} goal={goal} />
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Panel title="Mais vendidos">

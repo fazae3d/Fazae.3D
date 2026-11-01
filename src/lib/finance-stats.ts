@@ -277,6 +277,68 @@ export function monthGoalProgress(orders: Order[], goal: number, now = new Date(
   };
 }
 
+export type MonthRevenue = {
+  /** AAAA-MM */
+  key: string;
+  label: string;
+  revenue: number;
+  orders: number;
+  averageTicket: number;
+  /** Variação sobre o mês anterior (null quando o mês anterior não teve faturamento). */
+  changePct: number | null;
+  /** Quanto da meta mensal foi atingido (null quando não há meta). */
+  goalPct: number | null;
+  /** Mês ainda em andamento (o atual). */
+  current: boolean;
+};
+
+const MONTH_NAMES_PT = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+
+/**
+ * Faturamento mês a mês (pedidos confirmados, pelo dia do pedido no fuso da loja), do mais recente para o mais antigo. Começa no mês
+ * do primeiro pedido e vai até o mês atual, sem pular meses sem venda. `limit` corta nos meses mais recentes.
+ */
+export function monthlyRevenue(orders: Order[], goal = 0, now = new Date(), limit = 12): MonthRevenue[] {
+  const byMonth = new Map<string, { revenue: number; orders: number }>();
+  for (const order of orders) {
+    if (!isConfirmed(order)) continue;
+    const key = monthKey(new Date(order.createdAt));
+    const entry = byMonth.get(key) ?? { revenue: 0, orders: 0 };
+    entry.revenue += order.total;
+    entry.orders += 1;
+    byMonth.set(key, entry);
+  }
+  const currentKey = monthKey(now);
+  if (byMonth.size === 0) return [];
+  const first = [...byMonth.keys()].sort()[0];
+
+  const ascending: MonthRevenue[] = [];
+  let [year, month] = first.split("-").map(Number);
+  const [lastYear, lastMonth] = currentKey.split("-").map(Number);
+  while (year < lastYear || (year === lastYear && month <= lastMonth)) {
+    const key = `${year}-${String(month).padStart(2, "0")}`;
+    const entry = byMonth.get(key) ?? { revenue: 0, orders: 0 };
+    const revenue = round2(entry.revenue);
+    const previous = ascending[ascending.length - 1];
+    ascending.push({
+      key,
+      label: `${MONTH_NAMES_PT[month - 1]} de ${year}`,
+      revenue,
+      orders: entry.orders,
+      averageTicket: entry.orders > 0 ? round2(revenue / entry.orders) : 0,
+      changePct: previous && previous.revenue > 0 ? Math.round(((revenue - previous.revenue) / previous.revenue) * 100) : null,
+      goalPct: goal > 0 ? Math.round((revenue / goal) * 100) : null,
+      current: key === currentKey,
+    });
+    month += 1;
+    if (month > 12) {
+      month = 1;
+      year += 1;
+    }
+  }
+  return ascending.reverse().slice(0, limit);
+}
+
 export type ChannelResult = { channel: Order["channel"]; count: number; revenue: number; fees: number; net: number; averageTicket: number };
 
 /** Resultado por canal de venda: faturamento, taxas (gateway ou marketplace) e o que sobra depois delas. */

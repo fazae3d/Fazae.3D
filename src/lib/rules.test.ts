@@ -17,7 +17,7 @@ import { orderBalanceDue, periodComparison, revenueByDay } from "./admin-stats";
 import { toCsv } from "./csv";
 import { computeChannelFee, isMarketplace, parseChannelFees } from "./channels";
 import { buildCustomerMetrics, isInactive, phoneKey, rankCustomers, reactivationMessage, wasRecentlyReminded } from "./customer-insights";
-import { monthGoalProgress, channelResults } from "./finance-stats";
+import { monthGoalProgress, channelResults, monthlyRevenue } from "./finance-stats";
 import { needsFollowUp, quoteSavings, quoteWhatsAppMessage } from "./quote";
 import { campaignBodyHtml, isSafeButtonUrl } from "./campaign-email";
 import { computeQuoteTotals, daysUntil, isQuoteExpired, quoteDisplayStatus, quoteNumberLabel, validityEndOfDay, validityFromNow } from "./quote";
@@ -701,5 +701,49 @@ describe("auditoria: antes e depois", () => {
     expect(canRestore({ kind: "delete", targetType: "Coupon" })).toBe(true);
     expect(canRestore({ kind: "create", targetType: "Coupon" })).toBe(false);
     expect(canRestore({ kind: "update", targetType: "Order" })).toBe(false);
+  });
+});
+
+describe("faturamento por mês", () => {
+  const at = (day: string) => `${day}T15:00:00.000Z`;
+  const o = (id: string, day: string, total: number, status = "Entregue") => order({ id, createdAt: at(day), total, status: status as never });
+
+  it("soma só pedidos confirmados, mês a mês, do mais recente para o mais antigo, sem pular meses sem venda", () => {
+    const rows = monthlyRevenue(
+      [
+        o("1", "2026-08-10", 100),
+        o("2", "2026-08-20", 50),
+        o("3", "2026-10-05", 300),
+        o("4", "2026-10-06", 80, "Cancelado"),
+        o("5", "2026-10-07", 60, "Pedido recebido"),
+        o("6", "2026-11-01", 120),
+      ],
+      0,
+      new Date("2026-11-02T12:00:00.000Z"),
+    );
+    expect(rows.map((r) => [r.key, r.revenue, r.orders])).toEqual([
+      ["2026-11", 120, 1],
+      ["2026-10", 300, 1],
+      ["2026-09", 0, 0],
+      ["2026-08", 150, 2],
+    ]);
+    expect(rows[0]).toMatchObject({ current: true, label: "novembro de 2026", averageTicket: 120 });
+    expect(rows[3].averageTicket).toBe(75);
+  });
+
+  it("variação sobre o mês anterior e % da meta", () => {
+    const rows = monthlyRevenue([o("1", "2026-09-10", 200), o("2", "2026-10-10", 300), o("3", "2026-11-01", 100)], 400, new Date("2026-11-02T12:00:00.000Z"));
+    expect(rows.map((r) => r.changePct)).toEqual([-67, 50, null]);
+    expect(rows.map((r) => r.goalPct)).toEqual([25, 75, 50]);
+    expect(monthlyRevenue([o("1", "2026-10-10", 300)], 0, new Date("2026-11-02T12:00:00.000Z"))[0].goalPct).toBeNull();
+  });
+
+  it("pedido de noite no último dia do mês fica naquele mês (fuso da loja) e o corte mostra os meses mais recentes", () => {
+    const rows = monthlyRevenue([order({ id: "n", createdAt: "2026-11-01T01:30:00.000Z", total: 90, status: "Entregue" as never })], 0, new Date("2026-11-02T12:00:00.000Z"));
+    // novembro (atual) ainda sem venda; o pedido das 22h30 de 31/10 é de outubro
+    expect(rows.map((r) => [r.key, r.revenue])).toEqual([["2026-11", 0], ["2026-10", 90]]);
+    const many = [o("a", "2025-01-10", 10), o("b", "2026-11-01", 10)];
+    expect(monthlyRevenue(many, 0, new Date("2026-11-02T12:00:00.000Z"), 3)).toHaveLength(3);
+    expect(monthlyRevenue([], 0)).toEqual([]);
   });
 });
