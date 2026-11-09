@@ -448,7 +448,7 @@ describe("orçamento por WhatsApp", () => {
   const base = { customerName: "Maria da Silva", number: 12, total: 250, validUntil: "2026-11-30T23:59:59.000Z", link: "https://x.com/orcamento/abc" };
   it("destaca economia e frete grátis", () => {
     const text = quoteWhatsAppMessage({ ...base, savings: 30, freeShipping: true });
-    expect(text).toContain("Olá, Maria!");
+    expect(text.startsWith("Maria, segue o orçamento")).toBe(true);
     expect(text).toContain("economizando");
     expect(text).toContain("frete grátis");
     expect(text.endsWith("https://x.com/orcamento/abc")).toBe(true);
@@ -456,6 +456,11 @@ describe("orçamento por WhatsApp", () => {
   it("sem vantagem não inventa ganho", () => {
     expect(quoteWhatsAppMessage(base)).not.toMatch(/economizando|frete/);
     expect(quoteWhatsAppMessage({ ...base, freeShipping: true })).toContain("E o frete é grátis");
+  });
+  it("sem economia não deixa espaço duplo e usa o modelo das Regras da loja", () => {
+    expect(quoteWhatsAppMessage(base)).not.toMatch(/ {2}/);
+    const custom = quoteWhatsAppMessage({ ...base, template: "Oi {{nome}}! Total {{total}}.\n{{ link }}" });
+    expect(custom).toBe("Oi Maria! Total R$ 250,00.\nhttps://x.com/orcamento/abc".replace("R$ ", "R$\u00a0"));
   });
 });
 

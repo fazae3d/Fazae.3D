@@ -11,6 +11,7 @@ import { formatPrice } from "@/lib/format";
 import { round2 } from "@/lib/money";
 import { QUOTE_LOSS_REASONS, computeQuoteTotals, formatStoreDate, quoteLossLabel, quoteNumberLabel, quoteSavings, quoteWhatsAppMessage, validityEndOfDay, type Quote, type QuoteStatus } from "@/lib/quote";
 import { normalizePhone } from "@/lib/whatsapp";
+import { getStoreRules } from "@/server/store-rules";
 import { registerQuoteSent, sendConversationMedia, sendConversationText, startConversation, syncStageFromQuote } from "@/server/repositories/whatsapp-repository";
 import { SITE_URL } from "@/lib/site-config";
 import { logAdminAction } from "@/server/audit";
@@ -204,6 +205,7 @@ export async function sendQuoteViaConversationAction(id: string): Promise<{ succ
     freeShipping: savings.freeShipping,
     validUntil: quote.validUntil,
     link: `${SITE_URL}/orcamento/${quote.token}`,
+    template: (await getStoreRules()).quote.whatsappText,
   });
 
   const result = await withMutationFallback(async (): Promise<{ success: true; conversationId: string } | { success: false; error: string }> => {

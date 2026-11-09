@@ -1,4 +1,5 @@
 import { round2 } from "@/lib/money";
+import { DEFAULT_QUOTE_WHATSAPP_TEXT } from "@/lib/store-rules";
 import { storeDayKey, toStoreTime } from "@/lib/store-time";
 
 export type QuoteStatus = "rascunho" | "enviado" | "aprovado" | "recusado";
@@ -205,14 +206,29 @@ export function quoteWhatsAppMessage(input: {
   freeShipping?: boolean;
   validUntil: string;
   link: string;
+  /** Modelo da mensagem (Regras da loja). Sem ele, vale o padrão. */
+  template?: string;
 }) {
   const first = input.customerName.trim().split(/\s+/)[0] || input.customerName;
   const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   const win =
     input.savings && input.savings > 0
-      ? ` Você está economizando ${brl(input.savings)}${input.freeShipping ? " e ainda ganha frete grátis" : ""}!`
+      ? `Você está economizando ${brl(input.savings)}${input.freeShipping ? " e ainda ganha frete grátis" : ""}!`
       : input.freeShipping
-        ? " E o frete é grátis!"
+        ? "E o frete é grátis!"
         : "";
-  return `Olá, ${first}! Segue o orçamento ${quoteNumberLabel(input.number)} da Fazaê 3D, no valor de ${brl(input.total)}.${win} A condição vale até ${formatStoreDate(input.validUntil)}:\n${input.link}`;
+  const values: Record<string, string> = {
+    nome: first,
+    numero: quoteNumberLabel(input.number),
+    total: brl(input.total),
+    economia: win,
+    validade: formatStoreDate(input.validUntil),
+    link: input.link,
+  };
+  const template = input.template?.trim() ? input.template : DEFAULT_QUOTE_WHATSAPP_TEXT;
+  return template
+    .replace(/\{\{\s*(\w+)\s*\}\}/g, (whole, key: string) => values[key] ?? whole)
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/[ \t]+\n/g, "\n")
+    .trim();
 }

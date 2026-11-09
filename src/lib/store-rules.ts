@@ -34,10 +34,15 @@ export type StoreRules = {
   };
   reviews: { rewardValue: number; rewardMinSubtotal: number };
   finance: { growthMultiplier: number; growthMonths: number; autoPayInstallments: boolean };
-  quote: { validityDays: number; deliveryText: string; paymentText: string; notesText: string };
+  quote: { validityDays: number; deliveryText: string; paymentText: string; notesText: string; whatsappText: string };
   owner: { email: string };
   texts: { whatsappMessage: string; customOrderIntro: string };
 };
+
+/** Variáveis que a mensagem do orçamento por WhatsApp aceita (ver quoteWhatsAppMessage). */
+export const QUOTE_WHATSAPP_VARIABLES = ["nome", "numero", "total", "economia", "validade", "link"] as const;
+
+export const DEFAULT_QUOTE_WHATSAPP_TEXT = "{{nome}}, segue o orçamento {{numero}} da Fazaê 3D, no valor de {{total}}. {{economia}} A condição vale até {{validade}}:\n{{link}}";
 
 export const DEFAULT_RULES: StoreRules = {
   company: {
@@ -67,6 +72,7 @@ export const DEFAULT_RULES: StoreRules = {
     paymentText: "Pix ou cartão de crédito. Para iniciar a produção pedimos 50% de sinal; o restante é pago antes do envio ou da retirada.",
     notesText:
       "Peças impressas em 3D: pequenas variações de textura e tonalidade são características do processo. Cores e modelo são confirmados com você antes de produzir.",
+    whatsappText: DEFAULT_QUOTE_WHATSAPP_TEXT,
   },
   owner: { email: "" },
   texts: {
@@ -159,6 +165,14 @@ export const RULE_FIELDS: FieldSpec[] = [
   { path: "quote.deliveryText", group: "orcamento", label: "Prazo de entrega", kind: "textarea", maxLength: 300 },
   { path: "quote.paymentText", group: "orcamento", label: "Forma de pagamento", kind: "textarea", maxLength: 500 },
   { path: "quote.notesText", group: "orcamento", label: "Observações", kind: "textarea", maxLength: 800, optional: true },
+  {
+    path: "quote.whatsappText",
+    group: "orcamento",
+    label: "Mensagem do orçamento no WhatsApp",
+    hint: "Texto enviado ao cliente junto com o link do orçamento. Use {{nome}} (primeiro nome), {{numero}}, {{total}}, {{validade}}, {{link}} (obrigatório) e {{economia}} (frase de desconto ou frete grátis, some sozinha quando não houver). Quebras de linha valem.",
+    kind: "textarea",
+    maxLength: 800,
+  },
 
   { path: "owner.email", group: "avisos", label: "E-mail para receber avisos", hint: "Recebe novo pedido, pagamento aprovado e mensagens do formulário de contato. Vazio usa o e-mail configurado no servidor.", kind: "email", maxLength: 120, optional: true },
   { path: "texts.whatsappMessage", group: "textos", label: "Mensagem pronta do WhatsApp", hint: "Texto que já vem escrito quando o cliente clica em “Fazer orçamento no WhatsApp”.", kind: "textarea", maxLength: 300 },
@@ -257,6 +271,13 @@ export function validateRulesInput(input: unknown): { ok: true; rules: StoreRule
     const checked = validateField(spec, getPath(input, spec.path));
     if (!checked.ok) return checked;
     setPath(rules as unknown as Record<string, unknown>, spec.path, checked.value);
+  }
+  const unknownVariable = [...rules.quote.whatsappText.matchAll(/\{\{\s*([^{}]*?)\s*\}\}/g)].map((m) => m[1]).find((v) => !(QUOTE_WHATSAPP_VARIABLES as readonly string[]).includes(v));
+  if (unknownVariable !== undefined) {
+    return { ok: false, error: `Mensagem do orçamento no WhatsApp: a variável {{${unknownVariable}}} não existe. Use {{nome}}, {{numero}}, {{total}}, {{validade}}, {{link}} ou {{economia}}.` };
+  }
+  if (!/\{\{\s*link\s*\}\}/.test(rules.quote.whatsappText)) {
+    return { ok: false, error: "Mensagem do orçamento no WhatsApp: inclua {{link}}, senão o cliente não recebe o orçamento." };
   }
   if (rules.shipping.expressCost < rules.shipping.standardCost) {
     return { ok: false, error: "O frete expresso não pode custar menos que o padrão." };

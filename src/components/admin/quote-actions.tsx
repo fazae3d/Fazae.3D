@@ -32,6 +32,7 @@ export function QuoteActions({
   quote,
   publicUrl,
   validityDays,
+  whatsappText,
 }: {
   quote: {
     id: string;
@@ -55,6 +56,8 @@ export function QuoteActions({
   publicUrl: string;
   /** Validade de um orçamento novo (duplicar), vinda das Regras da loja. */
   validityDays: number;
+  /** Modelo da mensagem do orçamento (Regras da loja). */
+  whatsappText?: string;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -83,7 +86,7 @@ export function QuoteActions({
   };
 
   const sendWhatsApp = () => {
-    const message = quoteWhatsAppMessage({ ...quote, link });
+    const message = quoteWhatsAppMessage({ ...quote, link, template: whatsappText });
     const digits = whatsappDigits(quote.customerPhone);
     window.open(`https://wa.me/${digits}?text=${encodeURIComponent(message)}`, "_blank", "noopener");
     void markQuoteSentAction(quote.id).then(() => router.refresh());

@@ -171,6 +171,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
         <QuoteActions
           publicUrl={SITE_URL}
           validityDays={rules.quote.validityDays}
+          whatsappText={rules.quote.whatsappText}
           quote={{
             id: quote.id,
             number: quote.number,
