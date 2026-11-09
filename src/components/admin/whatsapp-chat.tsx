@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { markReadAction, sendMessageAction } from "@/app/admin/conversas/actions";
+import { markReadAction, markUnreadAction, sendMessageAction, updateLeadAction } from "@/app/admin/conversas/actions";
 import { StatusBadge } from "@/components/admin/page-header";
 import { renderMessage } from "@/lib/wa-cadence";
-import { formatPhone, stageLabel } from "@/lib/whatsapp";
+import { LEAD_STAGES, formatPhone } from "@/lib/whatsapp";
 import type { QuickReplyView } from "@/server/repositories/wa-quick-reply-repository";
 import type { WaConversationView, WaMessageView } from "@/server/repositories/whatsapp-repository";
 
@@ -67,6 +67,37 @@ export function WhatsAppChat({
   const [activeSuggestion, setActiveSuggestion] = useState(0);
   const endRef = useRef<HTMLDivElement>(null);
   const markedFor = useRef<string>("");
+  // A etapa muda na hora na tela; se o servidor recusar, volta para a que estava salva.
+  const [stage, setStage] = useState(conversation.stage);
+  const [savedStage, setSavedStage] = useState(`${conversation.id}:${conversation.stage}`);
+  if (savedStage !== `${conversation.id}:${conversation.stage}`) {
+    setSavedStage(`${conversation.id}:${conversation.stage}`);
+    setStage(conversation.stage);
+  }
+
+  const changeStage = async (next: string) => {
+    if (next === stage) return;
+    const previous = stage;
+    setStage(next);
+    setError(null);
+    const result = await updateLeadAction(conversation.id, { stage: next });
+    if (!result.success) {
+      setStage(previous);
+      setError(result.error);
+      return;
+    }
+    router.refresh();
+  };
+
+  const markUnread = async () => {
+    const result = await markUnreadAction(conversation.id);
+    if (!result.success) {
+      setError(result.error);
+      return;
+    }
+    // Sai da conversa: se ficasse aberta, ela seria marcada como lida de novo na hora.
+    router.push("/admin/conversas");
+  };
 
   // Mensagens novas aparecem sozinhas: atualiza de tempos em tempos enquanto a aba está aberta (o que se digita não se perde).
   useEffect(() => {
@@ -125,8 +156,23 @@ export function WhatsAppChat({
         <Link href={`/admin/orcamentos/novo?conversa=${conversation.id}`} className="shrink-0 rounded-lg border border-mist px-3 py-1.5 text-xs font-medium transition-colors hover:border-petrol">
           + Orçamento
         </Link>
-        <StatusBadge tone={conversation.stage === "ganho" ? "success" : conversation.stage === "perdido" ? "danger" : "info"}>{stageLabel(conversation.stage)}</StatusBadge>
+        <button type="button" onClick={markUnread} className="shrink-0 rounded-lg border border-mist px-3 py-1.5 text-xs font-medium transition-colors hover:border-petrol" title="Volta a conversa para a lista como não lida e fecha esta tela">
+          Marcar como não lida
+        </button>
         {conversation.optedOut ? <StatusBadge tone="danger">Pediu para sair</StatusBadge> : null}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-1.5 border-b border-mist px-4 py-2" role="group" aria-label="Etapa do contato">
+        <span className="mr-1 text-xs text-graphite">Etapa:</span>
+        {LEAD_STAGES.map((s) => {
+          const active = stage === s.key;
+          const tone = active ? (s.key === "ganho" ? "border-emerald-500 bg-emerald-500/15 text-emerald-400" : s.key === "perdido" ? "border-red-500 bg-red-500/15 text-red-400" : "border-petrol bg-petrol/15 text-petrol") : "border-mist text-graphite hover:border-petrol hover:text-ink";
+          return (
+            <button key={s.key} type="button" onClick={() => changeStage(s.key)} aria-pressed={active} className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${tone}`}>
+              {s.label}
+            </button>
+          );
+        })}
       </div>
 
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-4">

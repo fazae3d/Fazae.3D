@@ -348,6 +348,11 @@ export async function markConversationRead(id: string): Promise<void> {
   await db.waConversation.updateMany({ where: { id, unreadCount: { gt: 0 } }, data: { unreadCount: 0 } });
 }
 
+/** Volta a conversa para "não lida" (só se estiver lida: se já tem mensagens novas, mantém a contagem). */
+export async function markConversationUnread(id: string): Promise<void> {
+  await db.waConversation.updateMany({ where: { id, unreadCount: 0 }, data: { unreadCount: 1 } });
+}
+
 /** Marca/desmarca "não quer receber". Ao marcar, as cadências ativas do contato são paradas. */
 export async function setConversationOptOut(id: string, optedOut: boolean): Promise<void> {
   await db.$transaction([

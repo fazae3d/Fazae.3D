@@ -48,6 +48,13 @@ export function WhatsAppLeadPanel({
   const [simText, setSimText] = useState("");
   const [cadenceId, setCadenceId] = useState("");
 
+  // A etapa também muda direto na conversa: acompanha o valor salvo para não "desfazer" a troca ao salvar outros campos.
+  const [savedStage, setSavedStage] = useState(conversation.stage);
+  if (savedStage !== conversation.stage) {
+    setSavedStage(conversation.stage);
+    setStage(conversation.stage);
+  }
+
   const dirty =
     name !== (conversation.name ?? "") ||
     stage !== conversation.stage ||

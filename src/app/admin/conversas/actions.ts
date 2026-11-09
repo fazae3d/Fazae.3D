@@ -12,6 +12,7 @@ import { enrollConversations } from "@/server/repositories/wa-cadence-repository
 import {
   bulkUpdateConversations,
   markConversationRead,
+  markConversationUnread,
   recordInboundMessage,
   sendConversationText,
   setConversationOptOut,
@@ -86,6 +87,17 @@ export async function markReadAction(id: string): Promise<void> {
   } catch {
     // marcar como lida é só conveniência
   }
+}
+
+export async function markUnreadAction(id: string): Promise<{ success: true } | { success: false; error: string }> {
+  if (!(await requireAdmin())) return DENIED;
+  try {
+    await markConversationUnread(id);
+  } catch {
+    return { success: false, error: "Não foi possível marcar como não lida." };
+  }
+  revalidatePath("/admin", "layout");
+  return { success: true };
 }
 
 export async function setOptOutAction(id: string, optedOut: boolean): Promise<{ success: true } | { success: false; error: string }> {
