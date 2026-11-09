@@ -1,9 +1,11 @@
 import { timingSafeEqual } from "crypto";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { parseUazapiMessage, parseUazapiStatusUpdate } from "@/lib/whatsapp";
 import { applyStatusUpdate, recordInboundMessage } from "@/server/repositories/whatsapp-repository";
 import { touchWebhook } from "@/server/repositories/wa-cadence-repository";
 import { maybeAutoReply } from "@/server/whatsapp/automation";
+import { ensureMessageMedia, hasViewableMedia } from "@/server/whatsapp/media";
+import { db } from "@/server/db";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +42,18 @@ export async function POST(request: NextRequest) {
     const message = parseUazapiMessage(payload);
     if (message) {
       const recorded = await recordInboundMessage(message);
+      // Guarda a foto/áudio/documento no nosso armazenamento logo que chega (o endereço da uazapi vence em 2 dias). Se falhar, o painel
+      // tenta de novo na primeira vez que alguém abrir a mensagem.
+      if (!recorded.duplicate && hasViewableMedia(message.mediaType)) {
+        after(async () => {
+          try {
+            const row = await db.waMessage.findUnique({ where: { providerId: message.providerId }, select: { id: true } });
+            if (row) await ensureMessageMedia(row.id);
+          } catch (error) {
+            console.error("[whatsapp] não foi possível guardar a mídia", error);
+          }
+        });
+      }
       if (!message.fromMe && !recorded.duplicate && recorded.conversationId) {
         await maybeAutoReply({ conversationId: recorded.conversationId, created: Boolean(recorded.created), text: message.text, at: message.at });
       }

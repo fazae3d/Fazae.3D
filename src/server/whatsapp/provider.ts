@@ -10,6 +10,8 @@ export interface WhatsAppProvider {
   sendText(phone: string, text: string, options?: { delayMs?: number }): Promise<SendResult>;
   /** Envia um arquivo a partir de um endereço público (ex.: o PDF do orçamento). */
   sendMedia(phone: string, media: { url: string; kind: MediaKind; caption?: string; fileName?: string }): Promise<SendResult>;
+  /** Pede à uazapi o arquivo de uma mensagem recebida (foto, áudio, vídeo, documento). O endereço devolvido vale só 2 dias. */
+  downloadMedia?(messageId: string): Promise<{ url: string; mimetype: string } | null>;
   /** O número tem WhatsApp? `null` = não foi possível saber (não bloqueia o envio). */
   checkNumber(phone: string): Promise<boolean | null>;
   /** `known: false` quando a resposta não deu para interpretar: nesse caso não se deve bloquear nada por causa disso. */
@@ -62,6 +64,27 @@ function uazapi(baseUrl: string, token: string): WhatsAppProvider {
         ...(media.caption ? { text: media.caption } : {}),
         ...(media.kind === "document" && media.fileName ? { docName: media.fileName } : {}),
       }),
+    async downloadMedia(messageId) {
+      // A documentação não diz se o id é o "messageid" (do WhatsApp) ou o "id" interno (com o número na frente): tenta o primeiro e, se a
+      // uazapi disser que não achou, o segundo.
+      const candidates = [...new Set([messageId, messageId.includes(":") ? messageId.split(":").pop()! : `${messageId}`])];
+      for (const id of candidates) {
+        try {
+          const res = await fetch(`${base}/message/download`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({ id, return_link: true, generate_mp3: true }),
+            signal: AbortSignal.timeout(25_000),
+          });
+          if (!res.ok) continue;
+          const data = (await res.json().catch(() => null)) as { fileURL?: string; mimetype?: string } | null;
+          if (data?.fileURL) return { url: data.fileURL, mimetype: data.mimetype ?? "" };
+        } catch {
+          // tenta o próximo
+        }
+      }
+      return null;
+    },
     async checkNumber(phone) {
       try {
         const res = await fetch(`${base}/chat/check`, { method: "POST", headers, body: JSON.stringify({ numbers: [phone] }), signal: AbortSignal.timeout(10_000) });

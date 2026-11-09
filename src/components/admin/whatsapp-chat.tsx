@@ -32,17 +32,18 @@ const MEDIA_TEXT: Record<string, string> = {
 };
 
 function MediaBlock({ type, url }: { type: string; url: string | null }) {
-  if (!url) return <p className="mb-1 text-xs italic text-graphite">[{MEDIA_TEXT[type] ?? "arquivo"}: abra no WhatsApp para ver]</p>;
+  const [failed, setFailed] = useState(false);
+  if (!url || failed) return <p className="mb-1 text-xs italic text-graphite">[{MEDIA_TEXT[type] ?? "arquivo"}: não deu para carregar aqui, abra no WhatsApp para ver]</p>;
   if (type === "image" || type === "sticker") {
     return (
       <a href={url} target="_blank" rel="noopener noreferrer" className="mb-1 block">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={url} alt="Imagem da conversa" loading="lazy" referrerPolicy="no-referrer" className="max-h-64 max-w-full rounded-lg" />
+        <img src={url} alt="Imagem da conversa" loading="lazy" referrerPolicy="no-referrer" onError={() => setFailed(true)} className="max-h-64 max-w-full rounded-lg" />
       </a>
     );
   }
-  if (type === "audio") return <audio controls src={url} className="mb-1 max-w-full" preload="none" />;
-  if (type === "video") return <video controls src={url} className="mb-1 max-h-64 max-w-full rounded-lg" preload="none" />;
+  if (type === "audio") return <audio controls src={url} onError={() => setFailed(true)} className="mb-1 max-w-full" preload="none" />;
+  if (type === "video") return <video controls src={url} onError={() => setFailed(true)} className="mb-1 max-h-64 max-w-full rounded-lg" preload="none" />;
   return (
     <a href={url} target="_blank" rel="noopener noreferrer" className="mb-1 block text-xs text-petrol underline">
       Abrir {MEDIA_TEXT[type] ?? "arquivo"}

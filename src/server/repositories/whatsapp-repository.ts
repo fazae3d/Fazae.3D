@@ -1,4 +1,5 @@
 import { db } from "../db";
+import { hasViewableMedia } from "../whatsapp/media";
 import { getWhatsAppProvider, type MediaKind } from "../whatsapp/provider";
 import { storeDayKey } from "@/lib/store-time";
 import { isOptOutText, messagePreview, nextStatus, normalizePhone, LEAD_STAGE_KEYS, type InboundMessage } from "@/lib/whatsapp";
@@ -112,6 +113,13 @@ export async function getConversation(id: string): Promise<WaConversationView | 
   return row ? toConversation(row) : null;
 }
 
+/** Arquivos de clientes abrem pela rota do painel (confere o login); só o que nós enviamos, como o PDF do orçamento, usa o endereço direto. */
+function mediaHref(m: { id: string; direction: string; mediaType: string | null; mediaUrl: string | null }): string | null {
+  if (!hasViewableMedia(m.mediaType)) return null;
+  if (m.direction === "out" && m.mediaUrl && /^https?:\/\//i.test(m.mediaUrl)) return m.mediaUrl;
+  return `/api/admin/whatsapp-media/${m.id}`;
+}
+
 export async function getConversationMessages(conversationId: string, limit = 200): Promise<WaMessageView[]> {
   const rows = await db.waMessage.findMany({ where: { conversationId }, orderBy: { createdAt: "desc" }, take: limit });
   return rows.reverse().map((m) => ({
@@ -119,7 +127,7 @@ export async function getConversationMessages(conversationId: string, limit = 20
     direction: m.direction === "in" ? "in" : "out",
     body: m.body,
     mediaType: m.mediaType,
-    mediaUrl: m.mediaUrl,
+    mediaUrl: mediaHref(m),
     status: m.status,
     origin: m.origin,
     error: m.error,

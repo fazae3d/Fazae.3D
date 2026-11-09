@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { updateStoreRulesAction } from "@/app/admin/configuracoes/regras/actions";
 import { useToast } from "@/components/admin/toast";
+import { QuoteMessageHelp } from "@/components/admin/quote-message-help";
 import { formatPrice } from "@/lib/format";
 import { DEFAULT_RULES, RULE_FIELDS, RULE_GROUPS, getPath, validateField, type FieldSpec, type StoreRules } from "@/lib/store-rules";
 
@@ -140,13 +141,16 @@ export function StoreRulesForm({ initial }: { initial: StoreRules }) {
                         {values[spec.path] === "true" ? "Ligado" : "Desligado"}
                       </label>
                     ) : spec.kind === "textarea" || spec.kind === "list" ? (
-                      <textarea
-                        id={id}
-                        rows={spec.kind === "list" ? 3 : 3}
-                        value={values[spec.path]}
-                        onChange={(e) => setValue(spec.path, e.target.value)}
-                        className={inputClass(Boolean(error))}
-                      />
+                      <>
+                        <textarea
+                          id={id}
+                          rows={spec.path === "quote.whatsappText" ? 6 : 3}
+                          value={values[spec.path]}
+                          onChange={(e) => setValue(spec.path, e.target.value)}
+                          className={inputClass(Boolean(error))}
+                        />
+                        {spec.path === "quote.whatsappText" ? <QuoteMessageHelp textareaId={id} value={values[spec.path]} onChange={(v) => setValue(spec.path, v)} /> : null}
+                      </>
                     ) : (
                       <input
                         id={id}
