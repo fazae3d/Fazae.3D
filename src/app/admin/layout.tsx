@@ -11,6 +11,7 @@ import { AdminNav, SectionTabs } from "@/components/admin/admin-nav";
 import { AdminMobileNav } from "@/components/admin/admin-mobile-nav";
 import { AdminSearch } from "@/components/admin/admin-search";
 import { AdminThemeToggle } from "@/components/admin/theme-toggle";
+import { ChatSoundToggle, LiveUpdates } from "@/components/admin/live-updates";
 import { TableEnhancer, TitleBadge } from "@/components/admin/enhancers";
 import { ToastProvider } from "@/components/admin/toast";
 import { SignOutButton } from "@/components/sign-out-button";
@@ -96,13 +97,15 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             >
               Ver loja <AdminIcon name="external" className="h-3.5 w-3.5" />
             </Link>
+            <ChatSoundToggle />
             <AdminThemeToggle />
           </div>
         </header>
 
         <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
           <ToastProvider>
-            <TitleBadge count={(badges.pedidos ?? 0) + (badges.orcamentos ?? 0)} />
+            <LiveUpdates />
+            <TitleBadge count={(badges.pedidos ?? 0) + (badges.orcamentos ?? 0) + (badges.conversas ?? 0)} />
             <TableEnhancer />
             <SectionTabs />
             {children}
