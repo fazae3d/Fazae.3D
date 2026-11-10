@@ -128,7 +128,7 @@ export default async function AdminActivityPage({ searchParams }: { searchParams
         }
       />
 
-      <form action="/admin/atividade" className="admin-card mb-4 grid gap-3 rounded-xl border border-mist p-4 sm:grid-cols-2 lg:grid-cols-5">
+      <form action="/admin/atividade" className="admin-card mb-4 grid grid-cols-1 gap-3 rounded-xl border border-mist p-4 sm:grid-cols-2 lg:grid-cols-5">
         {params.tipo ? <input type="hidden" name="tipo" value={params.tipo} /> : null}
         <input name="q" defaultValue={params.q ?? ""} placeholder="Buscar (nome, código, ação)" className={`${FIELD} lg:col-span-2`} />
         <select name="quem" defaultValue={params.quem ?? ""} className={FIELD} aria-label="Quem fez">

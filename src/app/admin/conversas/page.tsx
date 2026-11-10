@@ -101,7 +101,7 @@ export default async function ConversasPage({ searchParams }: { searchParams: Pr
         </div>
       ) : null}
 
-      <div className="grid gap-4 lg:h-[calc(100vh-18rem)] lg:min-h-[480px] lg:grid-cols-[320px_minmax(0,1fr)_300px]">
+      <div className="grid grid-cols-1 gap-4 lg:h-[calc(100vh-18rem)] lg:min-h-[480px] lg:grid-cols-[320px_minmax(0,1fr)_300px]">
         {/* Lista */}
         <div className={`min-h-0 flex-col gap-3 ${selected ? "hidden lg:flex" : "flex"}`}>
           <WhatsAppNewConversation />

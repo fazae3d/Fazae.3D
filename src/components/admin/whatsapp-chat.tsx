@@ -272,11 +272,11 @@ export function WhatsAppChat({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-center gap-3 border-b border-mist px-4 py-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-mist px-4 py-3">
         <Link href="/admin/conversas" className="text-sm text-graphite hover:text-ink lg:hidden" aria-label="Voltar para a lista">
           ←
         </Link>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-[9rem] flex-1">
           <p className="truncate font-medium">{conversation.name ?? formatPhone(conversation.phone)}</p>
           <p className="truncate text-xs text-graphite">{formatPhone(conversation.phone)}</p>
         </div>
@@ -447,7 +447,7 @@ export function WhatsAppChat({
                 }}
                 rows={2}
                 placeholder={attachment && attachment.kind !== "audio" ? "Legenda (opcional)" : "Mensagem (digite / para respostas rápidas)"}
-                className="min-h-[44px] flex-1 resize-none rounded-xl border border-mist bg-transparent px-3 py-2 text-sm outline-none focus:border-petrol"
+                className="min-h-[44px] min-w-0 flex-1 resize-none rounded-xl border border-mist bg-transparent px-3 py-2 text-sm outline-none focus:border-petrol"
               />
               <button
                 type="button"

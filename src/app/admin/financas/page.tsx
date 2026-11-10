@@ -296,7 +296,7 @@ export default async function AdminFinancePage({ searchParams }: { searchParams:
           <p className="mt-1 text-xs text-graphite">
             em {upcoming.length} parcela(s) e fatura(s) do cartão, por mês e por cartão. Cada uma sai do caixa e do fluxo no dia do vencimento, sem você precisar marcar nada.
           </p>
-          <ul className="mt-4 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="mt-4 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
             {bills.map((bill) => (
               <li key={bill.month} className="border border-mist px-3 py-2">
                 <div className="flex items-center justify-between">

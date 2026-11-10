@@ -42,7 +42,7 @@ export default async function CadenciasPage() {
           <EmptyState icon="chat" title="Nenhuma cadência ainda" description="Comece por um dos modelos abaixo: já vêm com mensagens prontas que você pode editar." />
         </div>
       ) : (
-        <div className="mb-8 grid gap-4 lg:grid-cols-2">
+        <div className="mb-8 grid grid-cols-1 gap-4 lg:grid-cols-2">
           {cadences.map((c) => (
             <div key={c.id} className="admin-card flex flex-col rounded-xl border border-mist p-5">
               <div className="flex items-start justify-between gap-3">
@@ -95,7 +95,7 @@ export default async function CadenciasPage() {
       )}
 
       <p className="label-caps mb-3 text-[11px] text-graphite">Criar uma nova cadência</p>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {CADENCE_KINDS.map((k) => (
           <Link key={k.key} href={`/admin/conversas/cadencias/nova?tipo=${k.key}`} className="admin-card rounded-xl border border-mist p-4 transition-colors hover:border-petrol">
             <p className="font-medium">{k.label}</p>
