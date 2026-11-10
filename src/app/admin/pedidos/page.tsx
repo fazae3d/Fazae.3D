@@ -1,3 +1,4 @@
+import { OpenInConversas } from "@/components/admin/open-in-conversas";
 import { itemSpecs } from "@/lib/order-item";
 import { EmptyState } from "@/components/admin/empty-state";
 import Link from "next/link";
@@ -68,12 +69,9 @@ function formatDate(iso: string) {
 
 
 /** Mensagem pronta pedindo a avaliação, com o link que dispensa login. O cupom de R$ 5 é gerado quando a pessoa avalia. */
-function reviewWhatsAppHref(order: Order) {
-  const digits = (order.customerPhone ?? "").replace(/\D/g, "");
-  const phone = digits ? (digits.length <= 11 ? `55${digits}` : digits) : "";
+function reviewMessage(order: Order) {
   const name = firstName(order.customerName ?? order.address?.recipient ?? "tudo bem");
-  const message = `Oi, ${name}! Aqui é da Fazaê 3D. Seu pedido ${order.id} chegou direitinho? Conta pra gente o que achou: avalie em um minuto e ganhe R$ 5 de desconto na próxima compra (a partir de R$ 30). ${createReviewUrl(order)}`;
-  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+  return `Oi, ${name}! Aqui é da Fazaê 3D. Seu pedido ${order.id} chegou direitinho? Conta pra gente o que achou: avalie em um minuto e ganhe R$ 5 de desconto na próxima compra (a partir de R$ 30). ${createReviewUrl(order)}`;
 }
 
 function matchesQuery(order: Order, query: string) {
@@ -346,14 +344,9 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
 
               {order.status === "Entregue" && (
                 <div className="mb-3 border-t border-mist pt-4">
-                  <a
-                    href={reviewWhatsAppHref(order)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-petrol hover:underline"
-                  >
-                    Pedir avaliação no WhatsApp (cliente ganha R$ 5)
-                  </a>
+                  <OpenInConversas phone={order.customerPhone} name={order.customerName ?? order.address?.recipient} text={reviewMessage(order)} className="text-sm text-petrol hover:underline">
+                    Pedir avaliação no Conversas (cliente ganha R$ 5)
+                  </OpenInConversas>
                 </div>
               )}
 

@@ -1,6 +1,7 @@
 import { db } from "../db";
 import { getAutomationSettings } from "../repositories/wa-settings-repository";
 import { getWaConfig } from "../repositories/wa-cadence-repository";
+import { findOrderById } from "../repositories/order-repository";
 import { sendConversationText, startConversation } from "../repositories/whatsapp-repository";
 import { renderMessage, isWithinSchedule, DEFAULT_SEND_DAYS } from "@/lib/wa-cadence";
 import { firstName, formatPrice } from "@/lib/format";
@@ -47,22 +48,33 @@ function fill(template: string, vars: Record<string, string>) {
     .trim();
 }
 
-type OrderEvent = "pago" | "enviado" | "pix";
+type OrderEvent = "pago" | "enviado" | "pix" | "producao";
 
-/** Manda o aviso do pedido pelo WhatsApp (uma única vez por pedido e evento). Devolve se foi enviado. */
-async function sendOrderMessage(order: Pick<Order, "id" | "customerName" | "customerPhone" | "total" | "tracking" | "address">, event: OrderEvent, extraCode?: string): Promise<boolean> {
+type OrderMessageResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * Manda o aviso do pedido pelo WhatsApp (uma única vez por pedido e evento). `force` ignora a chave geral dos avisos de pedido
+ * (usado quando uma pessoa clica no botão de enviar).
+ */
+async function deliverOrderMessage(
+  order: Pick<Order, "id" | "customerName" | "customerPhone" | "total" | "tracking" | "address">,
+  event: OrderEvent,
+  options: { extraCode?: string; force?: boolean } = {},
+): Promise<OrderMessageResult> {
+  const { extraCode, force } = options;
   try {
     const settings = await getAutomationSettings();
-    if (!settings.orderNotifyEnabled) return false;
+    if (!force && !settings.orderNotifyEnabled) return { ok: false, error: "Os avisos de pedido estão desligados." };
     const phone = normalizePhone(order.customerPhone);
-    if (!phone || !isMobilePhone(phone)) return false;
+    if (!phone) return { ok: false, error: "O pedido não tem telefone." };
+    if (!isMobilePhone(phone)) return { ok: false, error: "O telefone do pedido não é de celular." };
 
     const name = firstName(order.customerName ?? order.address?.recipient ?? "tudo bem");
     const vars = { nome: name, pedido: order.id, total: formatPrice(order.total), rastreio: order.tracking ?? "" };
     if (event === "enviado" && !order.tracking) vars.rastreio = "em breve no site";
 
     const opened = await startConversation({ phone, name: order.customerName ?? undefined, source: "cliente" });
-    if (!opened.success) return false;
+    if (!opened.success) return { ok: false, error: opened.error };
 
     // Primeira conversa com o número: acrescenta o aviso de saída.
     const previous = await db.waMessage.count({ where: { conversationId: opened.id, direction: "out", status: { not: "failed" } } });
@@ -70,14 +82,26 @@ async function sendOrderMessage(order: Pick<Order, "id" | "customerName" | "cust
     if (previous === 0) text = withOptOutNotice(text);
 
     const sent = await sendConversationText(opened.id, text, { origin: "pedido", ref: `pedido:${order.id}:${event}` });
-    if (!sent.success) return false;
+    if (!sent.success) return { ok: false, error: sent.error };
     // O código do Pix vai sozinho, em outra mensagem, para dar para copiar com um toque.
     if (extraCode) await sendConversationText(opened.id, extraCode, { origin: "pedido", ref: `pedido:${order.id}:${event}-codigo` });
-    return true;
+    return { ok: true };
   } catch (error) {
     console.error("[whatsapp] erro no aviso de pedido", error);
-    return false;
+    return { ok: false, error: "Não foi possível enviar agora. Tente de novo em instantes." };
   }
+}
+
+async function sendOrderMessage(order: Pick<Order, "id" | "customerName" | "customerPhone" | "total" | "tracking" | "address">, event: OrderEvent, extraCode?: string): Promise<boolean> {
+  return (await deliverOrderMessage(order, event, { extraCode })).ok;
+}
+
+/** Aviso de "começamos a produzir": pelo botão da tela Produção (manual) ou sozinho, se a regra estiver ligada. Um por pedido. */
+export async function sendProductionNotice(orderId: string): Promise<OrderMessageResult> {
+  const order = await findOrderById(orderId);
+  if (!order) return { ok: false, error: "Pedido não encontrado." };
+  if (order.status === "Cancelado") return { ok: false, error: "O pedido está cancelado." };
+  return deliverOrderMessage(order, "producao", { force: true });
 }
 
 /** Gancho da mudança de status: avisa pagamento aprovado e pedido enviado (só pedidos do site). */

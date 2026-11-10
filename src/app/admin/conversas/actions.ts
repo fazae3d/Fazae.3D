@@ -129,6 +129,14 @@ export async function sendAttachmentAction(input: {
   return result;
 }
 
+/** Abre (ou cria) a conversa com um número, para os botões "Abrir no Conversas" espalhados pelo painel. */
+export async function openConversationAction(input: { phone: string; name?: string }): Promise<{ success: true; id: string } | { success: false; error: string }> {
+  if (!(await requireAdmin())) return DENIED;
+  const result = await withMutationFallback(() => startConversation({ phone: input.phone, name: input.name, source: "cliente" }));
+  if (result.success) refresh();
+  return result;
+}
+
 export async function markReadAction(id: string): Promise<void> {
   if (!(await requireAdmin())) return;
   try {

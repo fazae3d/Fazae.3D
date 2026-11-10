@@ -22,6 +22,8 @@ import type { ProductionStage } from "@/generated/prisma/client";
 import type { Order, OrderItem, ProductionItem } from "@/server/types";
 import { withMutationFallback } from "@/lib/db-fallback";
 import { logAdminAction } from "@/server/audit";
+import { getStoreRules } from "@/server/store-rules";
+import { sendProductionNotice } from "@/server/whatsapp/automation";
 
 function slugify(text: string) {
   return text
@@ -57,8 +59,31 @@ export async function updateProductionAction(
     await logAdminAction("pedido.producao", "Order", orderId, { etapa: data.stage, prazo: data.deadline, sinalRecebido: data.depositAmount });
     revalidatePath("/admin/producao");
     revalidatePath("/admin/pedidos");
+    // Aviso automático de "começamos a produzir" (só se a regra estiver ligada; nunca derruba a mudança de etapa).
+    if (data.stage === "em_producao") {
+      try {
+        const rules = await getStoreRules({ fresh: true });
+        if (rules.automation.productionNoticeAuto) {
+          const sent = await sendProductionNotice(orderId);
+          if (sent.ok) await logAdminAction("pedido.aviso-producao", "Order", orderId, { automatico: true });
+        }
+      } catch (error) {
+        console.error("[producao] erro no aviso automático", error);
+      }
+    }
   }
   return result;
+}
+
+/** Botão "Avisar cliente" da tela Produção: manda a mensagem de produção iniciada pelo Conversas (uma única vez por pedido). */
+export async function sendProductionNoticeAction(orderId: string): Promise<{ success: true } | { success: false; error: string }> {
+  if (!(await requireAdmin())) return { success: false, error: "Acesso restrito ao administrador." };
+  const sent = await sendProductionNotice(orderId);
+  if (!sent.ok) return { success: false, error: sent.error };
+  await logAdminAction("pedido.aviso-producao", "Order", orderId, { automatico: false });
+  revalidatePath("/admin/producao");
+  revalidatePath("/admin/conversas");
+  return { success: true };
 }
 
 type ProductionItemResult = { success: true; item: ProductionItem } | { success: false; error: string };

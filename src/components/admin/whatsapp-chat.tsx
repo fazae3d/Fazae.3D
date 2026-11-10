@@ -72,13 +72,16 @@ export function WhatsAppChat({
   conversation,
   messages,
   quickReplies,
+  initialText,
 }: {
   conversation: WaConversationView;
   messages: WaMessageView[];
   quickReplies: QuickReplyView[];
+  /** Texto já escrito na caixa (ex.: acompanhamento de orçamento); só vai quando a pessoa clica em Enviar. */
+  initialText?: string;
 }) {
   const router = useRouter();
-  const [text, setText] = useState("");
+  const [text, setText] = useState(initialText ?? "");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeSuggestion, setActiveSuggestion] = useState(0);

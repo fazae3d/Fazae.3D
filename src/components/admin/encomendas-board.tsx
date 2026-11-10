@@ -6,7 +6,7 @@ import { useState } from "react";
 import type { CustomOrderRequest, CustomRequestStatus } from "@/lib/types";
 import { updateCustomOrderRequestAction } from "@/app/admin/encomendas/actions";
 import { CustomOrderRequestForm, STATUS_LABELS } from "@/components/admin/custom-order-request-form";
-import { getWhatsAppLink } from "@/lib/site-config";
+import { OpenInConversas } from "@/components/admin/open-in-conversas";
 import { KanbanBoard, type KanbanColumn } from "@/components/admin/kanban-board";
 
 const STATUS_COLUMNS: KanbanColumn[] = (
@@ -93,14 +93,9 @@ export function EncomendasBoard({ requests: initialRequests }: { requests: Custo
                       Montar orçamento
                     </Link>
                   )}
-                  <a
-                    href={getWhatsAppLink(request.phone)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="rounded-lg border border-mist px-4 py-2 text-sm transition-colors hover:border-petrol"
-                  >
-                    Abrir WhatsApp
-                  </a>
+                  <OpenInConversas phone={request.phone} name={request.name} className="rounded-lg border border-mist px-4 py-2 text-sm transition-colors hover:border-petrol">
+                    Abrir no Conversas
+                  </OpenInConversas>
                 </div>
               </div>
 

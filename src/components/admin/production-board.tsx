@@ -8,6 +8,7 @@ import type { ProductionStage } from "@/generated/prisma/client";
 import { formatPrice } from "@/lib/format";
 import {
   updateProductionAction,
+  sendProductionNoticeAction,
   updateProductionItemAction,
   deleteProductionItemAction,
 } from "@/app/admin/producao/actions";
@@ -198,7 +199,7 @@ function ItemEditForm({
   );
 }
 
-export function ProductionBoard({ cards: initialCards, products }: { cards: ProductionCard[]; products: SaleProduct[] }) {
+export function ProductionBoard({ cards: initialCards, products, noticeSent }: { cards: ProductionCard[]; products: SaleProduct[]; noticeSent: string[] }) {
   const router = useRouter();
   const [cards, setCards] = useState(initialCards);
   const [sellingId, setSellingId] = useState<string | null>(null);
@@ -209,6 +210,42 @@ export function ProductionBoard({ cards: initialCards, products }: { cards: Prod
   const [view, setView] = useState<"lista" | "kanban">("lista");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [noticed, setNoticed] = useState<string[]>(noticeSent);
+  const [noticing, setNoticing] = useState<string | null>(null);
+  const [seenNotice, setSeenNotice] = useState(noticeSent);
+  if (seenNotice !== noticeSent) {
+    setSeenNotice(noticeSent);
+    setNoticed(noticeSent);
+  }
+
+  /** Botão "Avisar cliente": só para pedido que está em produção; depois de enviado vira "Cliente avisado". */
+  function renderNotice(card: ProductionCard) {
+    if (card.kind !== "order" || card.order.productionStage !== "em_producao") return null;
+    const id = card.order.id;
+    if (noticed.includes(id)) return <span className="label-caps text-[10px] text-petrol">Cliente avisado</span>;
+    return (
+      <button
+        type="button"
+        disabled={noticing === id}
+        title="Manda pelo WhatsApp (Conversas) que começamos a produzir. Texto editável em Conversas, Ajustes."
+        onClick={async (e) => {
+          e.stopPropagation();
+          setError(null);
+          setNoticing(id);
+          const result = await sendProductionNoticeAction(id);
+          setNoticing(null);
+          if (!result.success) {
+            setError(result.error);
+            return;
+          }
+          setNoticed((prev) => [...prev, id]);
+        }}
+        className="label-caps self-start rounded border border-petrol px-2 py-1 text-[10px] text-petrol transition-colors hover:bg-petrol hover:text-[#111] disabled:opacity-50"
+      >
+        {noticing === id ? "Enviando..." : "Avisar cliente"}
+      </button>
+    );
+  }
 
   const applyLocalStage = (id: string, stage: ProductionStage) => {
     setCards((prev) =>
@@ -288,6 +325,7 @@ export function ProductionBoard({ cards: initialCards, products }: { cards: Prod
             {order.productionDeadline ? formatDate(order.productionDeadline) : "Sem prazo"}
           </p>
           <p className="text-ink">{formatPrice(orderBalanceDue(order))} a receber</p>
+          {renderNotice(card)}
         </div>
       );
     }
@@ -402,13 +440,16 @@ export function ProductionBoard({ cards: initialCards, products }: { cards: Prod
                       />
                     </td>
                     <td className="px-4 py-3">
-                      <button
-                        type="button"
-                        onClick={() => setEditingId(editingId === card.id ? null : card.id)}
-                        className="label-caps text-[11px] text-graphite hover:text-petrol"
-                      >
-                        {editingId === card.id ? "Fechar" : "Editar"}
-                      </button>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setEditingId(editingId === card.id ? null : card.id)}
+                          className="label-caps text-[11px] text-graphite hover:text-petrol"
+                        >
+                          {editingId === card.id ? "Fechar" : "Editar"}
+                        </button>
+                        {renderNotice(card)}
+                      </div>
                     </td>
                   </tr>
                   {editingId === card.id && (

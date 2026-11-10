@@ -93,6 +93,17 @@ export function WhatsAppAutomationForm({ initial, hours }: { initial: WaAutomati
         ) : null}
       </div>
 
+      <div className="admin-card rounded-xl border border-mist p-5">
+        <h2 className="text-sm font-semibold">Aviso de produção iniciada</h2>
+        <p className="mb-3 mt-1 text-xs text-graphite">
+          Na tela Produção, quando o pedido está em &quot;Em produção&quot;, aparece o botão <strong>Avisar cliente</strong>, que manda esta mensagem pelo Conversas (uma vez por pedido, funciona mesmo com os avisos de pedido acima desligados). Para o aviso sair sozinho ao mudar a etapa, ligue &quot;Avisar sozinho quando o pedido entrar em produção&quot; em Regras da loja.
+        </p>
+        <textarea value={s.orderTemplates.producao} onChange={(e) => set({ orderTemplates: { ...s.orderTemplates, producao: e.target.value } })} rows={4} className={AREA} />
+        <p className="mt-2 text-xs text-graphite">
+          Variáveis: <code className="rounded bg-mist px-1">{"{{nome}}"}</code> <code className="rounded bg-mist px-1">{"{{pedido}}"}</code> <code className="rounded bg-mist px-1">{"{{total}}"}</code>.
+        </p>
+      </div>
+
       {error ? <p className="text-sm text-red-500">{error}</p> : null}
       <button type="button" onClick={save} disabled={pending || !dirty} className="rounded-lg bg-petrol px-5 py-2.5 text-sm font-semibold text-[#111] disabled:opacity-50">
         {pending ? "Salvando…" : "Salvar ajustes"}

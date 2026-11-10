@@ -1,5 +1,6 @@
 "use client";
 
+import { OpenInConversas } from "@/components/admin/open-in-conversas";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -13,10 +14,9 @@ import {
   deleteQuoteAction,
   duplicateQuoteAction,
   emailQuoteAction,
-  markQuoteSentAction,
   setQuoteStatusAction,
 } from "@/app/admin/orcamentos/actions";
-import { QUOTE_LOSS_REASONS, isQuoteExpired, quoteLossLabel, quoteNumberLabel, quoteWhatsAppMessage, validityFromNow, type QuoteStatus } from "@/lib/quote";
+import { QUOTE_LOSS_REASONS, isQuoteExpired, quoteLossLabel, quoteWhatsAppMessage, validityFromNow, type QuoteStatus } from "@/lib/quote";
 
 const BTN = "flex items-center gap-1.5 rounded-lg border border-mist px-3.5 py-2 text-sm transition-colors hover:border-petrol disabled:opacity-60";
 const BTN_PRIMARY = "flex items-center gap-1.5 rounded-lg bg-petrol px-3.5 py-2 text-sm font-semibold text-[#111] transition-opacity hover:opacity-90 disabled:opacity-60";
@@ -69,7 +69,6 @@ export function QuoteActions({
   const [lossNote, setLossNote] = useState("");
   const expired = isQuoteExpired(quote);
 
-  const label = quoteNumberLabel(quote.number);
   const link = `${publicUrl}/orcamento/${quote.token}`;
   const pdfHref = `/orcamento/${quote.token}/pdf`;
 
@@ -83,13 +82,6 @@ export function QuoteActions({
       toast(okMessage);
       router.refresh();
     });
-  };
-
-  const sendWhatsApp = () => {
-    const message = quoteWhatsAppMessage({ ...quote, link, template: whatsappText });
-    const digits = whatsappDigits(quote.customerPhone);
-    window.open(`https://wa.me/${digits}?text=${encodeURIComponent(message)}`, "_blank", "noopener");
-    void markQuoteSentAction(quote.id).then(() => router.refresh());
   };
 
   const sendViaConversations = () => {
@@ -151,9 +143,14 @@ export function QuoteActions({
         >
           <AdminIcon name="send" className="h-4 w-4" /> Enviar PDF pelo Conversas
         </button>
-        <button type="button" onClick={sendWhatsApp} className={BTN}>
-          <AdminIcon name="send" className="h-4 w-4" /> Abrir no WhatsApp
-        </button>
+        <OpenInConversas
+          phone={quote.customerPhone}
+          name={quote.customerName}
+          text={quoteWhatsAppMessage({ ...quote, link, template: whatsappText })}
+          className={BTN}
+        >
+          <AdminIcon name="send" className="h-4 w-4" /> Abrir conversa com o texto pronto
+        </OpenInConversas>
         <button
           type="button"
           disabled={pending || !quote.customerEmail}

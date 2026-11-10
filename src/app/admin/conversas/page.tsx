@@ -42,8 +42,8 @@ function ago(iso: string, now = Date.now()) {
   return `há ${days} dia${days > 1 ? "s" : ""}`;
 }
 
-export default async function ConversasPage({ searchParams }: { searchParams: Promise<{ c?: string; f?: string; etapa?: string; q?: string }> }) {
-  const { c, f, etapa, q } = await searchParams;
+export default async function ConversasPage({ searchParams }: { searchParams: Promise<{ c?: string; f?: string; etapa?: string; q?: string; texto?: string }> }) {
+  const { c, f, etapa, q, texto } = await searchParams;
   const provider = getWhatsAppProvider();
   const stage = LEAD_STAGES.some((s) => s.key === etapa) ? etapa : undefined;
 
@@ -135,7 +135,7 @@ export default async function ConversasPage({ searchParams }: { searchParams: Pr
 
         {/* Conversa */}
         <div className={`admin-card min-h-0 overflow-hidden rounded-xl border border-mist ${selected ? "flex h-[70vh] flex-col lg:h-auto" : "hidden lg:flex lg:items-center lg:justify-center"}`}>
-          {selected ? <WhatsAppChat key={selected.id} conversation={selected} messages={messages} quickReplies={quickReplies} /> : <p className="text-sm text-graphite">Escolha uma conversa para começar.</p>}
+          {selected ? <WhatsAppChat key={selected.id} conversation={selected} messages={messages} quickReplies={quickReplies} initialText={texto?.slice(0, 1500)} /> : <p className="text-sm text-graphite">Escolha uma conversa para começar.</p>}
         </div>
 
         {/* Ficha do lead */}

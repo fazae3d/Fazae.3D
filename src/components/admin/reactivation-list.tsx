@@ -1,8 +1,9 @@
 "use client";
 
+import { OpenInConversas } from "@/components/admin/open-in-conversas";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { markCustomerRemindedAction } from "@/app/admin/clientes/actions";
 import { useToast } from "@/components/admin/toast";
 import { StatusBadge } from "@/components/admin/page-header";
@@ -22,36 +23,25 @@ export type ReactivationRow = {
   recentlyReminded: boolean;
 };
 
-function whatsappDigits(phone: string) {
-  const digits = phone.replace(/\D/g, "");
-  if (!digits) return "";
-  return digits.length <= 11 ? `55${digits}` : digits;
-}
-
 const dateFmt = (iso: string) => new Date(iso).toLocaleDateString("pt-BR", { timeZone: "America/Fortaleza" });
 
 export function ReactivationList({ rows, siteUrl, days }: { rows: ReactivationRow[]; siteUrl: string; days: number }) {
   const router = useRouter();
   const { toast } = useToast();
-  const [pending, startTransition] = useTransition();
   const [coupon, setCoupon] = useState("");
   const [showReminded, setShowReminded] = useState(false);
 
   const visible = rows.filter((r) => showReminded || !r.recentlyReminded);
   const hiddenCount = rows.length - rows.filter((r) => !r.recentlyReminded).length;
 
-  const remind = (row: ReactivationRow) => {
-    const message = reactivationMessage({ name: row.name, lastOrderAt: row.lastOrderAt, siteUrl, coupon });
-    window.open(`https://wa.me/${whatsappDigits(row.phone)}?text=${encodeURIComponent(message)}`, "_blank", "noopener");
-    startTransition(async () => {
-      const result = await markCustomerRemindedAction(row.id);
-      if (!result.success) {
-        toast(result.error, "error");
-        return;
-      }
-      toast("Lembrete registrado");
-      router.refresh();
-    });
+  const markReminded = async (row: ReactivationRow) => {
+    const result = await markCustomerRemindedAction(row.id);
+    if (!result.success) {
+      toast(result.error, "error");
+      return;
+    }
+    toast("Lembrete registrado");
+    router.refresh();
   };
 
   return (
@@ -99,14 +89,15 @@ export function ReactivationList({ rows, siteUrl, days }: { rows: ReactivationRo
                   </p>
                 ) : null}
               </div>
-              <button
-                type="button"
-                onClick={() => remind(row)}
-                disabled={pending}
-                className="shrink-0 rounded-lg bg-petrol px-3.5 py-2 text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-60"
+              <OpenInConversas
+                phone={row.phone}
+                name={row.name}
+                text={reactivationMessage({ name: row.name, lastOrderAt: row.lastOrderAt, siteUrl, coupon })}
+                beforeOpen={() => markReminded(row)}
+                className="shrink-0 rounded-lg bg-petrol px-3.5 py-2 text-sm font-semibold transition-opacity hover:opacity-90"
               >
-                {row.lastReminderAt ? "Lembrar de novo" : "Lembrar no WhatsApp"}
-              </button>
+                {row.lastReminderAt ? "Lembrar de novo" : "Lembrar no Conversas"}
+              </OpenInConversas>
             </li>
           ))}
         </ul>

@@ -1,3 +1,4 @@
+import { OpenInConversas } from "@/components/admin/open-in-conversas";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Breadcrumb } from "@/components/breadcrumb";
@@ -26,12 +27,6 @@ const REQUEST_STATUS_LABELS: Record<CustomRequestStatus, string> = {
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
-}
-
-function whatsappDigits(phone: string) {
-  const digits = phone.replace(/\D/g, "");
-  if (!digits) return "";
-  return digits.length <= 11 ? `55${digits}` : digits;
 }
 
 export default async function AdminCustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -113,14 +108,9 @@ export default async function AdminCustomerDetailPage({ params }: { params: Prom
           }
           actions={
             <>
-              <a
-                href={`https://wa.me/${whatsappDigits(customer.phone)}`}
-                target="_blank"
-                rel="noreferrer"
-                className="rounded-lg border border-mist px-3.5 py-2 text-sm transition-colors hover:border-petrol"
-              >
-                Abrir WhatsApp
-              </a>
+              <OpenInConversas phone={customer.phone} name={customer.name} className="rounded-lg border border-mist px-3.5 py-2 text-sm transition-colors hover:border-petrol">
+                Abrir no Conversas
+              </OpenInConversas>
               <Link
                 href={`/admin/orcamentos/novo?cliente=${customer.id}`}
                 className="rounded-lg bg-petrol px-3.5 py-2 text-sm font-semibold transition-opacity hover:opacity-90"

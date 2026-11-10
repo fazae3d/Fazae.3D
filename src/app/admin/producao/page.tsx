@@ -2,6 +2,7 @@ import { getAllOrders } from "@/server/repositories/order-repository";
 import { getAllProductionItems } from "@/server/repositories/production-item-repository";
 import { getAllProducts } from "@/server/repositories/product-repository";
 import { withReadFallback } from "@/lib/db-fallback";
+import { db } from "@/server/db";
 import { fallbackOrders, fallbackProducts } from "@/server/demo-fallback";
 import { ProductionBoard, type ProductionCard } from "@/components/admin/production-board";
 import { ProductionItemForm } from "@/components/admin/production-item-form";
@@ -19,6 +20,13 @@ export default async function AdminProductionPage() {
   const itemCards: ProductionCard[] = productionItems.map((item) => ({ kind: "item", id: item.id, item }));
   const cards = [...orderCards, ...itemCards];
 
+  // Pedidos cujo aviso de "começamos a produzir" já saiu (cada aviso sai uma vez por pedido).
+  const noticed = await withReadFallback(
+    () => db.waMessage.findMany({ where: { ref: { in: orderCards.map((c) => `pedido:${c.id}:producao`) } }, select: { ref: true } }),
+    [],
+  );
+  const noticeSent = noticed.map((m) => (m.ref ?? "").split(":")[1]).filter(Boolean);
+
   return (
     <div>
       <div className="mb-8">
@@ -32,6 +40,7 @@ export default async function AdminProductionPage() {
 
       <ProductionBoard
         cards={cards}
+        noticeSent={noticeSent}
         products={products.map((p) => ({ slug: p.slug, price: p.price, materials: p.materials }))}
       />
     </div>
