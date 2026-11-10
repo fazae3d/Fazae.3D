@@ -1,5 +1,6 @@
 "use client";
 
+import { STAGE_NOTICES } from "@/lib/stage-notices";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { saveAutomationAction } from "@/app/admin/conversas/ajustes/actions";
@@ -94,11 +95,18 @@ export function WhatsAppAutomationForm({ initial, hours }: { initial: WaAutomati
       </div>
 
       <div className="admin-card rounded-xl border border-mist p-5">
-        <h2 className="text-sm font-semibold">Aviso de produção iniciada</h2>
+        <h2 className="text-sm font-semibold">Avisos por etapa da produção</h2>
         <p className="mb-3 mt-1 text-xs text-graphite">
-          Na tela Produção, quando o pedido está em &quot;Em produção&quot;, aparece o botão <strong>Avisar cliente</strong>, que manda esta mensagem pelo Conversas (uma vez por pedido, funciona mesmo com os avisos de pedido acima desligados). Para o aviso sair sozinho ao mudar a etapa, ligue &quot;Avisar sozinho quando o pedido entrar em produção&quot; em Regras da loja.
+          Na tela Produção, cada pedido ganha o botão de aviso da etapa em que está (na fila, produção iniciada, pronto). O botão manda a mensagem abaixo pelo Conversas, uma vez por pedido e etapa, mesmo com os avisos de pedido acima desligados. Para o aviso sair sozinho ao mudar a etapa, ligue a opção da etapa em Regras da loja, Automação (todas nascem desligadas).
         </p>
-        <textarea value={s.orderTemplates.producao} onChange={(e) => set({ orderTemplates: { ...s.orderTemplates, producao: e.target.value } })} rows={4} className={AREA} />
+        <div className="space-y-4">
+          {STAGE_NOTICES.map((n) => (
+            <label key={n.event} className="block text-xs text-graphite">
+              {n.label}
+              <textarea value={s.orderTemplates[n.event]} onChange={(e) => set({ orderTemplates: { ...s.orderTemplates, [n.event]: e.target.value } })} rows={3} className={`${AREA} mt-1`} />
+            </label>
+          ))}
+        </div>
         <p className="mt-2 text-xs text-graphite">
           Variáveis: <code className="rounded bg-mist px-1">{"{{nome}}"}</code> <code className="rounded bg-mist px-1">{"{{pedido}}"}</code> <code className="rounded bg-mist px-1">{"{{total}}"}</code>.
         </p>

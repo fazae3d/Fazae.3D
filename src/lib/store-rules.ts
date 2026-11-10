@@ -31,8 +31,10 @@ export type StoreRules = {
     pendingOrderExpireDays: number;
     reactivationDays: number;
     reminderCooldownDays: number;
-    /** Avisa o cliente por WhatsApp sozinho quando o pedido entra em produção (desligado: só o botão manual na tela de Produção). */
+    /** Avisos por WhatsApp sozinhos ao mudar a etapa na Produção (desligado: só os botões manuais da tela Produção). */
+    queueNoticeAuto: boolean;
     productionNoticeAuto: boolean;
+    readyNoticeAuto: boolean;
   };
   reviews: { rewardValue: number; rewardMinSubtotal: number };
   finance: { growthMultiplier: number; growthMonths: number; autoPayInstallments: boolean };
@@ -65,7 +67,7 @@ export const DEFAULT_RULES: StoreRules = {
   payments: { installments: 3, welcomeCouponCode: "FAZAE10", welcomeCouponText: "10% OFF na primeira compra" },
   pix: { key: "", depositPct: 50 },
   storefront: { lowStockThreshold: 5, scarcityThreshold: 2, returnDays: 7 },
-  automation: { abandonedCartHours: 2, abandonedCartSecondDays: 3, pendingOrderExpireDays: 4, reactivationDays: 120, reminderCooldownDays: 30, productionNoticeAuto: false },
+  automation: { abandonedCartHours: 2, abandonedCartSecondDays: 3, pendingOrderExpireDays: 4, reactivationDays: 120, reminderCooldownDays: 30, queueNoticeAuto: false, productionNoticeAuto: false, readyNoticeAuto: false },
   reviews: { rewardValue: 5, rewardMinSubtotal: 30 },
   finance: { growthMultiplier: 5, growthMonths: 12, autoPayInstallments: true },
   quote: {
@@ -156,10 +158,24 @@ export const RULE_FIELDS: FieldSpec[] = [
   { path: "automation.reactivationDays", group: "automacao", label: "Cliente “sumido” depois de", hint: "Entra na lista “Para reativar” e nas regras de reativação.", kind: "number", min: 30, max: 730, integer: true, unit: "dias" },
   { path: "automation.reminderCooldownDays", group: "automacao", label: "Intervalo entre lembretes ao mesmo cliente", kind: "number", min: 1, max: 365, integer: true, unit: "dias" },
   {
+    path: "automation.queueNoticeAuto",
+    group: "automacao",
+    label: "Avisar sozinho quando o pedido ficar na fila (etapa Início)",
+    hint: "Desligado: na tela Produção aparece o botão de aviso para você enviar quando quiser. Ligado: ao mudar o pedido para \"Início\", a mensagem sai sozinha pelo Conversas (uma única vez por pedido). Os textos se editam em Conversas, Ajustes.",
+    kind: "toggle",
+  },
+  {
     path: "automation.productionNoticeAuto",
     group: "automacao",
-    label: "Avisar sozinho quando o pedido entrar em produção",
-    hint: "Desligado: na tela Produção aparece o botão \"Avisar cliente\" para você enviar a mensagem quando quiser. Ligado: ao mudar o pedido para \"Em produção\", a mensagem sai sozinha pelo Conversas (uma única vez por pedido). O texto da mensagem se edita em Conversas, Ajustes.",
+    label: "Avisar sozinho quando a produção começar (etapa Em produção)",
+    hint: "Desligado: só o botão manual na tela Produção. Ligado: ao mudar o pedido para \"Em produção\", a mensagem sai sozinha pelo Conversas (uma única vez por pedido).",
+    kind: "toggle",
+  },
+  {
+    path: "automation.readyNoticeAuto",
+    group: "automacao",
+    label: "Avisar sozinho quando o pedido ficar pronto (etapa Finalizado)",
+    hint: "Desligado: só o botão manual na tela Produção. Ligado: ao mudar o pedido para \"Finalizado\", a mensagem sai sozinha pelo Conversas (uma única vez por pedido).",
     kind: "toggle",
   },
 

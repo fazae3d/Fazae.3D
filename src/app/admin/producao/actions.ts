@@ -24,6 +24,7 @@ import { withMutationFallback } from "@/lib/db-fallback";
 import { logAdminAction } from "@/server/audit";
 import { getStoreRules } from "@/server/store-rules";
 import { sendProductionNotice } from "@/server/whatsapp/automation";
+import { isNoticeEvent, stageNoticeFor } from "@/lib/stage-notices";
 
 function slugify(text: string) {
   return text
@@ -59,13 +60,14 @@ export async function updateProductionAction(
     await logAdminAction("pedido.producao", "Order", orderId, { etapa: data.stage, prazo: data.deadline, sinalRecebido: data.depositAmount });
     revalidatePath("/admin/producao");
     revalidatePath("/admin/pedidos");
-    // Aviso automático de "começamos a produzir" (só se a regra estiver ligada; nunca derruba a mudança de etapa).
-    if (data.stage === "em_producao") {
+    // Aviso automático da etapa (só se a regra daquela etapa estiver ligada; nunca derruba a mudança de etapa).
+    const notice = stageNoticeFor(data.stage);
+    if (notice) {
       try {
         const rules = await getStoreRules({ fresh: true });
-        if (rules.automation.productionNoticeAuto) {
-          const sent = await sendProductionNotice(orderId);
-          if (sent.ok) await logAdminAction("pedido.aviso-producao", "Order", orderId, { automatico: true });
+        if (rules.automation[notice.autoRule]) {
+          const sent = await sendProductionNotice(orderId, notice.event);
+          if (sent.ok) await logAdminAction("pedido.aviso-producao", "Order", orderId, { etapa: notice.event, automatico: true });
         }
       } catch (error) {
         console.error("[producao] erro no aviso automático", error);
@@ -75,12 +77,13 @@ export async function updateProductionAction(
   return result;
 }
 
-/** Botão "Avisar cliente" da tela Produção: manda a mensagem de produção iniciada pelo Conversas (uma única vez por pedido). */
-export async function sendProductionNoticeAction(orderId: string): Promise<{ success: true } | { success: false; error: string }> {
+/** Botão de aviso da tela Produção: manda a mensagem da etapa pelo Conversas (uma única vez por pedido e etapa). */
+export async function sendProductionNoticeAction(orderId: string, event: string): Promise<{ success: true } | { success: false; error: string }> {
   if (!(await requireAdmin())) return { success: false, error: "Acesso restrito ao administrador." };
-  const sent = await sendProductionNotice(orderId);
+  if (!isNoticeEvent(event)) return { success: false, error: "Aviso inválido." };
+  const sent = await sendProductionNotice(orderId, event);
   if (!sent.ok) return { success: false, error: sent.error };
-  await logAdminAction("pedido.aviso-producao", "Order", orderId, { automatico: false });
+  await logAdminAction("pedido.aviso-producao", "Order", orderId, { etapa: event, automatico: false });
   revalidatePath("/admin/producao");
   revalidatePath("/admin/conversas");
   return { success: true };

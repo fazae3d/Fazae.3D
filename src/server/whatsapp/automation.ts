@@ -6,6 +6,7 @@ import { sendConversationText, startConversation } from "../repositories/whatsap
 import { renderMessage, isWithinSchedule, DEFAULT_SEND_DAYS } from "@/lib/wa-cadence";
 import { firstName, formatPrice } from "@/lib/format";
 import { isMobilePhone, isOptOutText, normalizePhone, withOptOutNotice } from "@/lib/whatsapp";
+import type { NoticeEvent } from "@/lib/stage-notices";
 import type { Order } from "../types";
 
 const AUTO_REPLY_COOLDOWN_MS = 12 * 3_600_000;
@@ -48,7 +49,7 @@ function fill(template: string, vars: Record<string, string>) {
     .trim();
 }
 
-type OrderEvent = "pago" | "enviado" | "pix" | "producao";
+type OrderEvent = "pago" | "enviado" | "pix" | NoticeEvent;
 
 type OrderMessageResult = { ok: true } | { ok: false; error: string };
 
@@ -96,12 +97,12 @@ async function sendOrderMessage(order: Pick<Order, "id" | "customerName" | "cust
   return (await deliverOrderMessage(order, event, { extraCode })).ok;
 }
 
-/** Aviso de "começamos a produzir": pelo botão da tela Produção (manual) ou sozinho, se a regra estiver ligada. Um por pedido. */
-export async function sendProductionNotice(orderId: string): Promise<OrderMessageResult> {
+/** Aviso de etapa da produção (na fila, produção iniciada, pronto): pelo botão da tela Produção ou sozinho, se a regra estiver ligada. Um por pedido e etapa. */
+export async function sendProductionNotice(orderId: string, event: NoticeEvent): Promise<OrderMessageResult> {
   const order = await findOrderById(orderId);
   if (!order) return { ok: false, error: "Pedido não encontrado." };
   if (order.status === "Cancelado") return { ok: false, error: "O pedido está cancelado." };
-  return deliverOrderMessage(order, "producao", { force: true });
+  return deliverOrderMessage(order, event, { force: true });
 }
 
 /** Gancho da mudança de status: avisa pagamento aprovado e pedido enviado (só pedidos do site). */

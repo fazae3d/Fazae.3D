@@ -14,6 +14,7 @@ import {
 } from "@/app/admin/producao/actions";
 import { KanbanBoard, type KanbanColumn } from "@/components/admin/kanban-board";
 import { Select } from "@/components/select";
+import { stageNoticeFor } from "@/lib/stage-notices";
 import { ProductionSaleDialog, type SaleProduct } from "@/components/admin/production-sale-dialog";
 
 export type ProductionCard =
@@ -220,29 +221,32 @@ export function ProductionBoard({ cards: initialCards, products, noticeSent }: {
 
   /** Botão "Avisar cliente": só para pedido que está em produção; depois de enviado vira "Cliente avisado". */
   function renderNotice(card: ProductionCard) {
-    if (card.kind !== "order" || card.order.productionStage !== "em_producao") return null;
+    if (card.kind !== "order") return null;
+    const notice = stageNoticeFor(card.order.productionStage);
+    if (!notice) return null;
     const id = card.order.id;
-    if (noticed.includes(id)) return <span className="label-caps text-[10px] text-petrol">Cliente avisado</span>;
+    const key = `${id}:${notice.event}`;
+    if (noticed.includes(key)) return <span className="label-caps text-[10px] text-petrol">Cliente avisado</span>;
     return (
       <button
         type="button"
         disabled={noticing === id}
-        title="Manda pelo WhatsApp (Conversas) que começamos a produzir. Texto editável em Conversas, Ajustes."
+        title="Manda esta mensagem pelo WhatsApp (Conversas). O texto se edita em Conversas, Ajustes."
         onClick={async (e) => {
           e.stopPropagation();
           setError(null);
           setNoticing(id);
-          const result = await sendProductionNoticeAction(id);
+          const result = await sendProductionNoticeAction(id, notice.event);
           setNoticing(null);
           if (!result.success) {
             setError(result.error);
             return;
           }
-          setNoticed((prev) => [...prev, id]);
+          setNoticed((prev) => [...prev, key]);
         }}
         className="label-caps self-start rounded border border-petrol px-2 py-1 text-[10px] text-petrol transition-colors hover:bg-petrol hover:text-[#111] disabled:opacity-50"
       >
-        {noticing === id ? "Enviando..." : "Avisar cliente"}
+        {noticing === id ? "Enviando..." : notice.button}
       </button>
     );
   }
