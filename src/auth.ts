@@ -9,7 +9,7 @@ import { loginSchema } from "@/lib/validation";
 const LOGIN_LIMIT = 20;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
   ...authConfig,
   events: {
     // Quem entrou no painel e quando (só administradores): fica em Atividade.
@@ -61,7 +61,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // Agora o papel é reconferido no banco a cada 60 segundos (se o banco falhar, vale o que já estava no token).
     async jwt(params) {
       const token = await authConfig.callbacks.jwt(params);
-      if (token.id && (!token.roleCheckedAt || Date.now() - token.roleCheckedAt > 60_000)) {
+      if (token.id && (params.trigger === "update" || !token.roleCheckedAt || Date.now() - token.roleCheckedAt > 60_000)) {
         try {
           const { db } = await import("@/server/db");
           const row = await db.user.findUnique({ where: { id: token.id }, select: { role: true } });

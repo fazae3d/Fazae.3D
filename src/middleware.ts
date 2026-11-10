@@ -25,7 +25,12 @@ export default auth((req) => {
   // Being logged in is necessary but not sufficient for /admin, a
   // customer session must never reach it, even if they guess the URL.
   if (pathname.startsWith("/admin") && req.auth?.user?.role !== "admin") {
-    return Response.redirect(new URL("/", req.nextUrl.origin));
+    // O papel do cookie pode estar velho (a pessoa foi promovida a administradora depois de entrar). Antes de recusar, uma rota no
+    // servidor confere no banco e renova o cookie. O "r=1" evita repetir isso em círculo.
+    if (req.nextUrl.searchParams.get("r") === "1") return Response.redirect(new URL("/", req.nextUrl.origin));
+    const refresh = new URL("/api/admin-access/refresh", req.nextUrl.origin);
+    refresh.searchParams.set("next", pathname);
+    return Response.redirect(refresh);
   }
 });
 
