@@ -6,12 +6,14 @@ import { ADMIN_AUTH_DISABLED } from "@/lib/dev-flags";
 import { withMutationFallback } from "@/lib/db-fallback";
 import { logAdminAction } from "@/server/audit";
 import { CONVERSATION_SOURCES, LEAD_STAGE_KEYS, normalizePhone } from "@/lib/whatsapp";
-import { getWhatsAppProvider } from "@/server/whatsapp/provider";
+import { getWhatsAppProvider, type MediaKind } from "@/server/whatsapp/provider";
+import { MAX_OUTGOING_BYTES, OUTGOING_PATH, createOutgoingUpload, outgoingExtension, signedMediaUrl } from "@/server/whatsapp/media";
 import { db } from "@/server/db";
 import { enrollConversations } from "@/server/repositories/wa-cadence-repository";
 import {
   bulkUpdateConversations,
   markConversationRead,
+  sendConversationMedia,
   markConversationUnread,
   recordInboundMessage,
   sendConversationText,
@@ -76,6 +78,54 @@ export async function updateLeadAction(
     return { success: true as const };
   });
   if (result.success) refresh();
+  return result;
+}
+
+const MEDIA_KINDS: MediaKind[] = ["image", "video", "audio", "document"];
+
+/** Passo 1 do envio de anexo: pede o endereço para o navegador mandar o arquivo direto para o armazenamento. */
+export async function prepareAttachmentAction(input: {
+  fileName: string;
+  contentType: string;
+  size: number;
+}): Promise<{ success: true; path: string; uploadUrl: string } | { success: false; error: string }> {
+  if (!(await requireAdmin())) return DENIED;
+  if (!Number.isFinite(input.size) || input.size <= 0) return { success: false, error: "Arquivo vazio." };
+  if (input.size > MAX_OUTGOING_BYTES) return { success: false, error: "O arquivo passa de 25 MB. Escolha um menor." };
+  const created = await createOutgoingUpload(outgoingExtension(input.fileName, input.contentType));
+  if (!created.ok) return { success: false, error: created.error };
+  return { success: true, path: created.path, uploadUrl: created.uploadUrl };
+}
+
+/** Passo 2: manda para o cliente o arquivo que o navegador acabou de subir. A legenda vale para imagem, vídeo e documento. */
+export async function sendAttachmentAction(input: {
+  conversationId: string;
+  path: string;
+  kind: string;
+  caption?: string;
+  fileName?: string;
+}): Promise<{ success: true } | { success: false; error: string }> {
+  if (!(await requireAdmin())) return DENIED;
+  if (!OUTGOING_PATH.test(input.path)) return { success: false, error: "Arquivo inválido." };
+  if (!MEDIA_KINDS.includes(input.kind as MediaKind)) return { success: false, error: "Tipo de arquivo inválido." };
+  const kind = input.kind as MediaKind;
+  const url = await signedMediaUrl(input.path, 600);
+  if (!url) return { success: false, error: "Não foi possível ler o arquivo enviado. Tente de novo." };
+  const caption = kind === "audio" ? undefined : input.caption?.trim().slice(0, 1000) || undefined;
+  const result = await withMutationFallback(async () => {
+    const sent = await sendConversationMedia(input.conversationId, {
+      url,
+      kind,
+      caption,
+      fileName: kind === "document" ? input.fileName?.slice(0, 120) : undefined,
+      stored: input.path,
+    });
+    return sent.success ? ({ success: true as const }) : sent;
+  });
+  if (result.success) {
+    refresh();
+    revalidatePath("/admin", "layout");
+  }
   return result;
 }
 

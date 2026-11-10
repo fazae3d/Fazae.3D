@@ -57,6 +57,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     ...authConfig.callbacks,
+    // O papel do JWT só era lido no login: quem perdia o acesso de administrador continuava podendo usar as ações do painel até sair.
+    // Agora o papel é reconferido no banco a cada 60 segundos (se o banco falhar, vale o que já estava no token).
+    async jwt(params) {
+      const token = await authConfig.callbacks.jwt(params);
+      if (token.id && (!token.roleCheckedAt || Date.now() - token.roleCheckedAt > 60_000)) {
+        try {
+          const { db } = await import("@/server/db");
+          const row = await db.user.findUnique({ where: { id: token.id }, select: { role: true } });
+          token.role = row?.role ?? "customer";
+          token.roleCheckedAt = Date.now();
+        } catch (error) {
+          console.error("[auth] não foi possível reconferir o papel no banco", error);
+        }
+      }
+      return token;
+    },
     // Google sign-in has no local account by default, provision (or
     // reuse) a DemoUser record here so an OAuth login gets the same order
     // history / saved addresses / role as a Credentials login. The

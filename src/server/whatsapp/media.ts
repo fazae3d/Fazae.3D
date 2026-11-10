@@ -83,10 +83,36 @@ export async function ensureMessageMedia(messageId: string): Promise<MessageMedi
   }
 }
 
-/** Endereço temporário (2 minutos) para abrir um arquivo guardado. */
-export async function signedMediaUrl(path: string): Promise<string | null> {
+/** Endereço temporário (2 minutos por padrão) para abrir um arquivo guardado. */
+export async function signedMediaUrl(path: string, seconds = 120): Promise<string | null> {
   const store = storage();
   if (!store) return null;
-  const { data, error } = await store.from(WHATSAPP_MEDIA_BUCKET).createSignedUrl(path, 120);
+  const { data, error } = await store.from(WHATSAPP_MEDIA_BUCKET).createSignedUrl(path, seconds);
   return error ? null : data.signedUrl;
+}
+
+/** Arquivos que o painel envia ficam em "out/". O nome é sempre gerado aqui (uuid + extensão), nunca o do arquivo original. */
+export const OUTGOING_PATH = /^out\/[0-9a-f-]{36}\.[a-z0-9]{1,8}$/;
+export const MAX_OUTGOING_BYTES = MAX_BYTES;
+
+export function outgoingExtension(fileName: string, contentType: string): string {
+  const fromName = /\.([A-Za-z0-9]{1,8})$/.exec(fileName)?.[1]?.toLowerCase();
+  return fromName ?? EXTENSION_BY_MIME[contentType.toLowerCase()] ?? "bin";
+}
+
+/**
+ * Prepara o envio direto do navegador para o armazenamento (arquivos grandes não passam pelo servidor do site, que tem limite de
+ * tamanho por requisição). Devolve o endereço de envio, que vale por pouco tempo, e o caminho final do arquivo.
+ */
+export async function createOutgoingUpload(extension: string): Promise<{ ok: true; path: string; uploadUrl: string } | { ok: false; error: string }> {
+  const store = storage();
+  if (!store) return { ok: false, error: "O armazenamento de arquivos não está configurado no servidor." };
+  const path = `out/${randomUUID()}.${extension}`;
+  let signed = await store.from(WHATSAPP_MEDIA_BUCKET).createSignedUploadUrl(path);
+  if (signed.error && /not found|bucket/i.test(signed.error.message)) {
+    await store.createBucket(WHATSAPP_MEDIA_BUCKET, { public: false, fileSizeLimit: MAX_BYTES });
+    signed = await store.from(WHATSAPP_MEDIA_BUCKET).createSignedUploadUrl(path);
+  }
+  if (signed.error || !signed.data) return { ok: false, error: "Não foi possível preparar o envio do arquivo." };
+  return { ok: true, path, uploadUrl: signed.data.signedUrl };
 }

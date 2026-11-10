@@ -19,5 +19,7 @@ declare module "next-auth/jwt" {
   interface JWT {
     id?: string;
     role?: AppUserRole;
+    /** Quando o papel foi reconferido no banco (ms). */
+    roleCheckedAt?: number;
   }
 }

@@ -1,5 +1,5 @@
 import { db } from "../db";
-import { hasViewableMedia } from "../whatsapp/media";
+import { STORED_MEDIA_PREFIX, hasViewableMedia } from "../whatsapp/media";
 import { getWhatsAppProvider, type MediaKind } from "../whatsapp/provider";
 import { storeDayKey } from "@/lib/store-time";
 import { isOptOutText, messagePreview, nextStatus, normalizePhone, LEAD_STAGE_KEYS, type InboundMessage } from "@/lib/whatsapp";
@@ -259,7 +259,7 @@ export type SendOrigin = "manual" | "cadencia" | "campanha" | "pedido" | "automa
 /** Envia um arquivo (ex.: o PDF do orçamento) pela conversa e registra. */
 export async function sendConversationMedia(
   conversationId: string,
-  media: { url: string; kind: MediaKind; caption?: string; fileName?: string },
+  media: { url: string; kind: MediaKind; caption?: string; fileName?: string; /** Caminho do arquivo no nosso armazenamento (para o painel mostrar a mensagem sem depender do endereço temporário). */ stored?: string },
 ): Promise<SendTextResult> {
   const conversation = await db.waConversation.findUnique({ where: { id: conversationId } });
   if (!conversation) return { success: false, error: "Conversa não encontrada." };
@@ -267,14 +267,15 @@ export async function sendConversationMedia(
   const result = await getWhatsAppProvider().sendMedia(conversation.phone, media);
   const now = new Date();
   const body = media.caption ?? "";
+  const savedUrl = media.stored ? `${STORED_MEDIA_PREFIX}${media.stored}` : media.url;
   if (!result.ok) {
-    await db.waMessage.create({ data: { conversationId, direction: "out", body, mediaType: media.kind, mediaUrl: media.url, status: "failed", origin: "manual", error: result.error, createdAt: now } });
+    await db.waMessage.create({ data: { conversationId, direction: "out", body, mediaType: media.kind, mediaUrl: savedUrl, status: "failed", origin: "manual", error: result.error, createdAt: now } });
     return { success: false, error: result.error };
   }
   const message = await db.waMessage.upsert({
     where: { providerId: result.providerId },
-    create: { conversationId, direction: "out", body, mediaType: media.kind, mediaUrl: media.url, providerId: result.providerId, status: "sent", origin: "manual", createdAt: now },
-    update: { mediaType: media.kind, mediaUrl: media.url },
+    create: { conversationId, direction: "out", body, mediaType: media.kind, mediaUrl: savedUrl, providerId: result.providerId, status: "sent", origin: "manual", createdAt: now },
+    update: { mediaType: media.kind, mediaUrl: savedUrl },
   });
   await db.waConversation.update({
     where: { id: conversationId },

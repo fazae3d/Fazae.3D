@@ -118,6 +118,7 @@ export const NAV_GROUPS: NavGroup[] = [
     links: [
       { href: "/admin/configuracoes", label: "Loja" },
       { href: "/admin/configuracoes/regras", label: "Regras da loja" },
+      { href: "/admin/configuracoes/administradores", label: "Administradores" },
       { href: "/admin/atividade", label: "Atividade" },
     ],
   },
