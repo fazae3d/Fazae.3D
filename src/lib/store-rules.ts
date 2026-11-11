@@ -32,6 +32,9 @@ export type StoreRules = {
     reactivationDays: number;
     reminderCooldownDays: number;
     /** Avisos por WhatsApp sozinhos ao mudar a etapa na Produção (desligado: só os botões manuais da tela Produção). */
+    /** Intervalo entre duas mensagens automáticas (cadências e campanhas), em minutos: o sistema sorteia um valor entre o mínimo e o máximo. 0 no mínimo = sem intervalo. */
+    sendGapMinMinutes: number;
+    sendGapMaxMinutes: number;
     queueNoticeAuto: boolean;
     productionNoticeAuto: boolean;
     readyNoticeAuto: boolean;
@@ -67,7 +70,7 @@ export const DEFAULT_RULES: StoreRules = {
   payments: { installments: 3, welcomeCouponCode: "FAZAE10", welcomeCouponText: "10% OFF na primeira compra" },
   pix: { key: "", depositPct: 50 },
   storefront: { lowStockThreshold: 5, scarcityThreshold: 2, returnDays: 7 },
-  automation: { abandonedCartHours: 2, abandonedCartSecondDays: 3, pendingOrderExpireDays: 4, reactivationDays: 120, reminderCooldownDays: 30, queueNoticeAuto: false, productionNoticeAuto: false, readyNoticeAuto: false },
+  automation: { abandonedCartHours: 2, abandonedCartSecondDays: 3, pendingOrderExpireDays: 4, reactivationDays: 120, reminderCooldownDays: 30, sendGapMinMinutes: 3, sendGapMaxMinutes: 8, queueNoticeAuto: false, productionNoticeAuto: false, readyNoticeAuto: false },
   reviews: { rewardValue: 5, rewardMinSubtotal: 30 },
   finance: { growthMultiplier: 5, growthMonths: 12, autoPayInstallments: true },
   quote: {
@@ -157,6 +160,28 @@ export const RULE_FIELDS: FieldSpec[] = [
   { path: "automation.pendingOrderExpireDays", group: "automacao", label: "Pedido sem pagamento expira em", hint: "Depois disso o pedido é cancelado e o estoque volta.", kind: "number", min: 1, max: 30, integer: true, unit: "dias" },
   { path: "automation.reactivationDays", group: "automacao", label: "Cliente “sumido” depois de", hint: "Entra na lista “Para reativar” e nas regras de reativação.", kind: "number", min: 30, max: 730, integer: true, unit: "dias" },
   { path: "automation.reminderCooldownDays", group: "automacao", label: "Intervalo entre lembretes ao mesmo cliente", kind: "number", min: 1, max: 365, integer: true, unit: "dias" },
+  {
+    path: "automation.sendGapMinMinutes",
+    group: "automacao",
+    label: "Intervalo mínimo entre mensagens automáticas",
+    hint: "Depois de cada mensagem das cadências e campanhas, o sistema espera pelo menos isto antes da próxima, para não mandar tudo de uma vez (evita bloqueio do número). Também se ajusta em Conversas, Cadências.",
+    kind: "number",
+    min: 0,
+    max: 240,
+    integer: true,
+    unit: "min",
+  },
+  {
+    path: "automation.sendGapMaxMinutes",
+    group: "automacao",
+    label: "Intervalo máximo entre mensagens automáticas",
+    hint: "O tempo de espera varia entre o mínimo e este valor (parece mais natural do que um intervalo fixo). Precisa ser igual ou maior que o mínimo.",
+    kind: "number",
+    min: 0,
+    max: 480,
+    integer: true,
+    unit: "min",
+  },
   {
     path: "automation.queueNoticeAuto",
     group: "automacao",
@@ -296,6 +321,9 @@ export function validateRulesInput(input: unknown): { ok: true; rules: StoreRule
     const checked = validateField(spec, getPath(input, spec.path));
     if (!checked.ok) return checked;
     setPath(rules as unknown as Record<string, unknown>, spec.path, checked.value);
+  }
+  if (rules.automation.sendGapMaxMinutes < rules.automation.sendGapMinMinutes) {
+    return { ok: false, error: "O intervalo máximo entre mensagens não pode ser menor que o mínimo." };
   }
   const unknownVariable = [...rules.quote.whatsappText.matchAll(/\{\{\s*([^{}]*?)\s*\}\}/g)].map((m) => m[1]).find((v) => !(QUOTE_WHATSAPP_VARIABLES as readonly string[]).includes(v));
   if (unknownVariable !== undefined) {

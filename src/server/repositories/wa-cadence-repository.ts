@@ -5,6 +5,7 @@ import { buildMessageVars } from "../whatsapp/context";
 import { getAllCustomers, getCustomersWithMetrics, markCustomerReminded } from "./customer-repository";
 import { isInactive, phoneKey, wasRecentlyReminded } from "@/lib/customer-insights";
 import { getStoreRules } from "@/server/store-rules";
+import { requiredGapMs } from "@/lib/wa-cadence";
 import { storeDayKey } from "@/lib/store-time";
 import { isMobilePhone, normalizePhone, withOptOutNotice } from "@/lib/whatsapp";
 import {
@@ -413,6 +414,7 @@ export async function importContacts(input: ImportInput, now = new Date()): Prom
 export type TickResult = { ran: boolean; reason?: string; sent: number; failed: number; stopped: number; enrolled?: number; remainingToday?: number };
 
 const MAX_SENDS_PER_TICK = 3;
+
 const RETRY_AFTER_MS = 30 * 60_000;
 const MAX_ATTEMPTS = 3;
 
@@ -422,9 +424,39 @@ const MAX_ATTEMPTS = 3;
  * simultâneas nunca mandarem a mesma mensagem duas vezes.
  */
 export async function runCadenceTick(now = new Date()): Promise<TickResult> {
+  // Uma rodada por vez: o painel aberto, o agendador e o "Rodar agora" podem chamar ao mesmo tempo, e duas rodadas simultâneas
+  // mandariam duas mensagens coladas (furando o intervalo). O trava vale enquanto a rodada roda e some sozinha ao terminar.
+  return db.$transaction(
+    async (tx) => {
+      const [row] = await tx.$queryRaw<{ locked: boolean }[]>`SELECT pg_try_advisory_xact_lock(727001) AS locked`;
+      if (!row?.locked) return { ran: false, reason: "Outra rodada está em andamento.", sent: 0, failed: 0, stopped: 0 };
+      return runCadenceTickLocked(now);
+    },
+    { timeout: 90_000, maxWait: 5_000 },
+  );
+}
+
+async function runCadenceTickLocked(now: Date): Promise<TickResult> {
   const empty = { sent: 0, failed: 0, stopped: 0 };
   const config = await getWaConfig();
   if (!config.autoSendEnabled) return { ran: false, reason: "O envio automático está desligado.", ...empty };
+
+  // Intervalo entre mensagens: depois de cada envio automático o sistema espera um tempo (sorteado entre o mínimo e o máximo das
+  // Regras da loja) antes do próximo. Conferido antes de qualquer chamada ao WhatsApp, porque esta rodada pode ser chamada com frequência.
+  const rules = await getStoreRules();
+  const gapMin = rules.automation.sendGapMinMinutes;
+  const gapMax = rules.automation.sendGapMaxMinutes;
+  if (gapMax > 0) {
+    const last = await db.waMessage.findFirst({
+      where: { direction: "out", origin: { in: ["cadencia", "campanha"] }, status: { not: "failed" } },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, createdAt: true },
+    });
+    if (last) {
+      const waitMs = last.createdAt.getTime() + requiredGapMs(last.id, gapMin, gapMax) - now.getTime();
+      if (waitMs > 0) return { ran: false, reason: `Respeitando o intervalo entre mensagens: a próxima sai em cerca de ${Math.max(1, Math.ceil(waitMs / 60_000))} min.`, ...empty };
+    }
+  }
 
   const tripped = await tripBreakerIfNeeded(now);
   if (tripped) return { ran: false, reason: `Envio desligado automaticamente: ${tripped}. Confira a conexão do WhatsApp e ligue de novo.`, ...empty };
@@ -447,7 +479,7 @@ export async function runCadenceTick(now = new Date()): Promise<TickResult> {
     take: 60,
   });
   // Cada cadência tem seus dias e horário (ou usa os gerais): só entra na rodada quem está dentro da própria agenda.
-  const due = candidates.filter((e) => isWithinSchedule(now, scheduleOf(e.cadence), config)).slice(0, Math.min(budget.remaining, MAX_SENDS_PER_TICK));
+  const due = candidates.filter((e) => isWithinSchedule(now, scheduleOf(e.cadence), config)).slice(0, Math.min(budget.remaining, gapMax > 0 ? 1 : MAX_SENDS_PER_TICK));
   if (candidates.length > 0 && due.length === 0) {
     return { ran: false, reason: "Há mensagens na hora de sair, mas todas as cadências estão fora do dia ou do horário de envio delas.", ...empty, enrolled };
   }

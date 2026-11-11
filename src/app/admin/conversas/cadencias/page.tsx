@@ -4,6 +4,7 @@ import { CadenceActiveToggle } from "@/components/admin/whatsapp-cadence-control
 import { PageHeader, StatusBadge } from "@/components/admin/page-header";
 import { WhatsAppAutoSendPanel } from "@/components/admin/whatsapp-auto-send-panel";
 import { withReadFallback } from "@/lib/db-fallback";
+import { getStoreRules } from "@/server/store-rules";
 import { CADENCE_KINDS, CADENCE_PRESETS, describeAudience, describeDelay, describeSchedule, hasAudience, kindLabel } from "@/lib/wa-cadence";
 import { sourceLabel, stageLabel } from "@/lib/whatsapp";
 import { getWhatsAppProvider } from "@/server/whatsapp/provider";
@@ -21,6 +22,7 @@ export default async function CadenciasPage() {
   ]);
   const budget = await withReadFallback(() => getSendBudget(new Date(), config), FALLBACK_BUDGET);
   const simulated = getWhatsAppProvider().name === "simulador";
+  const rules = await getStoreRules();
 
   return (
     <div>
@@ -34,7 +36,7 @@ export default async function CadenciasPage() {
         }
       />
 
-      <WhatsAppAutoSendPanel config={config} budget={budget} simulated={simulated} />
+      <WhatsAppAutoSendPanel config={config} budget={budget} simulated={simulated} gap={{ min: rules.automation.sendGapMinMinutes, max: rules.automation.sendGapMaxMinutes }} />
 
       <p className="label-caps mb-3 text-[11px] text-graphite">Suas cadências</p>
       {cadences.length === 0 ? (

@@ -5,6 +5,9 @@ import { auth } from "@/auth";
 import { ADMIN_AUTH_DISABLED } from "@/lib/dev-flags";
 import { withMutationFallback } from "@/lib/db-fallback";
 import { logAdminAction } from "@/server/audit";
+import { validateRulesInput } from "@/lib/store-rules";
+import { getStoreRules } from "@/server/store-rules";
+import { updateStoreRules } from "@/server/repositories/settings-repository";
 import { db } from "@/server/db";
 import { hasAudience, normalizeAudience, normalizeSendDays, normalizeSteps, normalizeWindow } from "@/lib/wa-cadence";
 import {
@@ -127,6 +130,23 @@ export async function saveWaConfigAction(input: Partial<WaConfigView>): Promise<
     await logAdminAction("whatsapp.config", "WaConfig", "1", clean as Record<string, unknown>);
     refresh();
   }
+  return result;
+}
+
+/** Intervalo entre mensagens automáticas (em minutos). Vive nas Regras da loja (com histórico e desfazer); esta ação é o atalho da tela de Cadências. */
+export async function saveSendGapAction(input: { min: number; max: number }): Promise<{ success: true } | { success: false; error: string }> {
+  if (!(await requireAdmin())) return DENIED;
+  const min = Math.round(Number(input.min));
+  const max = Math.round(Number(input.max));
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return { success: false, error: "Informe os dois valores em minutos." };
+  const current = await getStoreRules({ fresh: true });
+  const checked = validateRulesInput({ ...current, automation: { ...current.automation, sendGapMinMinutes: min, sendGapMaxMinutes: max } });
+  if (!checked.ok) return { success: false, error: checked.error };
+  const result = await withMutationFallback(async () => {
+    await updateStoreRules(checked.rules);
+    return { success: true as const };
+  });
+  if (result.success) refresh();
   return result;
 }
 

@@ -382,3 +382,16 @@ export function canRepeat(repeatAfterDays: number | null, enrollment: { status: 
   if (!repeatAfterDays || enrollment.status !== "concluida" || !enrollment.finishedAt) return false;
   return now.getTime() - enrollment.finishedAt.getTime() >= repeatAfterDays * 86_400_000;
 }
+
+/**
+ * Espera exigida depois da última mensagem automática: um valor entre o mínimo e o máximo configurados, sorteado de forma estável
+ * (depende do id da última mensagem), para a rodada seguinte não "re-sortear" até acertar um tempo curto.
+ */
+export function requiredGapMs(lastMessageId: string, minMinutes: number, maxMinutes: number): number {
+  const min = Math.max(0, minMinutes);
+  const max = Math.max(min, maxMinutes);
+  let hash = 0;
+  for (const ch of lastMessageId) hash = (hash * 31 + ch.charCodeAt(0)) % 1_000_003;
+  const fraction = (hash % 1000) / 1000;
+  return Math.round((min + fraction * (max - min)) * 60_000);
+}

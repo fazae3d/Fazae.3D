@@ -30,7 +30,7 @@ describe("regras da loja: padrões", () => {
   it("repetem o que a loja usava antes de virar editável", () => {
     expect(DEFAULT_RULES.shipping).toEqual({ standardCost: 24.9, standardEta: "5 a 8 dias úteis", expressCost: 39.9, expressEta: "2 a 3 dias úteis" });
     expect(DEFAULT_RULES.storefront).toEqual({ lowStockThreshold: 5, scarcityThreshold: 2, returnDays: 7 });
-    expect(DEFAULT_RULES.automation).toEqual({ abandonedCartHours: 2, abandonedCartSecondDays: 3, pendingOrderExpireDays: 4, reactivationDays: 120, reminderCooldownDays: 30, queueNoticeAuto: false, productionNoticeAuto: false, readyNoticeAuto: false });
+    expect(DEFAULT_RULES.automation).toEqual({ abandonedCartHours: 2, abandonedCartSecondDays: 3, pendingOrderExpireDays: 4, reactivationDays: 120, reminderCooldownDays: 30, sendGapMinMinutes: 3, sendGapMaxMinutes: 8, queueNoticeAuto: false, productionNoticeAuto: false, readyNoticeAuto: false });
     expect(DEFAULT_RULES.reviews).toEqual({ rewardValue: 5, rewardMinSubtotal: 30 });
     expect(DEFAULT_RULES.payments.installments).toBe(3);
     expect(DEFAULT_RULES.payments.welcomeCouponCode).toBe("FAZAE10");

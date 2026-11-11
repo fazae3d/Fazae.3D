@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { runCadencesNowAction, saveWaConfigAction } from "@/app/admin/conversas/cadencias/actions";
+import { runCadencesNowAction, saveSendGapAction, saveWaConfigAction } from "@/app/admin/conversas/cadencias/actions";
 import { Select } from "@/components/select";
 import { useToast } from "@/components/admin/toast";
 import type { SendBudget, WaConfigView } from "@/server/repositories/wa-cadence-repository";
@@ -11,7 +11,7 @@ const SELECT_CLASS = "rounded-lg border border-mist bg-transparent px-2.5 py-2 t
 const HOURS = Array.from({ length: 25 }, (_, h) => ({ value: String(h), label: `${String(h).padStart(2, "0")}h` }));
 
 /** Liga/desliga o envio automático e define o limite diário e a janela de horário. Nasce desligado. */
-export function WhatsAppAutoSendPanel({ config, budget, simulated }: { config: WaConfigView; budget: SendBudget; simulated: boolean }) {
+export function WhatsAppAutoSendPanel({ config, budget, simulated, gap }: { config: WaConfigView; budget: SendBudget; simulated: boolean; gap: { min: number; max: number } }) {
   const router = useRouter();
   const { toast } = useToast();
   const [limit, setLimit] = useState(String(config.dailyLimit));
@@ -19,6 +19,21 @@ export function WhatsAppAutoSendPanel({ config, budget, simulated }: { config: W
   const [end, setEnd] = useState(String(config.windowEndHour));
   const [pending, setPending] = useState(false);
   const [confirmOn, setConfirmOn] = useState(false);
+  const [gapMin, setGapMin] = useState(String(gap.min));
+  const [gapMax, setGapMax] = useState(String(gap.max));
+  const gapDirty = gapMin !== String(gap.min) || gapMax !== String(gap.max);
+
+  const saveGap = async () => {
+    setPending(true);
+    const result = await saveSendGapAction({ min: Number(gapMin), max: Number(gapMax) });
+    setPending(false);
+    if (!result.success) {
+      toast(result.error, "error");
+      return;
+    }
+    toast("Intervalo salvo");
+    router.refresh();
+  };
 
   const dirty = limit !== String(config.dailyLimit) || start !== String(config.windowStartHour) || end !== String(config.windowEndHour);
 
@@ -104,6 +119,26 @@ export function WhatsAppAutoSendPanel({ config, budget, simulated }: { config: W
           <label className="mb-1 block text-xs text-graphite">Parar de enviar às</label>
           <Select value={end} onChange={setEnd} options={HOURS.slice(1)} className={SELECT_CLASS} />
         </div>
+      </div>
+
+      <div className="mt-4 border-t border-mist pt-4">
+        <p className="mb-1 text-xs font-medium text-graphite">Intervalo entre uma mensagem e a próxima</p>
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="text-xs text-graphite">
+            De
+            <input value={gapMin} onChange={(e) => setGapMin(e.target.value.replace(/\D/g, ""))} inputMode="numeric" className="mt-1 block w-24 rounded-lg border border-mist bg-transparent px-2.5 py-2 text-sm text-ink outline-none focus:border-petrol" />
+          </label>
+          <label className="text-xs text-graphite">
+            Até (minutos)
+            <input value={gapMax} onChange={(e) => setGapMax(e.target.value.replace(/\D/g, ""))} inputMode="numeric" className="mt-1 block w-24 rounded-lg border border-mist bg-transparent px-2.5 py-2 text-sm text-ink outline-none focus:border-petrol" />
+          </label>
+          <button type="button" disabled={!gapDirty || pending} onClick={saveGap} className="rounded-lg border border-mist px-4 py-2 text-sm hover:border-petrol disabled:opacity-40">
+            Salvar intervalo
+          </button>
+        </div>
+        <p className="mt-2 text-xs text-graphite">
+          Depois de cada mensagem automática (cadências e campanhas), o sistema espera um tempo sorteado entre esses dois valores antes da próxima, e manda uma por vez. Com uma lista de 10 contatos e intervalo de 3 a 8 minutos, o envio leva cerca de uma hora. Com 0 no primeiro campo e no segundo, não há intervalo. O sistema confere o intervalo a cada rodada: se as rodadas forem espaçadas, a espera real pode ser maior.
+        </p>
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
