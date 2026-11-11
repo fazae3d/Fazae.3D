@@ -2,6 +2,7 @@ import { db } from "../db";
 import { STORED_MEDIA_PREFIX, hasViewableMedia } from "../whatsapp/media";
 import { getWhatsAppProvider, type MediaKind } from "../whatsapp/provider";
 import { storeDayKey } from "@/lib/store-time";
+import { usableName } from "@/lib/wa-cadence";
 import { isOptOutText, messagePreview, nextStatus, normalizePhone, LEAD_STAGE_KEYS, type InboundMessage } from "@/lib/whatsapp";
 
 export type WaConversationView = {
@@ -43,7 +44,8 @@ function toConversation(row: ConversationRow): WaConversationView {
   return {
     id: row.id,
     phone: row.phone,
-    name: row.name,
+    // Nome só com números (ex.: número da linha da planilha) não vale como nome.
+    name: usableName(row.name) || null,
     source: row.source,
     stage: row.stage,
     tags: row.tags,

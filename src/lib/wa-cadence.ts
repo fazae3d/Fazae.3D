@@ -114,7 +114,7 @@ export function missingVariables(template: string, vars: MessageVars) {
 }
 
 export function renderMessage(template: string, contact: { name?: string | null }, random: () => number = Math.random, vars: MessageVars = {}) {
-  const first = (contact.name ?? "").trim().split(/\s+/)[0] ?? "";
+  const first = usableName(contact.name).split(/\s+/)[0] ?? "";
   const withName = template.replace(/\{\{\s*([a-z_]+)\s*\}\}/gi, (_, key: string) => {
     const k = key.toLowerCase();
     return k === "nome" ? first : (vars[k as keyof MessageVars] ?? "");
@@ -155,7 +155,32 @@ export const storeToday = (now = new Date()) => storeDayKey(now);
 
 export type ImportRow = { name: string; phone: string };
 
-const NAME_HEADERS = ["nome", "name", "cliente", "contato", "razao social", "empresa", "fantasia"];
+const NAME_HEADERS = ["nome", "name", "cliente", "contato", "razao social", "empresa", "fantasia", "estabelecimento", "loja", "negocio", "responsavel", "proprietario", "dono"];
+
+/** Só letras contam como nome: "2", "14" ou "—" (colunas de número da linha, códigos) não viram "Olá 2!". */
+export function usableName(name: unknown): string {
+  const text = String(name ?? "").trim();
+  return /\p{L}/u.test(text) ? text : "";
+}
+
+/** Coluna que mais parece conter nomes (textos com letras), fora a do telefone. -1 se nenhuma tiver. */
+function textColumn(rows: unknown[][], skip: number, startRow: number): number {
+  const sample = rows.slice(startRow, startRow + 30);
+  const width = Math.max(0, ...sample.map((r) => r.length));
+  let best = -1;
+  let bestShare = 0;
+  for (let c = 0; c < width; c++) {
+    if (c === skip) continue;
+    const filled = sample.filter((r) => String(r[c] ?? "").trim() !== "");
+    if (filled.length === 0) continue;
+    const share = filled.filter((r) => usableName(r[c]) !== "" && normalizePhone(String(r[c])) === null).length / filled.length;
+    if (share > bestShare + 1e-9) {
+      best = c;
+      bestShare = share;
+    }
+  }
+  return bestShare >= 0.6 ? best : -1;
+}
 const PHONE_HEADERS = ["telefone", "celular", "whatsapp", "whats", "fone", "phone", "tel", "numero", "contato"];
 
 function plainHeader(text: unknown) {
@@ -171,7 +196,11 @@ export function detectColumns(rows: unknown[][]): { nameCol: number; phoneCol: n
   const header = (rows[0] ?? []).map(plainHeader);
   const phoneByHeader = header.findIndex((h) => PHONE_HEADERS.some((p) => h === p || h.includes(p)));
   const nameByHeader = header.findIndex((h, i) => i !== phoneByHeader && NAME_HEADERS.some((n) => h === n || h.includes(n)));
-  if (phoneByHeader >= 0) return { phoneCol: phoneByHeader, nameCol: nameByHeader >= 0 ? nameByHeader : phoneByHeader === 0 ? 1 : 0, hasHeader: true };
+  if (phoneByHeader >= 0) {
+    // Sem título de nome reconhecido: usa a coluna que tem textos com letras (ignora colunas de número da linha ou código).
+    const byContent = nameByHeader >= 0 ? nameByHeader : textColumn(rows, phoneByHeader, 1);
+    return { phoneCol: phoneByHeader, nameCol: byContent >= 0 ? byContent : phoneByHeader === 0 ? 1 : 0, hasHeader: true };
+  }
 
   const sample = rows.slice(0, 20);
   const width = Math.max(0, ...sample.map((r) => r.length));
@@ -184,7 +213,8 @@ export function detectColumns(rows: unknown[][]): { nameCol: number; phoneCol: n
       bestHits = hits;
     }
   }
-  return { phoneCol: best, nameCol: best === 0 ? 1 : 0, hasHeader: false };
+  const textCol = textColumn(rows, best, 0);
+  return { phoneCol: best, nameCol: textCol >= 0 ? textCol : best === 0 ? 1 : 0, hasHeader: false };
 }
 
 export type PreparedImport = {
@@ -221,7 +251,7 @@ export function prepareImportRows(rows: unknown[][], cols: { nameCol: number; ph
       landlines += 1;
       return;
     }
-    valid.push({ name: rawName.slice(0, 120), phone });
+    valid.push({ name: usableName(rawName).slice(0, 120), phone });
   });
   return { valid, invalid, duplicates, landlines };
 }

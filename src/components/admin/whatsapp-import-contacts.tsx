@@ -67,6 +67,9 @@ export function WhatsAppImportContacts({ cadences }: { cadences: { id: string; n
 
   const width = Math.max(2, ...rows.slice(0, 50).map((r) => r.length));
   const columnOptions = Array.from({ length: Math.min(width, 26) }, (_, i) => ({ value: String(i), label: columnLabel(i, rows[0]?.[i], hasHeader) }));
+  // A coluna escolhida para o nome tem só números (ex.: número da linha)? Avisa antes de importar.
+  const nameCells = rows.slice(hasHeader ? 1 : 0, 40).map((r) => String(r[nameCol] ?? "").trim()).filter(Boolean);
+  const nameColumnIsNumeric = nameCells.length > 0 && nameCells.every((cell) => !/\p{L}/u.test(cell));
   const prepared = useMemo(() => (rows.length ? prepareImportRows(rows, { nameCol, phoneCol, hasHeader }) : null), [rows, nameCol, phoneCol, hasHeader]);
 
   const submit = async () => {
@@ -113,6 +116,11 @@ export function WhatsAppImportContacts({ cadences }: { cadences: { id: string; n
                 <Select value={String(phoneCol)} onChange={(v) => setPhoneCol(Number(v))} options={columnOptions} className={SELECT_CLASS} />
               </div>
             </div>
+            {nameColumnIsNumeric ? (
+              <p className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs">
+                A coluna escolhida para o nome tem só números. Troque a coluna do nome acima (ou siga assim: os contatos entram sem nome e a mensagem sai sem o nome, como &quot;Olá! Tudo bem?&quot;).
+              </p>
+            ) : null}
             <label className="mt-3 flex items-center gap-2 text-sm">
               <input type="checkbox" checked={hasHeader} onChange={(e) => setHasHeader(e.target.checked)} className="h-4 w-4 accent-[#b6ff00]" />
               A primeira linha é o cabeçalho (títulos das colunas)

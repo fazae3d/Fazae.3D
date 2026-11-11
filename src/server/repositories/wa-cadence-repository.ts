@@ -5,7 +5,7 @@ import { buildMessageVars } from "../whatsapp/context";
 import { getAllCustomers, getCustomersWithMetrics, markCustomerReminded } from "./customer-repository";
 import { isInactive, phoneKey, wasRecentlyReminded } from "@/lib/customer-insights";
 import { getStoreRules } from "@/server/store-rules";
-import { requiredGapMs } from "@/lib/wa-cadence";
+import { requiredGapMs, usableName } from "@/lib/wa-cadence";
 import { storeDayKey } from "@/lib/store-time";
 import { isMobilePhone, normalizePhone, withOptOutNotice } from "@/lib/whatsapp";
 import {
@@ -280,7 +280,7 @@ function toEnrollment(row: {
     cadenceId: row.cadenceId,
     cadenceName: row.cadence.name,
     conversationId: row.conversationId,
-    name: row.conversation.name,
+    name: usableName(row.conversation.name) || null,
     phone: row.conversation.phone,
     stepIndex: row.stepIndex,
     totalSteps: steps.ok ? steps.steps.length : 0,
@@ -362,7 +362,7 @@ export async function importContacts(input: ImportInput, now = new Date()): Prom
       result.landlines += 1;
       continue;
     }
-    unique.set(phone, String(row.name ?? "").trim().slice(0, 120));
+    unique.set(phone, usableName(row.name).slice(0, 120));
   }
   const phones = [...unique.keys()];
   if (phones.length === 0) return result;
@@ -622,7 +622,7 @@ export async function listQueue(filter: QueueFilter = {}, limit = 300): Promise<
     return {
       id: row.id,
       conversationId: row.conversationId,
-      name: row.conversation.name,
+      name: usableName(row.conversation.name) || null,
       phone: row.conversation.phone,
       cadenceId: row.cadenceId,
       cadenceName: row.cadence.name,
@@ -661,7 +661,7 @@ export async function listClosed(filter: QueueFilter = {}, limit = 300): Promise
     return {
       id: row.id,
       conversationId: row.conversationId,
-      name: row.conversation.name,
+      name: usableName(row.conversation.name) || null,
       phone: row.conversation.phone,
       cadenceName: row.cadence.name,
       status: row.status,
@@ -705,7 +705,7 @@ export async function listSentAutomated(q?: string, limit = 200): Promise<SentIt
   return rows.map((m) => ({
     id: m.id,
     conversationId: m.conversationId,
-    name: m.conversation.name,
+    name: usableName(m.conversation.name) || null,
     phone: m.conversation.phone,
     body: m.body,
     status: m.status,
