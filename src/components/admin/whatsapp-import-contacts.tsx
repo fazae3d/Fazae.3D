@@ -225,6 +225,11 @@ export function WhatsAppImportContacts({ cadences }: { cadences: { id: string; n
               </li>
             ) : null}
             {result.alreadyHadConversation > 0 ? <li className="text-graphite">{result.alreadyHadConversation} já tinham conversa{result.optedOut > 0 ? ` (${result.optedOut} pediram para sair)` : ""}</li> : null}
+            {result.renamed > 0 ? (
+              <li>
+                <strong className="text-petrol">{result.renamed}</strong> contatos que já existiam sem nome ganharam o nome da planilha
+              </li>
+            ) : null}
             {result.skippedCustomers > 0 ? <li className="text-graphite">{result.skippedCustomers} já são clientes e foram pulados</li> : null}
             {result.invalid > 0 ? <li className="text-graphite">{result.invalid} telefones inválidos</li> : null}
             {result.landlines > 0 ? <li className="text-graphite">{result.landlines} telefones fixos pulados (sem WhatsApp)</li> : null}

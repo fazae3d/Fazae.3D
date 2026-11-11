@@ -339,12 +339,14 @@ export type ImportResult = {
   skippedCustomers: number;
   optedOut: number;
   enrolled: number;
+  /** Contatos que já existiam sem nome válido (ex.: só número) e ganharam o nome da planilha. */
+  renamed: number;
 };
 
 export const MAX_IMPORT_ROWS = 3000;
 
 export async function importContacts(input: ImportInput, now = new Date()): Promise<ImportResult> {
-  const result: ImportResult = { received: input.rows.length, invalid: 0, duplicates: 0, landlines: 0, created: 0, alreadyHadConversation: 0, skippedCustomers: 0, optedOut: 0, enrolled: 0 };
+  const result: ImportResult = { received: input.rows.length, invalid: 0, duplicates: 0, landlines: 0, created: 0, alreadyHadConversation: 0, skippedCustomers: 0, optedOut: 0, enrolled: 0, renamed: 0 };
 
   // Nunca confiamos no que veio do navegador: telefones são normalizados e repetidos removidos aqui também.
   const unique = new Map<string, string>();
@@ -369,7 +371,7 @@ export async function importContacts(input: ImportInput, now = new Date()): Prom
 
   const tag = input.listName?.trim().toLowerCase().slice(0, 40);
   const [existing, customers] = await Promise.all([
-    db.waConversation.findMany({ where: { phone: { in: phones } }, select: { id: true, phone: true, optedOut: true } }),
+    db.waConversation.findMany({ where: { phone: { in: phones } }, select: { id: true, phone: true, optedOut: true, name: true } }),
     getAllCustomers().catch(() => []),
   ]);
   const existingByPhone = new Map(existing.map((c) => [c.phone, c]));
@@ -381,6 +383,12 @@ export async function importContacts(input: ImportInput, now = new Date()): Prom
     const found = existingByPhone.get(phone);
     if (found) {
       result.alreadyHadConversation += 1;
+      // Contato que já existe sem nome válido (ex.: ficou só o número da linha) ganha o nome da planilha. Nome que já está certo não muda.
+      const fileName = unique.get(phone);
+      if (fileName && usableName(found.name) === "") {
+        await db.waConversation.update({ where: { id: found.id }, data: { name: fileName } });
+        result.renamed += 1;
+      }
       if (found.optedOut) result.optedOut += 1;
       else if (!input.skipExisting) enrollIds.push(found.id);
       continue;

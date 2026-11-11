@@ -95,6 +95,7 @@ export function describeDelay(hours: number, first = false) {
  */
 export const MESSAGE_VARIABLES = [
   { key: "nome", label: "Nome", example: "Maria" },
+  { key: "nome_completo", label: "Nome completo (ou da empresa)", example: "Tabacaria Fumaça" },
   { key: "produto", label: "Produto da última compra", example: "Chaveiro Coração" },
   { key: "pedido", label: "Número do último pedido", example: "FAZ-1042" },
   { key: "ultima_compra", label: "Data da última compra", example: "12/09/2026" },
@@ -110,14 +111,16 @@ export function usedVariables(template: string) {
 
 /** Variáveis que o texto usa e que não têm valor para esse contato (o nome não conta: some sem deixar sobra). */
 export function missingVariables(template: string, vars: MessageVars) {
-  return usedVariables(template).filter((k) => k !== "nome" && MESSAGE_VARIABLES.some((v) => v.key === k) && !vars[k as keyof MessageVars]);
+  return usedVariables(template).filter((k) => k !== "nome" && k !== "nome_completo" && MESSAGE_VARIABLES.some((v) => v.key === k) && !vars[k as keyof MessageVars]);
 }
 
 export function renderMessage(template: string, contact: { name?: string | null }, random: () => number = Math.random, vars: MessageVars = {}) {
   const first = usableName(contact.name).split(/\s+/)[0] ?? "";
   const withName = template.replace(/\{\{\s*([a-z_]+)\s*\}\}/gi, (_, key: string) => {
     const k = key.toLowerCase();
-    return k === "nome" ? first : (vars[k as keyof MessageVars] ?? "");
+    if (k === "nome") return first;
+    if (k === "nome_completo") return usableName(contact.name);
+    return vars[k as keyof MessageVars] ?? "";
   });
   const spun = withName.replace(/\{([^{}|]+(?:\|[^{}|]*)+)\}/g, (_, options: string) => {
     const choices = options.split("|");
