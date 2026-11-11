@@ -4,6 +4,7 @@ import { EmptyState } from "@/components/admin/empty-state";
 import Link from "next/link";
 import { getAllOrders } from "@/server/repositories/order-repository";
 import { OrderStatusForm } from "@/components/admin/order-status-form";
+import { OrderProductionControl } from "@/components/admin/order-production-control";
 import { MarkAllPaidButton } from "@/components/admin/mark-paid-button";
 import { OrderPaymentControls } from "@/components/admin/order-payment-controls";
 import { StatusBadge, type BadgeTone } from "@/components/admin/page-header";
@@ -349,6 +350,8 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
                   </OpenInConversas>
                 </div>
               )}
+
+              <OrderProductionControl orderId={order.id} stage={order.productionStage} cancelled={order.status === "Cancelado"} />
 
               <div className="border-t border-mist pt-4">
                 <OrderStatusForm order={order} />

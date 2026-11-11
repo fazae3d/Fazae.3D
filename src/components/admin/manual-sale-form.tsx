@@ -92,8 +92,12 @@ export function ManualSaleForm({
   const [phoneSkipped, setPhoneSkipped] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pix");
   const [status, setStatus] = useState<OrderStatus>("Entregue");
-  const [productionPending, setProductionPending] = useState(false);
+  // "Produção pendente": quem não mexeu na caixa recebe a sugestão automática (produto avulso e pedido ainda não entregue = precisa produzir).
+  const [productionChoice, setProductionChoice] = useState<boolean | null>(null);
   const [items, setItems] = useState<SaleItem[]>([emptyItem(products)]);
+  const hasCustomItem = items.some((item) => item.manual);
+  const suggestProduction = hasCustomItem && status !== "Entregue" && status !== "Cancelado";
+  const productionPending = productionChoice ?? suggestProduction;
   // Taxa do marketplace: sugerida pelas Configurações, mas pode ser ajustada (a real muda por anúncio).
   const [feeOverride, setFeeOverride] = useState<string | null>(null);
   const [shippingInput, setShippingInput] = useState("");
@@ -148,7 +152,6 @@ export function ManualSaleForm({
   const setItemKind = (index: number, manual: boolean) => {
     const fresh = emptyItem(products, manual);
     updateItem(index, { ...fresh, quantity: items[index].quantity });
-    if (manual) setProductionPending(true);
   };
   const colorsOfMaterial = (name: string) => materials.find((m) => m.name === name)?.colors.map((c) => c.name) ?? [];
   const parseMoney = (value: string) => {
@@ -365,10 +368,11 @@ export function ManualSaleForm({
           <input
             type="checkbox"
             checked={productionPending}
-            onChange={(e) => setProductionPending(e.target.checked)}
+            onChange={(e) => setProductionChoice(e.target.checked)}
             className="h-4 w-4 accent-ink"
           />
           Produção pendente
+          {productionChoice === null && suggestProduction ? <span className="text-xs text-graphite">(marcada porque tem produto avulso e o pedido não está entregue)</span> : null}
         </label>
       </div>
 
