@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { isExcludedFromShopping } from "@/lib/shopping-policy";
 import type { Metadata } from "next";
 import { Accordion } from "@/components/accordion";
 import { Breadcrumb } from "@/components/breadcrumb";
@@ -95,7 +96,8 @@ export default async function ProductPage({ params }: PageProps<"/produto/[slug]
     sku: product.slug,
     brand: { "@type": "Brand", name: "Fazaê" },
     ...(product.images && product.images.length > 0 ? { image: product.images } : {}),
-    ...(product.price !== undefined
+    // Sem preço nos dados estruturados para o que o Google Shopping restringe: a página continua indexável, mas não vira oferta de compra.
+    ...(product.price !== undefined && !isExcludedFromShopping(product)
       ? {
           offers: {
             "@type": "Offer",

@@ -1,16 +1,10 @@
 import { getAllProducts } from "@/lib/demo-data";
 import { isSoldOut } from "@/lib/badges";
 import { SITE_URL } from "@/lib/site-config";
+import { isExcludedFromShopping } from "@/lib/shopping-policy";
 import { isPubliclyVisible } from "@/lib/visibility";
 
 export const revalidate = 3600;
-
-/**
- * Produtos que as políticas do Google Shopping não aceitam (armas e acessórios de arma, como porta-munição): ficam fora do feed
- * para não reprovar ou suspender a conta do Merchant Center. Continuam à venda normalmente na loja.
- */
-const EXCLUDED_FROM_FEED = new Set(["porta-municao"]);
-const EXCLUDED_NAME_PATTERN = /muni[cç][aã]o|arma|armas|pistola|revolver|rev[oó]lver/i;
 
 const xml = (value: string) =>
   value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
@@ -40,7 +34,8 @@ export async function GET() {
   const items = products
     .filter(isPubliclyVisible)
     .filter((p) => p.price !== undefined && p.images && p.images.length > 0)
-    .filter((p) => !EXCLUDED_FROM_FEED.has(p.slug) && !EXCLUDED_NAME_PATTERN.test(p.name))
+    // Produtos que o Google Shopping não aceita ou restringe (armas, Head Shop): só na loja (ver lib/shopping-policy.ts).
+    .filter((p) => !isExcludedFromShopping(p))
     .map((p) => {
       const description = p.description.replace(/\s+/g, " ").trim().slice(0, 4900);
       const extra = (p.images ?? [])
