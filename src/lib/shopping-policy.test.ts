@@ -6,6 +6,10 @@ describe("produtos fora do Google Shopping", () => {
     expect(isExcludedFromShopping({ slug: "cinzeiro-dado", name: "Cinzeiro Dado", categorySlug: "head-shop" })).toBe(true);
     expect(isExcludedFromShopping({ slug: "qualquer-coisa-nova", name: "Peça nova", categorySlug: "head-shop" })).toBe(true);
   });
+  it("incensário da categoria Head Shop continua no Google Shopping", () => {
+    expect(isExcludedFromShopping({ slug: "incensario-esfinge", name: "Incensário Esfinge", categorySlug: "head-shop" })).toBe(false);
+    expect(isExcludedFromShopping({ slug: "porta-isqueiro-bic-aranha", name: "Porta Isqueiro BIC Aranha", categorySlug: "head-shop" })).toBe(true);
+  });
   it("mantém a regra antiga de armas e acessórios de arma", () => {
     expect(isExcludedFromShopping({ slug: "porta-municao", name: "Porta Munição", categorySlug: "utilidades" })).toBe(true);
     expect(isExcludedFromShopping({ slug: "x", name: "Suporte de Pistola", categorySlug: "utilidades" })).toBe(true);

@@ -1,7 +1,7 @@
 import { getAllProducts } from "@/lib/demo-data";
 import { isSoldOut } from "@/lib/badges";
 import { SITE_URL } from "@/lib/site-config";
-import { isExcludedFromShopping } from "@/lib/shopping-policy";
+import { isExcludedFromShopping, isIncense } from "@/lib/shopping-policy";
 import { isPubliclyVisible } from "@/lib/visibility";
 
 export const revalidate = 3600;
@@ -56,8 +56,8 @@ export async function GET() {
 <g:brand>Fazaê</g:brand>
 <g:condition>new</g:condition>
 <g:identifier_exists>no</g:identifier_exists>
-<g:product_type>${xml(p.categoryName)}</g:product_type>${googleCategory(p.categoryName) ? `
-<g:google_product_category>${xml(googleCategory(p.categoryName)!)}</g:google_product_category>` : ""}${p.materials?.[0] ? `
+<g:product_type>${xml(isIncense(p) ? "Incensários" : p.categoryName)}</g:product_type>${googleCategory(isIncense(p) ? "Decoração" : p.categoryName) ? `
+<g:google_product_category>${xml(googleCategory(isIncense(p) ? "Decoração" : p.categoryName)!)}</g:google_product_category>` : ""}${p.materials?.[0] ? `
 <g:material>${xml(p.materials[0].material)}</g:material>${p.materials[0].colors.length ? `
 <g:color>${xml(p.materials[0].colors.slice(0, 3).join("/"))}</g:color>` : ""}` : ""}${p.weightGrams ? `
 <g:shipping_weight>${p.weightGrams} g</g:shipping_weight>` : ""}
