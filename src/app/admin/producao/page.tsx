@@ -23,7 +23,7 @@ export default async function AdminProductionPage() {
 
   // Avisos de etapa que já saíram, como "pedido:evento" (cada aviso sai uma vez por pedido e etapa).
   const noticed = await withReadFallback(
-    () => db.waMessage.findMany({ where: { ref: { in: orderCards.flatMap((c) => STAGE_NOTICES.map((n) => `pedido:${c.id}:${n.event}`)) } }, select: { ref: true } }),
+    () => db.waMessage.findMany({ where: { ref: { in: orderCards.flatMap((c) => [...STAGE_NOTICES.map((n) => `pedido:${c.id}:${n.event}`), `pedido:${c.id}:avaliacao`]) } }, select: { ref: true } }),
     [],
   );
   const noticeSent = noticed.map((m) => (m.ref ?? "").split(":").slice(1).join(":")).filter(Boolean);

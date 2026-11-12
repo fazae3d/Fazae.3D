@@ -23,7 +23,7 @@ import type { Order, OrderItem, ProductionItem } from "@/server/types";
 import { withMutationFallback } from "@/lib/db-fallback";
 import { logAdminAction } from "@/server/audit";
 import { getStoreRules } from "@/server/store-rules";
-import { sendProductionNotice } from "@/server/whatsapp/automation";
+import { sendProductionNotice, sendReviewRequest } from "@/server/whatsapp/automation";
 import { isNoticeEvent, stageNoticeFor } from "@/lib/stage-notices";
 
 function slugify(text: string) {
@@ -87,6 +87,17 @@ export async function sendProductionNoticeAction(orderId: string, event: string)
   revalidatePath("/admin/producao");
   revalidatePath("/admin/conversas");
   return { success: true };
+}
+
+/** Botão "Enviar pesquisa" da tela Produção: manda o link de avaliação pelo Conversas (uma vez por pedido). */
+export async function sendReviewRequestAction(orderId: string): Promise<{ success: true; warning?: string } | { success: false; error: string }> {
+  if (!(await requireAdmin())) return { success: false, error: "Acesso restrito ao administrador." };
+  const sent = await sendReviewRequest(orderId);
+  if (!sent.ok) return { success: false, error: sent.error };
+  await logAdminAction("pedido.pesquisa-avaliacao", "Order", orderId, {});
+  revalidatePath("/admin/producao");
+  revalidatePath("/admin/conversas");
+  return { success: true, warning: sent.warning };
 }
 
 type ProductionItemResult = { success: true; item: ProductionItem } | { success: false; error: string };

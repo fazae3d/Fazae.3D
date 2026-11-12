@@ -2,6 +2,7 @@ import { db } from "../db";
 import { getAutomationSettings } from "../repositories/wa-settings-repository";
 import { getWaConfig } from "../repositories/wa-cadence-repository";
 import { findOrderById } from "../repositories/order-repository";
+import { createReviewUrl } from "../review-link";
 import { sendConversationText, startConversation } from "../repositories/whatsapp-repository";
 import { renderMessage, isWithinSchedule, DEFAULT_SEND_DAYS } from "@/lib/wa-cadence";
 import { firstName, formatPrice } from "@/lib/format";
@@ -49,7 +50,7 @@ function fill(template: string, vars: Record<string, string>) {
     .trim();
 }
 
-type OrderEvent = "pago" | "enviado" | "pix" | NoticeEvent;
+type OrderEvent = "pago" | "enviado" | "pix" | "avaliacao" | NoticeEvent;
 
 type OrderMessageResult = { ok: true } | { ok: false; error: string };
 
@@ -58,7 +59,7 @@ type OrderMessageResult = { ok: true } | { ok: false; error: string };
  * (usado quando uma pessoa clica no botão de enviar).
  */
 async function deliverOrderMessage(
-  order: Pick<Order, "id" | "customerName" | "customerPhone" | "total" | "tracking" | "address">,
+  order: Pick<Order, "id" | "customerName" | "customerPhone" | "total" | "tracking" | "address" | "userEmail">,
   event: OrderEvent,
   options: { extraCode?: string; force?: boolean } = {},
 ): Promise<OrderMessageResult> {
@@ -71,7 +72,8 @@ async function deliverOrderMessage(
     if (!isMobilePhone(phone)) return { ok: false, error: "O telefone do pedido não é de celular." };
 
     const name = firstName(order.customerName ?? order.address?.recipient ?? "tudo bem");
-    const vars = { nome: name, pedido: order.id, total: formatPrice(order.total), rastreio: order.tracking ?? "" };
+    const vars: Record<string, string> = { nome: name, pedido: order.id, total: formatPrice(order.total), rastreio: order.tracking ?? "" };
+    if (event === "avaliacao") vars.link_avaliacao = createReviewUrl(order);
     if (event === "enviado" && !order.tracking) vars.rastreio = "em breve no site";
 
     const opened = await startConversation({ phone, name: order.customerName ?? undefined, source: "cliente" });
@@ -95,6 +97,17 @@ async function deliverOrderMessage(
 
 async function sendOrderMessage(order: Pick<Order, "id" | "customerName" | "customerPhone" | "total" | "tracking" | "address">, event: OrderEvent, extraCode?: string): Promise<boolean> {
   return (await deliverOrderMessage(order, event, { extraCode })).ok;
+}
+
+/** Pesquisa de avaliação (botão da tela Produção): manda o link para avaliar o pedido pelo Conversas. Uma por pedido. */
+export async function sendReviewRequest(orderId: string): Promise<(OrderMessageResult & { warning?: string })> {
+  const order = await findOrderById(orderId);
+  if (!order) return { ok: false, error: "Pedido não encontrado." };
+  if (order.status === "Cancelado") return { ok: false, error: "O pedido está cancelado." };
+  const sent = await deliverOrderMessage(order, "avaliacao", { force: true });
+  if (!sent.ok) return sent;
+  // O link de avaliação só abre quando o pedido está como Entregue.
+  return order.status === "Entregue" ? sent : { ...sent, warning: "O link só abre para o cliente quando o pedido estiver como Entregue. Marque como entregue em Pedidos." };
 }
 
 /** Aviso de etapa da produção (na fila, produção iniciada, pronto): pelo botão da tela Produção ou sozinho, se a regra estiver ligada. Um por pedido e etapa. */

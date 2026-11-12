@@ -9,6 +9,7 @@ import { formatPrice } from "@/lib/format";
 import {
   updateProductionAction,
   sendProductionNoticeAction,
+  sendReviewRequestAction,
   updateProductionItemAction,
   deleteProductionItemAction,
 } from "@/app/admin/producao/actions";
@@ -26,6 +27,9 @@ const STAGE_COLUMNS: KanbanColumn[] = [
   { key: "em_producao", label: "Em produção" },
   { key: "finalizado", label: "Finalizado" },
 ];
+
+/** Colunas do kanban: as três etapas e "Avaliação enviada" (pedido finalizado cuja pesquisa já foi enviada; não é uma etapa nova no banco). */
+const BOARD_COLUMNS: KanbanColumn[] = [...STAGE_COLUMNS, { key: "avaliacao", label: "Avaliação enviada" }];
 
 const STAGE_LABELS: Record<ProductionStage, string> = {
   nao_aplicavel: "Não aplicável",
@@ -208,7 +212,7 @@ export function ProductionBoard({ cards: initialCards, products, noticeSent }: {
   // router.refresh() following the "novo item" form), local state otherwise
   // only reflects props from the initial mount.
   useEffect(() => setCards(initialCards), [initialCards]);
-  const [view, setView] = useState<"lista" | "kanban">("lista");
+  const [view, setView] = useState<"lista" | "kanban">("kanban");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [noticed, setNoticed] = useState<string[]>(noticeSent);
@@ -217,6 +221,43 @@ export function ProductionBoard({ cards: initialCards, products, noticeSent }: {
   if (seenNotice !== noticeSent) {
     setSeenNotice(noticeSent);
     setNoticed(noticeSent);
+  }
+
+  /** Coluna do kanban: finalizado com pesquisa já enviada vai para "Avaliação enviada". */
+  function columnOf(card: ProductionCard): string {
+    const stage = cardColumn(card);
+    return card.kind === "order" && stage === "finalizado" && noticed.includes(`${card.order.id}:avaliacao`) ? "avaliacao" : stage;
+  }
+
+  /** Botão "Enviar pesquisa" (pedido finalizado): manda o link de avaliação pelo Conversas e o card vai para "Avaliação enviada". */
+  function renderReview(card: ProductionCard) {
+    if (card.kind !== "order" || card.order.productionStage !== "finalizado") return null;
+    const id = card.order.id;
+    const key = `${id}:avaliacao`;
+    if (noticed.includes(key)) return <span className="label-caps text-[10px] text-petrol">Pesquisa enviada</span>;
+    return (
+      <button
+        type="button"
+        disabled={noticing === key}
+        title="Manda o link de avaliação pelo WhatsApp (Conversas) e move o card para Avaliação enviada. O texto se edita em Conversas, Ajustes."
+        onClick={async (e) => {
+          e.stopPropagation();
+          setError(null);
+          setNoticing(key);
+          const result = await sendReviewRequestAction(id);
+          setNoticing(null);
+          if (!result.success) {
+            setError(result.error);
+            return;
+          }
+          setNoticed((prev) => [...prev, key]);
+          if (result.warning) setError(result.warning);
+        }}
+        className="label-caps self-start rounded border border-petrol px-2 py-1 text-[10px] text-petrol transition-colors hover:bg-petrol hover:text-[#111] disabled:opacity-50"
+      >
+        {noticing === key ? "Enviando..." : "Enviar pesquisa"}
+      </button>
+    );
   }
 
   /** Botão "Avisar cliente": só para pedido que está em produção; depois de enviado vira "Cliente avisado". */
@@ -295,6 +336,12 @@ export function ProductionBoard({ cards: initialCards, products, noticeSent }: {
   const handleMove = (id: string, newColumnKey: string) => {
     const card = cards.find((c) => c.id === id);
     if (!card) return;
+    if (newColumnKey === "avaliacao") {
+      setError('Para mandar o card para "Avaliação enviada", clique em "Enviar pesquisa" no pedido finalizado.');
+      return;
+    }
+    // Pedido que já recebeu a pesquisa continua finalizado: arrastar de volta para "Finalizado" não muda nada.
+    if (columnOf(card) === "avaliacao" && newColumnKey === "finalizado") return;
     if (card.kind === "order") {
       void handleOrderSave(card.order.id, { stage: newColumnKey as ProductionStage });
     } else {
@@ -330,6 +377,7 @@ export function ProductionBoard({ cards: initialCards, products, noticeSent }: {
           </p>
           <p className="text-ink">{formatPrice(orderBalanceDue(order))} a receber</p>
           {renderNotice(card)}
+          {renderReview(card)}
         </div>
       );
     }
@@ -453,6 +501,7 @@ export function ProductionBoard({ cards: initialCards, products, noticeSent }: {
                           {editingId === card.id ? "Fechar" : "Editar"}
                         </button>
                         {renderNotice(card)}
+                        {renderReview(card)}
                       </div>
                     </td>
                   </tr>
@@ -470,10 +519,10 @@ export function ProductionBoard({ cards: initialCards, products, noticeSent }: {
         </div>
       ) : (
         <KanbanBoard
-          columns={STAGE_COLUMNS}
+          columns={BOARD_COLUMNS}
           items={cards}
           getItemId={(card) => card.id}
-          getItemColumn={cardColumn}
+          getItemColumn={columnOf}
           onMove={handleMove}
           renderCard={(card) => (
             <div className="flex flex-col gap-2">

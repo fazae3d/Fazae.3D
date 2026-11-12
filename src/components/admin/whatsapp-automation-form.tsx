@@ -106,9 +106,13 @@ export function WhatsAppAutomationForm({ initial, hours }: { initial: WaAutomati
               <textarea value={s.orderTemplates[n.event]} onChange={(e) => set({ orderTemplates: { ...s.orderTemplates, [n.event]: e.target.value } })} rows={3} className={`${AREA} mt-1`} />
             </label>
           ))}
+          <label className="block text-xs text-graphite">
+            Pesquisa de avaliação (botão &quot;Enviar pesquisa&quot; nos pedidos finalizados; precisa de {"{{link_avaliacao}}"})
+            <textarea value={s.orderTemplates.avaliacao} onChange={(e) => set({ orderTemplates: { ...s.orderTemplates, avaliacao: e.target.value } })} rows={3} className={`${AREA} mt-1`} />
+          </label>
         </div>
         <p className="mt-2 text-xs text-graphite">
-          Variáveis: <code className="rounded bg-mist px-1">{"{{nome}}"}</code> <code className="rounded bg-mist px-1">{"{{pedido}}"}</code> <code className="rounded bg-mist px-1">{"{{total}}"}</code>.
+          Variáveis: <code className="rounded bg-mist px-1">{"{{nome}}"}</code> <code className="rounded bg-mist px-1">{"{{pedido}}"}</code> <code className="rounded bg-mist px-1">{"{{total}}"}</code>, e na pesquisa também <code className="rounded bg-mist px-1">{"{{link_avaliacao}}"}</code>.
         </p>
       </div>
 
