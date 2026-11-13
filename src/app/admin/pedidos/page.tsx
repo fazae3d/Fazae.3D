@@ -5,6 +5,7 @@ import Link from "next/link";
 import { getAllOrders } from "@/server/repositories/order-repository";
 import { OrderStatusForm } from "@/components/admin/order-status-form";
 import { OrderProductionControl } from "@/components/admin/order-production-control";
+import { OrderEditor } from "@/components/admin/order-editor";
 import { MarkAllPaidButton } from "@/components/admin/mark-paid-button";
 import { OrderPaymentControls } from "@/components/admin/order-payment-controls";
 import { StatusBadge, type BadgeTone } from "@/components/admin/page-header";
@@ -105,6 +106,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
     withReadFallback(() => getAllProducts(), fallbackProducts),
   ]);
   // Miniatura só para quem existe na loja: itens avulsos/personalizados não têm foto e ficam sem.
+  const catalogOptions = catalog.filter((p) => !p.hidden).map((p) => ({ slug: p.slug, name: p.name, price: p.price }));
   const photoBySlug = new Map(catalog.filter((p) => p.images && p.images.length > 0).map((p) => [p.slug, p.images![0]]));
   // "A enviar" = já pago, ainda sem código de rastreio e sem ter saído: a fila de trabalho do dia.
   const toShip = (o: Order) => (o.status === "Pagamento aprovado" || o.status === "Em preparação") && !o.tracking;
@@ -351,6 +353,12 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
                 </div>
               )}
 
+              {order.channel !== "online" && order.status !== "Cancelado" ? (
+                <OrderEditor
+                  order={{ id: order.id, total: order.total, shipping: order.shipping, discount: order.discount, depositAmount: order.depositAmount, paymentStatus: order.paymentStatus, items: order.items }}
+                  catalog={catalogOptions}
+                />
+              ) : null}
               <OrderProductionControl orderId={order.id} stage={order.productionStage} cancelled={order.status === "Cancelado"} />
 
               <div className="border-t border-mist pt-4">

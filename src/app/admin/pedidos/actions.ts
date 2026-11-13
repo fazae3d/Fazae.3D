@@ -8,11 +8,16 @@ import {
   findOrderById,
   markOrdersPaid,
   setManualOrderPayment,
+  updateOrderDetails,
   updateOrderStatus,
   type DeleteOrderResult,
   type OrderStatusUpdateResult,
 } from "@/server/repositories/order-repository";
-import type { OrderStatus } from "@/server/types";
+import type { OrderItem, OrderStatus } from "@/server/types";
+import { z } from "zod";
+import { round2 } from "@/lib/money";
+import { slugify } from "@/lib/slug";
+import { getProduct } from "@/server/repositories/product-repository";
 import { withMutationFallback } from "@/lib/db-fallback";
 import { notifyOrderStatusChange } from "@/lib/order-notifications";
 import { logAdminAction } from "@/server/audit";
@@ -53,6 +58,72 @@ export async function updateOrderStatusAction(
     if (result.previousStatus !== status) {
       await logAdminAction("pedido.status", "Order", id, { de: result.previousStatus, para: status, rastreio: tracking || undefined });
     }
+  }
+  return result;
+}
+
+const editLineSchema = z.object({
+  productSlug: z.string().max(120).optional(),
+  name: z.string().trim().min(1, "Dê um nome a todos os itens.").max(120),
+  material: z.string().max(60).optional(),
+  color: z.string().max(60).optional(),
+  scale: z.string().max(30).optional(),
+  quantity: z.number().int("A quantidade precisa ser um número inteiro.").min(1, "A quantidade mínima é 1.").max(999),
+  price: z.number().min(0, "O preço não pode ser negativo.").max(100000),
+});
+const editOrderSchema = z.object({
+  items: z.array(editLineSchema).min(1, "O pedido precisa ter pelo menos um item.").max(60),
+  shipping: z.number().min(0).max(100000),
+  discount: z.number().min(0).max(1000000),
+});
+
+export type EditOrderInput = z.input<typeof editOrderSchema>;
+export type EditOrderResult = { success: true; total: number; balanceDue: number; overpaid: number } | { success: false; error: string };
+
+/** Edita itens, preços, frete e desconto de um pedido lançado. Itens do catálogo seguem o nome e a categoria do cadastro; o preço é o que for digitado. */
+export async function updateOrderDetailsAction(orderId: string, input: EditOrderInput): Promise<EditOrderResult> {
+  if (!(await requireAdmin())) return { success: false, error: "Acesso restrito ao administrador." };
+  const parsed = editOrderSchema.safeParse(input);
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  const { shipping, discount } = parsed.data;
+  const lines = parsed.data.items.map((l) => ({ ...l, price: round2(l.price) }));
+  const subtotal = round2(lines.reduce((sum, l) => sum + l.price * l.quantity, 0));
+  if (discount > subtotal + shipping) return { success: false, error: "O desconto não pode passar do valor dos itens somado ao frete." };
+
+  const result = await withMutationFallback(async () => {
+    const items: OrderItem[] = [];
+    for (const line of lines) {
+      const product = line.productSlug && !line.productSlug.startsWith("avulso-") ? await getProduct(line.productSlug) : undefined;
+      if (line.productSlug && !line.productSlug.startsWith("avulso-") && !product) {
+        return { success: false as const, error: `O produto "${line.name}" não existe mais no catálogo.` };
+      }
+      items.push({
+        productSlug: product ? product.slug : line.productSlug?.startsWith("avulso-") ? line.productSlug : `avulso-${slugify(line.name).slice(0, 60) || "item"}`,
+        name: product ? product.name : line.name,
+        categoryName: product ? product.categoryName : "Avulso",
+        material: line.material ?? "",
+        color: line.color ?? "",
+        quantity: line.quantity,
+        price: line.price,
+        ...(line.scale ? { scale: line.scale } : {}),
+      });
+    }
+    const updated = await updateOrderDetails(orderId, { items, shipping: round2(shipping), discount: round2(discount) });
+    if (!updated.success) return updated;
+    await logAdminAction("pedido.editar", "Order", orderId, {
+      totalAntes: updated.previousTotal,
+      totalDepois: updated.order.total,
+      itens: items.map((i) => `${i.quantity}x ${i.name} (${i.price})`),
+      frete: shipping,
+      desconto: discount,
+    });
+    return { success: true as const, total: updated.order.total, balanceDue: updated.balanceDue, overpaid: updated.overpaid };
+  });
+  if (result.success) {
+    revalidatePath("/admin/pedidos");
+    revalidatePath("/admin/producao");
+    revalidatePath("/admin/financas");
+    revalidatePath("/admin");
   }
   return result;
 }

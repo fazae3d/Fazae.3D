@@ -1,5 +1,6 @@
 import { round2 } from "@/lib/money";
 import { applyManualPayment, receivedAmount } from "@/lib/payment";
+import { paymentAfterEdit, totalsFor } from "@/lib/order-edit";
 import { db } from "../db";
 import type { Order, OrderStatus } from "../types";
 import type { Prisma, ProductionStage } from "@/generated/prisma/client";
@@ -450,6 +451,78 @@ export function generateOrderId() {
 }
 
 /** Gera um id que ainda não existe no banco (a colisão é improvável, mas o id também é a chave de idempotência do pagamento). */
+export type UpdateOrderDetailsResult =
+  | { success: true; order: Order; balanceDue: number; overpaid: number; previousTotal: number }
+  | { success: false; error: string };
+
+/**
+ * Edita itens, frete e desconto de um pedido já lançado (upsell, desconto, troca de peça). Tudo numa transação:
+ * - estoque: se o pedido tinha reserva de estoque, o que passou a mais é baixado (com a mesma trava de falta de estoque) e o que
+ *   saiu volta para o estoque; os insumos acompanham a mesma diferença;
+ * - pagamento: o total novo é conferido com o que já foi recebido (ver paymentAfterEdit): sobe = saldo a receber, desce = excedente;
+ * - pedidos do site não entram: o valor já foi combinado com o Mercado Pago.
+ */
+export async function updateOrderDetails(id: string, input: { items: Order["items"]; shipping: number; discount: number }): Promise<UpdateOrderDetailsResult> {
+  const existing = await db.order.findUnique({ where: { id } });
+  if (!existing) return { success: false, error: "Pedido não encontrado." };
+  if (existing.channel === "online") return { success: false, error: "Pedidos feitos no site não podem ser editados aqui: o valor já foi combinado com o Mercado Pago. Para vender mais itens, lance uma venda manual." };
+  if (existing.status === "Cancelado") return { success: false, error: "Esse pedido está cancelado." };
+  if (input.items.length === 0) return { success: false, error: "O pedido precisa ter pelo menos um item." };
+
+  const oldItems = existing.items as Order["items"];
+  const { subtotal, total } = totalsFor(input.items, input.shipping, input.discount);
+  const pay = paymentAfterEdit(existing, total);
+  const oldTotals = quantitiesBySlug(oldItems);
+  const newTotals = quantitiesBySlug(input.items);
+  const slugs = [...new Set([...oldTotals.keys(), ...newTotals.keys()])];
+  const deltas = new Map(slugs.map((slug) => [slug, (newTotals.get(slug) ?? 0) - (oldTotals.get(slug) ?? 0)]));
+
+  let updated: OrderRow;
+  try {
+    updated = await db.$transaction(async (tx) => {
+      if (existing.stockReserved) {
+        const products = await tx.product.findMany({ where: { slug: { in: slugs } } });
+        for (const product of products) {
+          if (product.type === "sob_encomenda") continue;
+          const delta = deltas.get(product.slug) ?? 0;
+          if (delta > 0) {
+            const result = await tx.product.updateMany({ where: { slug: product.slug, stock: { gte: delta } }, data: { stock: { decrement: delta } } });
+            if (result.count === 0) throw new OutOfStockError(product.name);
+          } else if (delta < 0) {
+            await tx.product.update({ where: { slug: product.slug }, data: { stock: { increment: -delta } } });
+          }
+        }
+      }
+      let status = existing.status;
+      if (pay.paymentStatus === "approved" && status === "Pedido recebido") status = "Pagamento aprovado";
+      return tx.order.update({
+        where: { id },
+        data: {
+          items: input.items as unknown as Prisma.InputJsonValue,
+          subtotal,
+          shipping: input.shipping,
+          discount: input.discount,
+          total,
+          paymentStatus: pay.paymentStatus,
+          depositAmount: pay.depositAmount,
+          status,
+        },
+      });
+    });
+  } catch (error) {
+    if (error instanceof OutOfStockError) return { success: false, error: error.message };
+    throw error;
+  }
+
+  // Insumos seguem a diferença de quantidade (a lista de insumos de cada produto é a mesma usada na venda).
+  for (const [slug, delta] of deltas) {
+    if (delta === 0) continue;
+    const usages = await getUsagesForProduct(slug);
+    for (const usage of usages) await adjustRawMaterialStock(usage.rawMaterialId, -(usage.quantity * delta));
+  }
+  return { success: true, order: toOrder(updated), balanceDue: pay.balanceDue, overpaid: pay.overpaid, previousTotal: existing.total };
+}
+
 export async function generateUniqueOrderId(): Promise<string> {
   for (let attempt = 0; attempt < 5; attempt++) {
     const id = generateOrderId();
