@@ -15,7 +15,9 @@ const STORE_TZ = "America/Fortaleza";
 const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
 const ATTACH_ACCEPT = "image/*,video/mp4,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.stl,.3mf";
 
-type Attachment = { blob: Blob; name: string; type: string; kind: "image" | "video" | "audio" | "document"; previewUrl: string };
+const MAX_ATTACHMENTS = 10;
+
+type Attachment = { id: number; blob: Blob; name: string; type: string; kind: "image" | "video" | "audio" | "document"; previewUrl: string };
 
 /** WhatsApp: imagem, vídeo em MP4 e áudio vão como mídia; qualquer outro arquivo vai como documento. */
 function kindOf(type: string): Attachment["kind"] {
@@ -88,7 +90,9 @@ export function WhatsAppChat({
   const endRef = useRef<HTMLDivElement>(null);
   const markedFor = useRef<string>("");
   const fileInput = useRef<HTMLInputElement>(null);
-  const [attachment, setAttachment] = useState<Attachment | null>(null);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const attachmentId = useRef(0);
+  const [progress, setProgress] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const recorder = useRef<MediaRecorder | null>(null);
@@ -171,22 +175,50 @@ export function WhatsAppChat({
     return () => clearInterval(timer);
   }, [recording]);
 
-  const clearAttachment = () => {
-    if (attachment) URL.revokeObjectURL(attachment.previewUrl);
-    setAttachment(null);
+  const clearAttachments = () => {
+    for (const a of attachments) URL.revokeObjectURL(a.previewUrl);
+    setAttachments([]);
     if (fileInput.current) fileInput.current.value = "";
   };
 
-  const chooseFile = (file: File | undefined) => {
-    if (!file) return;
+  const removeAttachment = (id: number) => {
+    setAttachments((prev) => {
+      const gone = prev.find((a) => a.id === id);
+      if (gone) URL.revokeObjectURL(gone.previewUrl);
+      return prev.filter((a) => a.id !== id);
+    });
+  };
+
+  const addAttachment = (item: Omit<Attachment, "id">) => {
+    setAttachments((prev) => (prev.length >= MAX_ATTACHMENTS ? prev : [...prev, { ...item, id: ++attachmentId.current }]));
+  };
+
+  /** Vários arquivos de uma vez (foto, vídeo, documento): cada um vai como uma mensagem, na ordem em que foram escolhidos. */
+  const chooseFiles = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
     setError(null);
-    if (file.size > MAX_ATTACHMENT_BYTES) {
-      setError("O arquivo passa de 25 MB. Escolha um menor.");
-      return;
+    const tooBig: string[] = [];
+    let room = MAX_ATTACHMENTS - attachments.length;
+    let skipped = 0;
+    for (const file of Array.from(files)) {
+      if (file.size > MAX_ATTACHMENT_BYTES) {
+        tooBig.push(file.name);
+        continue;
+      }
+      if (room <= 0) {
+        skipped += 1;
+        continue;
+      }
+      const type = file.type || "application/octet-stream";
+      addAttachment({ blob: file, name: file.name, type, kind: kindOf(type), previewUrl: URL.createObjectURL(file) });
+      room -= 1;
     }
-    const type = file.type || "application/octet-stream";
-    clearAttachment();
-    setAttachment({ blob: file, name: file.name, type, kind: kindOf(type), previewUrl: URL.createObjectURL(file) });
+    if (fileInput.current) fileInput.current.value = "";
+    const problems = [
+      tooBig.length ? `Passam de 25 MB e ficaram de fora: ${tooBig.join(", ")}.` : "",
+      skipped ? `O limite é ${MAX_ATTACHMENTS} arquivos por envio: ${skipped} ficou de fora.` : "",
+    ].filter(Boolean);
+    if (problems.length) setError(problems.join(" "));
   };
 
   const startRecording = async () => {
@@ -202,7 +234,6 @@ export function WhatsAppChat({
       setError("Sem acesso ao microfone. Permita o microfone para este site no navegador e tente de novo.");
       return;
     }
-    clearAttachment();
     const media = new MediaRecorder(stream);
     recordingChunks.current = [];
     recordingCancelled.current = false;
@@ -215,7 +246,7 @@ export function WhatsAppChat({
       if (recordingCancelled.current || recordingChunks.current.length === 0) return;
       try {
         const mp3 = await recordingToMp3(new Blob(recordingChunks.current, { type: media.mimeType || "audio/webm" }));
-        setAttachment({ blob: mp3, name: "audio.mp3", type: "audio/mpeg", kind: "audio", previewUrl: URL.createObjectURL(mp3) });
+        addAttachment({ blob: mp3, name: "audio.mp3", type: "audio/mpeg", kind: "audio", previewUrl: URL.createObjectURL(mp3) });
       } catch {
         setError("Não foi possível preparar a gravação. Tente gravar de novo.");
       }
@@ -231,34 +262,50 @@ export function WhatsAppChat({
     recorder.current?.stop();
   };
 
-  /** Sobe o arquivo direto para o armazenamento (sem passar pelo servidor do site) e depois manda para o cliente. */
-  const sendAttachment = async () => {
-    if (!attachment || sending) return;
+  /**
+   * Manda os anexos em sequência: cada arquivo sobe direto para o armazenamento (sem passar pelo servidor do site) e depois vai para o
+   * cliente como uma mensagem. O texto digitado vira legenda do primeiro arquivo que aceita legenda (foto, vídeo ou documento).
+   * Se um falhar, os que já foram saem da lista e os que sobraram continuam lá para tentar de novo.
+   */
+  const sendAttachments = async () => {
+    if (attachments.length === 0 || sending) return;
     setSending(true);
     setError(null);
+    const queue = [...attachments];
+    const captionIndex = queue.findIndex((a) => a.kind !== "audio");
+    let sent = 0;
     try {
-      const prepared = await prepareAttachmentAction({ fileName: attachment.name, contentType: attachment.type, size: attachment.blob.size });
-      if (!prepared.success) throw new Error(prepared.error);
-      const form = new FormData();
-      form.append("cacheControl", "3600");
-      form.append("", new Blob([attachment.blob], { type: attachment.type }));
-      const upload = await fetch(prepared.uploadUrl, { method: "PUT", body: form, headers: { "x-upsert": "false" } });
-      if (!upload.ok) throw new Error("Não foi possível subir o arquivo. Confira a internet e tente de novo.");
-      const result = await sendAttachmentAction({ conversationId: conversation.id, path: prepared.path, kind: attachment.kind, caption: text, fileName: attachment.name });
-      if (!result.success) throw new Error(result.error);
-      clearAttachment();
+      for (let i = 0; i < queue.length; i++) {
+        const item = queue[i];
+        setProgress(queue.length > 1 ? `Enviando ${i + 1} de ${queue.length}…` : null);
+        const prepared = await prepareAttachmentAction({ fileName: item.name, contentType: item.type, size: item.blob.size });
+        if (!prepared.success) throw new Error(`${item.name}: ${prepared.error}`);
+        const form = new FormData();
+        form.append("cacheControl", "3600");
+        form.append("", new Blob([item.blob], { type: item.type }));
+        const upload = await fetch(prepared.uploadUrl, { method: "PUT", body: form, headers: { "x-upsert": "false" } });
+        if (!upload.ok) throw new Error(`${item.name}: não foi possível subir o arquivo. Confira a internet e tente de novo.`);
+        const result = await sendAttachmentAction({ conversationId: conversation.id, path: prepared.path, kind: item.kind, caption: i === captionIndex ? text : undefined, fileName: item.name });
+        if (!result.success) throw new Error(`${item.name}: ${result.error}`);
+        sent += 1;
+        URL.revokeObjectURL(item.previewUrl);
+        setAttachments((prev) => prev.filter((a) => a.id !== item.id));
+        if (i === captionIndex) setText("");
+      }
       setText("");
-      router.refresh();
+      if (fileInput.current) fileInput.current.value = "";
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível enviar.");
-      router.refresh();
+      const base = e instanceof Error ? e.message : "Não foi possível enviar.";
+      setError(sent > 0 ? `${sent} de ${queue.length} foram enviados. ${base}` : base);
     } finally {
+      setProgress(null);
       setSending(false);
+      router.refresh();
     }
   };
 
   const send = async () => {
-    if (attachment) return sendAttachment();
+    if (attachments.length > 0) return sendAttachments();
     if (!text.trim() || sending) return;
     setSending(true);
     setError(null);
@@ -359,26 +406,35 @@ export function WhatsAppChat({
                 .
               </p>
             ) : null}
-            {attachment ? (
-              <div className="mb-2 flex items-center gap-3 rounded-xl border border-mist p-2 text-sm">
-                {attachment.kind === "image" ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={attachment.previewUrl} alt="Prévia do anexo" className="h-14 w-14 rounded-lg object-cover" />
-                ) : null}
-                <div className="min-w-0 flex-1">
-                  {attachment.kind === "audio" ? (
-                    <audio controls src={attachment.previewUrl} className="h-9 w-full max-w-xs" />
-                  ) : (
-                    <p className="truncate font-medium">{attachment.name}</p>
-                  )}
-                  <p className="text-xs text-graphite">
-                    {attachment.kind === "audio" ? "Mensagem de áudio" : attachment.kind === "image" ? "Imagem" : attachment.kind === "video" ? "Vídeo" : "Documento"} · {formatSize(attachment.blob.size)}
-                    {attachment.kind !== "audio" ? " · o texto abaixo vai como legenda" : ""}
-                  </p>
-                </div>
-                <button type="button" onClick={clearAttachment} className="rounded-lg border border-mist px-2.5 py-1.5 text-xs hover:border-red-500 hover:text-red-500">
-                  Remover
-                </button>
+            {attachments.length > 0 ? (
+              <div className="mb-2 space-y-2">
+                {attachments.map((attachment) => (
+                  <div key={attachment.id} className="flex items-center gap-3 rounded-xl border border-mist p-2 text-sm">
+                    {attachment.kind === "image" ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={attachment.previewUrl} alt="Prévia do anexo" className="h-14 w-14 rounded-lg object-cover" />
+                    ) : null}
+                    <div className="min-w-0 flex-1">
+                      {attachment.kind === "audio" ? <audio controls src={attachment.previewUrl} className="h-9 w-full max-w-xs" /> : <p className="truncate font-medium">{attachment.name}</p>}
+                      <p className="text-xs text-graphite">
+                        {attachment.kind === "audio" ? "Mensagem de áudio" : attachment.kind === "image" ? "Imagem" : attachment.kind === "video" ? "Vídeo" : "Documento"} · {formatSize(attachment.blob.size)}
+                      </p>
+                    </div>
+                    <button type="button" onClick={() => removeAttachment(attachment.id)} disabled={sending} className="rounded-lg border border-mist px-2.5 py-1.5 text-xs hover:border-red-500 hover:text-red-500 disabled:opacity-50">
+                      Remover
+                    </button>
+                  </div>
+                ))}
+                <p className="flex flex-wrap items-center gap-3 text-xs text-graphite">
+                  <span>
+                    {attachments.length} {attachments.length === 1 ? "arquivo" : "arquivos"} (até {MAX_ATTACHMENTS}). {attachments.some((a) => a.kind !== "audio") ? "O texto abaixo vai como legenda do primeiro." : ""}
+                  </span>
+                  {attachments.length > 1 ? (
+                    <button type="button" onClick={clearAttachments} disabled={sending} className="underline hover:text-ink disabled:opacity-50">
+                      Remover todos
+                    </button>
+                  ) : null}
+                </p>
               </div>
             ) : null}
             {recording ? (
@@ -394,12 +450,12 @@ export function WhatsAppChat({
               </div>
             ) : (
             <div className="flex items-end gap-2">
-              <input ref={fileInput} type="file" accept={ATTACH_ACCEPT} className="hidden" onChange={(e) => chooseFile(e.target.files?.[0])} />
+              <input ref={fileInput} type="file" accept={ATTACH_ACCEPT} multiple className="hidden" onChange={(e) => chooseFiles(e.target.files)} />
               <button
                 type="button"
                 onClick={() => fileInput.current?.click()}
                 disabled={sending}
-                title="Anexar foto, vídeo ou documento"
+                title="Anexar fotos, vídeos ou documentos (até 10 de uma vez)"
                 aria-label="Anexar arquivo"
                 className="grid h-[44px] w-[44px] shrink-0 place-items-center rounded-xl border border-mist text-graphite hover:border-petrol hover:text-ink disabled:opacity-50"
               >
@@ -410,7 +466,7 @@ export function WhatsAppChat({
               <button
                 type="button"
                 onClick={startRecording}
-                disabled={sending || Boolean(attachment)}
+                disabled={sending || attachments.length >= MAX_ATTACHMENTS}
                 title="Gravar áudio"
                 aria-label="Gravar áudio"
                 className="grid h-[44px] w-[44px] shrink-0 place-items-center rounded-xl border border-mist text-graphite hover:border-petrol hover:text-ink disabled:opacity-50"
@@ -449,16 +505,16 @@ export function WhatsAppChat({
                   }
                 }}
                 rows={2}
-                placeholder={attachment && attachment.kind !== "audio" ? "Legenda (opcional)" : "Mensagem (digite / para respostas rápidas)"}
+                placeholder={attachments.some((a) => a.kind !== "audio") ? "Legenda do primeiro arquivo (opcional)" : "Mensagem (digite / para respostas rápidas)"}
                 className="min-h-[44px] min-w-0 flex-1 resize-none rounded-xl border border-mist bg-transparent px-3 py-2 text-sm outline-none focus:border-petrol"
               />
               <button
                 type="button"
                 onClick={send}
-                disabled={sending || (!attachment && !text.trim())}
+                disabled={sending || (attachments.length === 0 && !text.trim())}
                 className="rounded-xl bg-petrol px-4 py-2.5 text-sm font-semibold text-[#111] disabled:opacity-50"
               >
-                {sending ? "Enviando…" : "Enviar"}
+                {sending ? (progress ?? "Enviando…") : attachments.length > 1 ? `Enviar ${attachments.length}` : "Enviar"}
               </button>
             </div>
             )}
