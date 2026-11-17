@@ -16,6 +16,7 @@ import {
 import { KanbanBoard, type KanbanColumn } from "@/components/admin/kanban-board";
 import { Select } from "@/components/select";
 import { stageNoticeFor } from "@/lib/stage-notices";
+import { addBusinessDays, deadlineStatus } from "@/lib/business-days";
 import { ProductionSaleDialog, type SaleProduct } from "@/components/admin/production-sale-dialog";
 
 export type ProductionCard =
@@ -204,7 +205,7 @@ function ItemEditForm({
   );
 }
 
-export function ProductionBoard({ cards: initialCards, products, noticeSent }: { cards: ProductionCard[]; products: SaleProduct[]; noticeSent: string[] }) {
+export function ProductionBoard({ cards: initialCards, products, noticeSent, deadlineRules }: { cards: ProductionCard[]; products: SaleProduct[]; noticeSent: string[]; deadlineRules: { days: number; alertDays: number } }) {
   const router = useRouter();
   const [cards, setCards] = useState(initialCards);
   const [sellingId, setSellingId] = useState<string | null>(null);
@@ -222,6 +223,44 @@ export function ProductionBoard({ cards: initialCards, products, noticeSent }: {
     setSeenNotice(noticeSent);
     setNoticed(noticeSent);
   }
+
+  /**
+   * Situação do prazo de pedidos que ainda estão na fila ou em produção. Sem prazo cadastrado, usa o prazo padrão contado do dia do pedido.
+   * Alerta: faltam (prazo - dia do aviso) dias úteis ou menos, por exemplo no 7º dos 10 dias úteis.
+   */
+  function deadlineInfo(card: ProductionCard) {
+    if (card.kind !== "order") return null;
+    const stage = card.order.productionStage;
+    if (stage !== "inicio" && stage !== "em_producao") return null;
+    const deadline = card.order.productionDeadline ?? addBusinessDays(new Date(card.order.createdAt), deadlineRules.days).toISOString();
+    return deadlineStatus(deadline, new Date(), Math.max(0, deadlineRules.days - deadlineRules.alertDays));
+  }
+
+  function renderDeadlineAlert(card: ProductionCard) {
+    const info = deadlineInfo(card);
+    if (!info || info.level === "ok") return null;
+    const text =
+      info.level === "atrasado"
+        ? `Atrasado há ${info.late} dia${info.late === 1 ? "" : "s"} útil${info.late === 1 ? "" : "eis"}`
+        : info.remaining === 0
+          ? "Prazo vence hoje"
+          : `Perto do prazo: faltam ${info.remaining} dia${info.remaining === 1 ? "" : "s"} útil${info.remaining === 1 ? "" : "eis"}`;
+    return (
+      <span className={`label-caps self-start rounded px-2 py-1 text-[10px] ${info.level === "atrasado" ? "bg-red-500/15 text-red-500" : "bg-amber-400/15 text-amber-400"}`} title={`Prazo de produção: ${deadlineRules.days} dias úteis (alerta no ${deadlineRules.alertDays}º). Muda em Regras da loja.`}>
+        {text}
+      </span>
+    );
+  }
+
+  const deadlineSummary = cards.reduce(
+    (acc, card) => {
+      const info = deadlineInfo(card);
+      if (info?.level === "atrasado") acc.late += 1;
+      else if (info?.level === "alerta") acc.near += 1;
+      return acc;
+    },
+    { late: 0, near: 0 },
+  );
 
   /** Coluna do kanban: finalizado com pesquisa já enviada vai para "Avaliação enviada". */
   function columnOf(card: ProductionCard): string {
@@ -376,6 +415,7 @@ export function ProductionBoard({ cards: initialCards, products, noticeSent }: {
             {order.productionDeadline ? formatDate(order.productionDeadline) : "Sem prazo"}
           </p>
           <p className="text-ink">{formatPrice(orderBalanceDue(order))} a receber</p>
+          {renderDeadlineAlert(card)}
           {renderNotice(card)}
           {renderReview(card)}
         </div>
@@ -428,6 +468,14 @@ export function ProductionBoard({ cards: initialCards, products, noticeSent }: {
           Kanban
         </button>
       </div>
+
+      {deadlineSummary.late + deadlineSummary.near > 0 ? (
+        <div className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-2.5 text-sm">
+          {deadlineSummary.late > 0 ? <strong className="text-red-500">{deadlineSummary.late} pedido(s) atrasado(s)</strong> : null}
+          {deadlineSummary.late > 0 && deadlineSummary.near > 0 ? " e " : ""}
+          {deadlineSummary.near > 0 ? <strong>{deadlineSummary.near} perto do prazo</strong> : null}. Prazo de produção: {deadlineRules.days} dias úteis, com alerta a partir do {deadlineRules.alertDays}º. Os pedidos aparecem marcados abaixo.
+        </div>
+      ) : null}
 
       {error && <p className="mb-4 text-[11px] text-red-500">{error}</p>}
 
@@ -500,6 +548,7 @@ export function ProductionBoard({ cards: initialCards, products, noticeSent }: {
                         >
                           {editingId === card.id ? "Fechar" : "Editar"}
                         </button>
+                        {renderDeadlineAlert(card)}
                         {renderNotice(card)}
                         {renderReview(card)}
                       </div>

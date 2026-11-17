@@ -3,6 +3,7 @@ import { getAllProductionItems } from "@/server/repositories/production-item-rep
 import { getAllProducts } from "@/server/repositories/product-repository";
 import { withReadFallback } from "@/lib/db-fallback";
 import { db } from "@/server/db";
+import { getStoreRules } from "@/server/store-rules";
 import { STAGE_NOTICES } from "@/lib/stage-notices";
 import { fallbackOrders, fallbackProducts } from "@/server/demo-fallback";
 import { ProductionBoard, type ProductionCard } from "@/components/admin/production-board";
@@ -15,6 +16,7 @@ export default async function AdminProductionPage() {
     withReadFallback(() => getAllProducts(), fallbackProducts),
   ]);
 
+  const rules = await getStoreRules();
   const orderCards: ProductionCard[] = orders
     .filter((order) => order.status !== "Cancelado" && order.productionStage && order.productionStage !== "nao_aplicavel")
     .map((order) => ({ kind: "order", id: order.id, order }));
@@ -41,6 +43,7 @@ export default async function AdminProductionPage() {
 
       <ProductionBoard
         cards={cards}
+        deadlineRules={{ days: rules.production.deadlineBusinessDays, alertDays: rules.production.alertBusinessDays }}
         noticeSent={noticeSent}
         products={products.map((p) => ({ slug: p.slug, price: p.price, materials: p.materials }))}
       />

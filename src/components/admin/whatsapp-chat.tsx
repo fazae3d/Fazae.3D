@@ -90,6 +90,8 @@ export function WhatsAppChat({
   const endRef = useRef<HTMLDivElement>(null);
   const markedFor = useRef<string>("");
   const fileInput = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const chooseFilesRef = useRef<(files: ArrayLike<File> | null) => void>(() => undefined);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const attachmentId = useRef(0);
   const [progress, setProgress] = useState<string | null>(null);
@@ -175,6 +177,42 @@ export function WhatsAppChat({
     return () => clearInterval(timer);
   }, [recording]);
 
+  // Ao abrir a conversa no computador, o cursor já fica na caixa de mensagem (no celular não, para não abrir o teclado sozinho).
+  useEffect(() => {
+    if (window.matchMedia("(min-width: 1024px)").matches) textareaRef.current?.focus();
+  }, []);
+
+  /**
+   * Colar (Ctrl+V ou "Colar" do celular), como no WhatsApp Web: arquivos e imagens copiados viram anexos; texto colado fora de um campo
+   * entra na caixa de mensagem. Colar dentro dos outros campos (busca, observações) continua normal.
+   */
+  useEffect(() => {
+    const onPaste = (event: ClipboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const typing = Boolean(target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable));
+      if (typing && target !== textareaRef.current) return;
+      const data = event.clipboardData;
+      if (!data) return;
+      const files = Array.from(data.files ?? []);
+      if (files.length > 0) {
+        event.preventDefault();
+        chooseFilesRef.current(files);
+        textareaRef.current?.focus();
+        return;
+      }
+      if (!typing) {
+        const pasted = data.getData("text/plain");
+        if (pasted) {
+          event.preventDefault();
+          setText((prev) => prev + pasted);
+          textareaRef.current?.focus();
+        }
+      }
+    };
+    document.addEventListener("paste", onPaste);
+    return () => document.removeEventListener("paste", onPaste);
+  }, []);
+
   const clearAttachments = () => {
     for (const a of attachments) URL.revokeObjectURL(a.previewUrl);
     setAttachments([]);
@@ -194,7 +232,7 @@ export function WhatsAppChat({
   };
 
   /** Vários arquivos de uma vez (foto, vídeo, documento): cada um vai como uma mensagem, na ordem em que foram escolhidos. */
-  const chooseFiles = (files: FileList | null) => {
+  const chooseFiles = (files: ArrayLike<File> | null) => {
     if (!files || files.length === 0) return;
     setError(null);
     const tooBig: string[] = [];
@@ -220,6 +258,11 @@ export function WhatsAppChat({
     ].filter(Boolean);
     if (problems.length) setError(problems.join(" "));
   };
+
+  // Sempre usa a versão mais nova de chooseFiles (ela depende da lista atual de anexos).
+  useEffect(() => {
+    chooseFilesRef.current = chooseFiles;
+  });
 
   const startRecording = async () => {
     setError(null);
@@ -321,7 +364,18 @@ export function WhatsAppChat({
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div
+      className="flex h-full min-h-0 flex-col"
+      onDragOver={(e) => {
+        if (e.dataTransfer?.types?.includes("Files")) e.preventDefault();
+      }}
+      onDrop={(e) => {
+        if (e.dataTransfer?.files?.length) {
+          e.preventDefault();
+          chooseFiles(Array.from(e.dataTransfer.files));
+        }
+      }}
+    >
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-mist px-4 py-3">
         <Link href="/admin/conversas" className="text-sm text-graphite hover:text-ink lg:hidden" aria-label="Voltar para a lista">
           ←
@@ -477,6 +531,7 @@ export function WhatsAppChat({
                 </svg>
               </button>
               <textarea
+                ref={textareaRef}
                 value={text}
                 onChange={(e) => {
                   setText(e.target.value);

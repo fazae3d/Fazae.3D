@@ -8,6 +8,8 @@ import { getUsagesForProduct } from "./product-material-usage-repository";
 import { adjustRawMaterialStock } from "./raw-material-repository";
 import { randomInt } from "crypto";
 import { upsertCustomerFromContact } from "./customer-repository";
+import { addBusinessDays } from "@/lib/business-days";
+import { getStoreRules } from "../store-rules";
 
 export type { Order, OrderItem, OrderStatus, PaymentMethod } from "../types";
 
@@ -133,6 +135,11 @@ export async function addOrder(
   const productionStage =
     options?.productionStage ?? (options?.forceProductionPending ? "inicio" : await determineProductionStage(order));
   const reserve = options?.reserveStock === true;
+  // Pedido que vai para a produção já nasce com o prazo combinado (dias úteis das Regras da loja), se ninguém informou outro.
+  const productionDeadline =
+    productionStage !== "nao_aplicavel" && !order.productionDeadline
+      ? addBusinessDays(new Date(createdAt), (await getStoreRules()).production.deadlineBusinessDays)
+      : undefined;
   const created = await db.$transaction(async (tx) => {
     if (reserve) await reserveStock(tx, order.items);
     return tx.order.create({
@@ -142,6 +149,7 @@ export async function addOrder(
         items: rest.items as unknown as Prisma.InputJsonValue,
         address: address ? (address as unknown as Prisma.InputJsonValue) : undefined,
         productionStage,
+        ...(productionDeadline ? { productionDeadline } : {}),
         stockReserved: reserve,
       },
     });
@@ -418,9 +426,14 @@ export async function updateOrderProduction(
 ): Promise<UpdateOrderResult> {
   const existing = await db.order.findUnique({ where: { id } });
   if (!existing) return { success: false, error: "Pedido não encontrado." };
+  // Entrou na produção sem prazo (ex.: "Enviar para a produção" num pedido antigo): ganha o prazo padrão, contado a partir de hoje.
+  const needsDefaultDeadline =
+    (data.stage === "inicio" || data.stage === "em_producao") && !existing.productionDeadline && data.deadline === undefined;
+  const defaultDeadline = needsDefaultDeadline ? addBusinessDays(new Date(), (await getStoreRules()).production.deadlineBusinessDays) : undefined;
   const updated = await db.order.update({
     where: { id },
     data: {
+      ...(defaultDeadline ? { productionDeadline: defaultDeadline } : {}),
       ...(data.stage !== undefined ? { productionStage: data.stage } : {}),
       ...(data.deadline !== undefined ? { productionDeadline: data.deadline } : {}),
       ...(data.depositAmount !== undefined ? { depositAmount: data.depositAmount } : {}),

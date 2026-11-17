@@ -42,6 +42,7 @@ export type StoreRules = {
   reviews: { rewardValue: number; rewardMinSubtotal: number };
   finance: { growthMultiplier: number; growthMonths: number; autoPayInstallments: boolean };
   quote: { validityDays: number; deliveryText: string; paymentText: string; notesText: string; whatsappText: string };
+  production: { deadlineBusinessDays: number; alertBusinessDays: number };
   owner: { email: string };
   texts: { whatsappMessage: string; customOrderIntro: string };
 };
@@ -81,6 +82,7 @@ export const DEFAULT_RULES: StoreRules = {
       "Peças impressas em 3D: pequenas variações de textura e tonalidade são características do processo. Cores e modelo são confirmados com você antes de produzir.",
     whatsappText: DEFAULT_QUOTE_WHATSAPP_TEXT,
   },
+  production: { deadlineBusinessDays: 10, alertBusinessDays: 7 },
   owner: { email: "" },
   texts: {
     whatsappMessage: "Olá! Tenho uma ideia para imprimir em 3D.",
@@ -89,7 +91,7 @@ export const DEFAULT_RULES: StoreRules = {
   },
 };
 
-export type RuleGroupKey = "empresa" | "frete" | "pagamento" | "vitrine" | "automacao" | "clientes" | "financas" | "orcamento" | "avisos" | "textos";
+export type RuleGroupKey = "empresa" | "frete" | "pagamento" | "vitrine" | "automacao" | "clientes" | "financas" | "orcamento" | "producao" | "avisos" | "textos";
 
 export const RULE_GROUPS: { key: RuleGroupKey; title: string; description: string }[] = [
   { key: "empresa", title: "Dados da empresa", description: "Aparecem no rodapé, nas páginas legais, no Google, nos e-mails e no PDF do orçamento." },
@@ -100,6 +102,7 @@ export const RULE_GROUPS: { key: RuleGroupKey; title: string; description: strin
   { key: "clientes", title: "Avaliações e recompensa", description: "Cupom que o cliente ganha ao avaliar um pedido." },
   { key: "financas", title: "Finanças", description: "Meta de crescimento e como as parcelas do cartão são contadas no caixa." },
   { key: "orcamento", title: "Orçamento padrão", description: "Valores que já vêm preenchidos ao criar um orçamento novo (dá para mudar em cada um)." },
+  { key: "producao", title: "Prazos de produção", description: "Prazo de entrega combinado com o cliente, em dias úteis (segunda a sexta): já vem preenchido nos pedidos que entram na Produção, e a tela Produção avisa quando está chegando." },
   { key: "textos", title: "Textos do site", description: "Mensagem que abre o WhatsApp e a introdução da página de peça sob encomenda." },
   { key: "avisos", title: "Avisos para você", description: "Para onde vão os avisos de pedido, pagamento e contato do site." },
 ];
@@ -212,6 +215,28 @@ export const RULE_FIELDS: FieldSpec[] = [
   { path: "finance.autoPayInstallments", group: "financas", label: "Parcela vencida conta como paga sozinha", hint: "Ligado: no dia do vencimento a parcela sai do caixa automaticamente. Desligado: ela fica “vencida” até você marcar como paga em Finanças (Contas do mês), e só então sai do caixa.", kind: "toggle" },
 
   { path: "quote.validityDays", group: "orcamento", label: "Validade", kind: "number", min: 1, max: 90, integer: true, unit: "dias" },
+  {
+    path: "production.deadlineBusinessDays",
+    group: "producao",
+    label: "Prazo de produção (dias úteis)",
+    hint: "Quando um pedido entra na Produção (orçamento aprovado, venda manual, encomenda), o prazo de finalização já vem preenchido com a data de hoje mais estes dias úteis, sem contar sábado e domingo. Dá para mudar o prazo de cada pedido na tela Produção.",
+    kind: "number",
+    min: 1,
+    max: 90,
+    integer: true,
+    unit: "dias úteis",
+  },
+  {
+    path: "production.alertBusinessDays",
+    group: "producao",
+    label: "Avisar a partir de qual dia útil",
+    hint: "Quando o pedido chega neste dia útil, a tela Produção mostra o alerta \"perto do prazo\" e o menu ganha um número. Com prazo de 10 e aviso no 7º, o alerta aparece quando faltam 3 dias úteis. Precisa ser menor que o prazo.",
+    kind: "number",
+    min: 1,
+    max: 90,
+    integer: true,
+    unit: "dia útil",
+  },
   { path: "quote.deliveryText", group: "orcamento", label: "Prazo de entrega", kind: "textarea", maxLength: 300 },
   { path: "quote.paymentText", group: "orcamento", label: "Forma de pagamento", kind: "textarea", maxLength: 500 },
   { path: "quote.notesText", group: "orcamento", label: "Observações", kind: "textarea", maxLength: 800, optional: true },
@@ -321,6 +346,9 @@ export function validateRulesInput(input: unknown): { ok: true; rules: StoreRule
     const checked = validateField(spec, getPath(input, spec.path));
     if (!checked.ok) return checked;
     setPath(rules as unknown as Record<string, unknown>, spec.path, checked.value);
+  }
+  if (rules.production.alertBusinessDays >= rules.production.deadlineBusinessDays) {
+    return { ok: false, error: "O dia do aviso de prazo precisa ser menor que o prazo de produção." };
   }
   if (rules.automation.sendGapMaxMinutes < rules.automation.sendGapMinMinutes) {
     return { ok: false, error: "O intervalo máximo entre mensagens não pode ser menor que o mínimo." };

@@ -5,6 +5,8 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/server/db";
+import { addBusinessDays, deadlineStatus } from "@/lib/business-days";
+import { getStoreRules } from "@/server/store-rules";
 import { AdminIcon } from "@/components/admin/admin-icons";
 import { AdminLogo } from "@/components/admin/admin-logo";
 import { AdminNav, SectionTabs } from "@/components/admin/admin-nav";
@@ -26,12 +28,21 @@ export const metadata: Metadata = {
 /** Contadores do menu: o que está esperando ação (pedidos pagos sem envio, orçamentos aguardando resposta). */
 async function loadNavBadges(): Promise<Record<string, number>> {
   try {
-    const [toShip, quotesSent, unreadChats] = await Promise.all([
+    const [toShip, quotesSent, unreadChats, inProduction, rules] = await Promise.all([
       db.order.count({ where: { status: { in: ["Pagamento aprovado", "Em preparação"] }, tracking: null } }),
       db.quote.count({ where: { status: "enviado" } }),
       db.waConversation.count({ where: { unreadCount: { gt: 0 } } }),
+      db.order.findMany({ where: { productionStage: { in: ["inicio", "em_producao"] }, status: { not: "Cancelado" } }, select: { createdAt: true, productionDeadline: true } }),
+      getStoreRules(),
     ]);
-    return { pedidos: toShip, orcamentos: quotesSent, conversas: unreadChats };
+    // Pedidos em produção perto do prazo ou atrasados (mesma conta da tela Produção).
+    const alertWithin = Math.max(0, rules.production.deadlineBusinessDays - rules.production.alertBusinessDays);
+    const now = new Date();
+    const nearOrLate = inProduction.filter((o) => {
+      const deadline = (o.productionDeadline ?? addBusinessDays(o.createdAt, rules.production.deadlineBusinessDays)).toISOString();
+      return deadlineStatus(deadline, now, alertWithin).level !== "ok";
+    }).length;
+    return { pedidos: toShip, orcamentos: quotesSent, conversas: unreadChats, producao: nearOrLate };
   } catch {
     return {};
   }
