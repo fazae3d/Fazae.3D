@@ -27,7 +27,7 @@ import { JsonLd } from "@/components/json-ld";
 export const revalidate = 60;
 
 /** Loja física/online com endereço e área de atendimento: ajuda o Google a mostrar a Fazaê em buscas locais ("impressão 3D Natal"). */
-function organizationJsonLd(rules: StoreRules) {
+function organizationJsonLd(rules: StoreRules, whatsappNumber?: string) {
   const { company, localDelivery } = rules;
   return {
     "@context": "https://schema.org",
@@ -48,6 +48,9 @@ function organizationJsonLd(rules: StoreRules) {
     },
     areaServed: [...localDelivery.cities.map((name) => ({ "@type": "City", name })), { "@type": "Country", name: "Brasil" }],
     sameAs: [company.instagramUrl],
+    ...(whatsappNumber && /^\d{10,15}$/.test(whatsappNumber)
+      ? { telephone: `+${whatsappNumber}`, contactPoint: { "@type": "ContactPoint", contactType: "customer service", telephone: `+${whatsappNumber}`, availableLanguage: "Portuguese", areaServed: "BR", url: `https://wa.me/${whatsappNumber}` } }
+      : {}),
     ...(company.cnpj ? { taxID: company.cnpj } : {}),
   };
 }
@@ -70,6 +73,7 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
     async () => (await getSettings()).pixDiscountPct ?? DEFAULT_PIX_DISCOUNT_PCT,
     DEFAULT_PIX_DISCOUNT_PCT,
   );
+  const whatsappNumber = await withReadFallback(async () => (await getSettings()).whatsappNumber, undefined);
   const menuCategories = await withReadFallback(
     async () => publicCategories(await getAllCategories()).map((c) => ({ slug: c.slug, label: c.name })),
     CATEGORIES.map((c) => ({ slug: c.slug, label: c.label })),
@@ -80,7 +84,7 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
     <StoreRulesProvider rules={publicRules(rules)}>
     <CartProvider>
       <WishlistProvider>
-        <JsonLd data={organizationJsonLd(rules)} />
+        <JsonLd data={organizationJsonLd(rules, whatsappNumber)} />
         <JsonLd data={WEBSITE_JSON_LD} />
         <div
           aria-hidden="true"

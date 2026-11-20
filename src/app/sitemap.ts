@@ -43,6 +43,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     url: `${SITE_URL}/produto/${product.slug}`,
     changeFrequency: "weekly" as const,
     priority: 0.6,
+    // Imagens no sitemap ajudam o Google Imagens a achar as fotos dos produtos.
+    ...(product.images && product.images.length > 0 ? { images: product.images.slice(0, 5).map((img) => (img.startsWith("http") ? img : `${SITE_URL}${img.startsWith("/") ? "" : "/"}${img}`)) } : {}),
   }));
 
   return [...staticEntries, ...categoryEntries, ...productEntries];

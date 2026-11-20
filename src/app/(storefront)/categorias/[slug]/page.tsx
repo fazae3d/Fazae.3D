@@ -11,6 +11,7 @@ import { getAllCategories, getAllProducts } from "@/lib/demo-data";
 import { withReadFallback } from "@/lib/db-fallback";
 import { UNCATEGORIZED_SLUG, publicProducts } from "@/lib/visibility";
 import { fallbackProducts } from "@/server/demo-fallback";
+import { SITE_URL } from "@/lib/site-config";
 
 /** Categoria do banco (inclui as criadas no painel); a lista fixa só entra de reserva se o banco falhar. */
 async function findCategory(slug: string) {
@@ -53,9 +54,24 @@ export default async function CategoryPage({ params }: PageProps<"/categorias/[s
   const products = publicProducts(await withReadFallback(() => getAllProducts(), fallbackProducts));
   const hasItems = products.some((p) => p.categorySlug === category.slug);
   const photo = getCategoryPhoto(category.slug);
+  const categoryProducts = products.filter((p) => p.categorySlug === category.slug);
+  // Lista de produtos para o Google entender a página como coleção (ajuda a aparecer em buscas como "cinzeiro impresso em 3D").
+  const collectionJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: `${category.label} em 3D`,
+    url: `${SITE_URL}/categorias/${category.slug}`,
+    description: category.description || undefined,
+    mainEntity: {
+      "@type": "ItemList",
+      numberOfItems: categoryProducts.length,
+      itemListElement: categoryProducts.slice(0, 40).map((p, i) => ({ "@type": "ListItem", position: i + 1, url: `${SITE_URL}/produto/${p.slug}`, name: p.name })),
+    },
+  };
 
   return (
     <div>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionJsonLd) }} />
       {photo && (
         <section
           className={`relative flex items-end overflow-hidden bg-ink text-paper ${
@@ -82,7 +98,7 @@ export default async function CategoryPage({ params }: PageProps<"/categorias/[s
         {photo ? (
           <p className="max-w-xl text-graphite">{category.description}</p>
         ) : (
-          <SectionHeading eyebrow="Catálogo" title={category.label} subtitle={category.description} />
+          <SectionHeading eyebrow="Catálogo" title={category.label} subtitle={category.description} as="h1" />
         )}
 
         {hasItems ? (

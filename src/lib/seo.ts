@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { SITE_NAME, SITE_URL } from "@/lib/site-config";
 
+const DEFAULT_SHARE_IMAGE = `${SITE_URL}/opengraph-image`;
+
 /**
  * Metadados de uma página pública: título, descrição, canonical e as tags de compartilhamento (Open Graph/Twitter).
  * O Next NÃO herda o openGraph da página-mãe campo a campo: quando a página define o seu, ele substitui o do layout.
@@ -12,7 +14,8 @@ export function pageMeta({ title, description, path }: { title: string; descript
     title,
     description,
     alternates: { canonical: path },
-    openGraph: { type: "website", locale: "pt_BR", siteName: SITE_NAME, title: fullTitle, description, url: `${SITE_URL}${path}` },
-    twitter: { card: "summary_large_image", title: fullTitle, description },
+    // Sem imagem própria, a página usa a imagem padrão da loja (senão o link sai sem foto no WhatsApp, Facebook e no Google Discover).
+    openGraph: { type: "website", locale: "pt_BR", siteName: SITE_NAME, title: fullTitle, description, url: `${SITE_URL}${path}`, images: [{ url: DEFAULT_SHARE_IMAGE, width: 1200, height: 630, alt: `${SITE_NAME} 3D` }] },
+    twitter: { card: "summary_large_image", title: fullTitle, description, images: [DEFAULT_SHARE_IMAGE] },
   };
 }
