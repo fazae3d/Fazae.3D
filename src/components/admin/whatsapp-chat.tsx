@@ -50,23 +50,96 @@ const MEDIA_TEXT: Record<string, string> = {
   contact: "contato",
 };
 
-function MediaBlock({ type, url }: { type: string; url: string | null }) {
+function MediaBlock({ type, url, onOpen }: { type: string; url: string | null; onOpen?: () => void }) {
   const [failed, setFailed] = useState(false);
   if (!url || failed) return <p className="mb-1 text-xs italic text-graphite">[{MEDIA_TEXT[type] ?? "arquivo"}: não deu para carregar aqui, abra no WhatsApp para ver]</p>;
   if (type === "image" || type === "sticker") {
     return (
-      <a href={url} target="_blank" rel="noopener noreferrer" className="mb-1 block">
+      <button type="button" onClick={onOpen} className="mb-1 block cursor-zoom-in" title="Clique para ampliar" aria-label="Ampliar imagem">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={url} alt="Imagem da conversa" loading="lazy" referrerPolicy="no-referrer" onError={() => setFailed(true)} className="max-h-64 max-w-full rounded-lg" />
-      </a>
+      </button>
     );
   }
   if (type === "audio") return <audio controls src={url} onError={() => setFailed(true)} className="mb-1 max-w-full" preload="none" />;
-  if (type === "video") return <video controls src={url} onError={() => setFailed(true)} className="mb-1 max-h-64 max-w-full rounded-lg" preload="none" />;
+  if (type === "video") {
+    return (
+      <div className="mb-1">
+        <video controls src={url} onError={() => setFailed(true)} className="max-h-64 max-w-full rounded-lg" preload="none" />
+        <button type="button" onClick={onOpen} className="mt-1 text-xs text-petrol underline">
+          Ampliar vídeo
+        </button>
+      </div>
+    );
+  }
   return (
     <a href={url} target="_blank" rel="noopener noreferrer" className="mb-1 block text-xs text-petrol underline">
       Abrir {MEDIA_TEXT[type] ?? "arquivo"}
     </a>
+  );
+}
+
+type ViewerItem = { id: string; type: string; url: string };
+
+/**
+ * Visualizador de fotos e vídeos dentro do próprio painel (sem abrir outra aba): fundo escuro, setas e teclado (← → Esc) para passar
+ * pelas mídias da conversa e botão Baixar. O download usa a rota do painel com ?download=1, que confere o login.
+ */
+function MediaViewer({ items, index, onChange, onClose }: { items: ViewerItem[]; index: number; onChange: (next: number) => void; onClose: () => void }) {
+  const item = items[index];
+  const total = items.length;
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      else if (e.key === "ArrowLeft" && index > 0) onChange(index - 1);
+      else if (e.key === "ArrowRight" && index < total - 1) onChange(index + 1);
+    };
+    window.addEventListener("keydown", onKey);
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = previous;
+    };
+  }, [index, total, onChange, onClose]);
+
+  if (!item) return null;
+  const downloadHref = item.url.startsWith("/api/") ? `${item.url}?download=1` : item.url;
+  const nav = "absolute top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-black/60 text-xl text-white hover:bg-black/80 disabled:opacity-30";
+
+  return (
+    <div className="fixed inset-0 z-[70] flex flex-col bg-black/90" role="dialog" aria-modal="true" aria-label="Visualizador de mídia" onClick={onClose}>
+      <div className="flex items-center justify-between gap-3 px-4 py-3 text-sm text-white" onClick={(e) => e.stopPropagation()}>
+        <span>{total > 1 ? `${index + 1} de ${total}` : ""}</span>
+        <div className="flex items-center gap-2">
+          <a href={downloadHref} download className="rounded-lg border border-white/30 px-3.5 py-2 text-sm hover:bg-white/10">
+            Baixar
+          </a>
+          <button type="button" onClick={onClose} className="rounded-lg border border-white/30 px-3.5 py-2 text-sm hover:bg-white/10" aria-label="Fechar">
+            Fechar
+          </button>
+        </div>
+      </div>
+      <div className="relative flex min-h-0 flex-1 items-center justify-center px-4 pb-6">
+        {item.type === "video" ? (
+          <video key={item.id} controls autoPlay src={item.url} className="max-h-full max-w-full rounded-lg" onClick={(e) => e.stopPropagation()} />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img key={item.id} src={item.url} alt="Imagem ampliada" referrerPolicy="no-referrer" className="max-h-full max-w-full object-contain" onClick={(e) => e.stopPropagation()} />
+        )}
+        {total > 1 ? (
+          <>
+            <button type="button" className={`${nav} left-2`} disabled={index === 0} onClick={(e) => { e.stopPropagation(); onChange(index - 1); }} aria-label="Anterior">
+              ‹
+            </button>
+            <button type="button" className={`${nav} right-2`} disabled={index === total - 1} onClick={(e) => { e.stopPropagation(); onChange(index + 1); }} aria-label="Próxima">
+              ›
+            </button>
+          </>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
@@ -90,6 +163,11 @@ export function WhatsAppChat({
   const endRef = useRef<HTMLDivElement>(null);
   const markedFor = useRef<string>("");
   const fileInput = useRef<HTMLInputElement>(null);
+  const [viewerId, setViewerId] = useState<string | null>(null);
+  const viewable: ViewerItem[] = messages
+    .filter((m) => m.mediaUrl && (m.mediaType === "image" || m.mediaType === "sticker" || m.mediaType === "video"))
+    .map((m) => ({ id: m.id, type: m.mediaType as string, url: m.mediaUrl as string }));
+  const viewerIndex = viewerId ? viewable.findIndex((v) => v.id === viewerId) : -1;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const chooseFilesRef = useRef<(files: ArrayLike<File> | null) => void>(() => undefined);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -376,6 +454,7 @@ export function WhatsAppChat({
         }
       }}
     >
+      {viewerIndex >= 0 ? <MediaViewer items={viewable} index={viewerIndex} onChange={(next) => setViewerId(viewable[next]?.id ?? null)} onClose={() => setViewerId(null)} /> : null}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-mist px-4 py-3">
         <Link href="/admin/conversas" className="text-sm text-graphite hover:text-ink lg:hidden" aria-label="Voltar para a lista">
           ←
@@ -413,7 +492,7 @@ export function WhatsAppChat({
           return (
             <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
               <div className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm sm:max-w-[70%] ${mine ? "bg-petrol/20" : "bg-mist"} ${m.status === "failed" ? "ring-1 ring-red-500/60" : ""}`}>
-                {m.mediaType ? <MediaBlock type={m.mediaType} url={m.mediaUrl} /> : null}
+                {m.mediaType ? <MediaBlock type={m.mediaType} url={m.mediaUrl} onOpen={() => setViewerId(m.id)} /> : null}
                 {m.body ? <p className="whitespace-pre-wrap break-words">{m.body}</p> : null}
                 <p className="mt-1 text-right text-[11px] text-graphite">
                   {mine && ORIGIN_TEXT[m.origin] ? `${ORIGIN_TEXT[m.origin]} · ` : ""}

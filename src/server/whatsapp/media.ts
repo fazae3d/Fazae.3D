@@ -84,10 +84,11 @@ export async function ensureMessageMedia(messageId: string): Promise<MessageMedi
 }
 
 /** Endereço temporário (2 minutos por padrão) para abrir um arquivo guardado. */
-export async function signedMediaUrl(path: string, seconds = 120): Promise<string | null> {
+export async function signedMediaUrl(path: string, seconds = 120, downloadAs?: string): Promise<string | null> {
   const store = storage();
   if (!store) return null;
-  const { data, error } = await store.from(WHATSAPP_MEDIA_BUCKET).createSignedUrl(path, seconds);
+  // Com nome de arquivo, o endereço manda o navegador baixar em vez de abrir.
+  const { data, error } = await store.from(WHATSAPP_MEDIA_BUCKET).createSignedUrl(path, seconds, downloadAs ? { download: downloadAs } : undefined);
   return error ? null : data.signedUrl;
 }
 
