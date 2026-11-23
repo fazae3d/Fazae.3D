@@ -214,7 +214,7 @@ export function WhatsAppChat({
   useEffect(() => {
     const timer = setInterval(() => {
       if (!document.hidden) router.refresh();
-    }, 7000);
+    }, 20_000);
     return () => clearInterval(timer);
   }, [router]);
 

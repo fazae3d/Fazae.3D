@@ -4,7 +4,9 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { AdminIcon } from "./admin-icons";
 
-const POLL_MS = 5000;
+/** Consulta o servidor a cada 12 s com a aba à vista e a cada 60 s com ela escondida (menos chamadas ao servidor, que é cobrado por uso). */
+const POLL_VISIBLE_MS = 12_000;
+const POLL_HIDDEN_MS = 60_000;
 const SOUND_KEY = "admin-chat-sound";
 const SOUND_EVENT = "admin-chat-sound-change";
 
@@ -58,6 +60,7 @@ function playDing() {
 export function LiveUpdates() {
   const router = useRouter();
   const last = useRef<{ unread: number; lastInboundAt: string | null } | null>(null);
+  const polls = useRef(0);
 
   // Navegadores só deixam tocar som depois que a pessoa mexeu na página uma vez: no primeiro clique/tecla liberamos o áudio.
   useEffect(() => {
@@ -78,7 +81,10 @@ export function LiveUpdates() {
     let stopped = false;
     const poll = async () => {
       try {
-        const res = await fetch("/api/admin/live", { cache: "no-store" });
+        // A rodada das cadências só é pedida de vez em quando (a cada 3ª consulta, ou sempre com a aba escondida).
+        polls.current += 1;
+        const withTick = document.hidden || polls.current % 3 === 1;
+        const res = await fetch(`/api/admin/live${withTick ? "?tick=1" : ""}`, { cache: "no-store" });
         if (!res.ok || stopped) return;
         const data = (await res.json()) as { unread: number; lastInboundAt: string | null };
         const before = last.current;
@@ -91,15 +97,22 @@ export function LiveUpdates() {
         // sem internet ou servidor ocupado: tenta de novo no próximo ciclo
       }
     };
-    void poll();
-    const timer = setInterval(poll, POLL_MS);
+    let timer: ReturnType<typeof setTimeout>;
+    const loop = async () => {
+      await poll();
+      if (!stopped) timer = setTimeout(loop, document.hidden ? POLL_HIDDEN_MS : POLL_VISIBLE_MS);
+    };
+    void loop();
     const onVisible = () => {
-      if (!document.hidden) void poll();
+      if (!document.hidden) {
+        clearTimeout(timer);
+        void loop();
+      }
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => {
       stopped = true;
-      clearInterval(timer);
+      clearTimeout(timer);
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [router]);
