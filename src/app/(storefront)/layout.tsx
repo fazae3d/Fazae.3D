@@ -21,10 +21,11 @@ import { getStoreRules } from "@/server/store-rules";
 import { JsonLd } from "@/components/json-ld";
 
 /**
- * Vitrine servida da CDN e regenerada em segundo plano a cada 60 s: preço, estoque e novidades aparecem em até 1 minuto,
- * e as ações do painel (editar produto/estoque) ainda forçam a atualização na hora.
+ * Vitrine servida da CDN e regenerada em segundo plano a cada 1 hora (cada regeneração gasta processamento e consulta o banco).
+ * As ações do painel (editar produto, estoque, categoria, regras) forçam a atualização na hora; só o estoque que baixa por
+ * venda do cliente (selo "Últimas peças") pode levar até 1 hora para aparecer.
  */
-export const revalidate = 60;
+export const revalidate = 3600;
 
 /** Loja física/online com endereço e área de atendimento: ajuda o Google a mostrar a Fazaê em buscas locais ("impressão 3D Natal"). */
 function organizationJsonLd(rules: StoreRules, whatsappNumber?: string) {

@@ -8,8 +8,8 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /**
- * Sinal barato para o painel saber, a cada poucos segundos, se chegou mensagem nova de cliente: quantas conversas estão não lidas e
- * quando foi a última mensagem recebida. O painel só recarrega a tela (e toca o som) quando algum dos dois muda.
+ * Sinal barato para o painel saber se chegou mensagem nova de cliente: quantas conversas estão não lidas e quando foi a última
+ * mensagem recebida. O painel só recarrega a tela (e toca o som) quando algum dos dois muda. Uma única consulta ao banco.
  */
 export async function GET(request: Request) {
   if (!ADMIN_AUTH_DISABLED) {
@@ -29,14 +29,10 @@ export async function GET(request: Request) {
     });
   }
   try {
-    const [unread, latest] = await Promise.all([
-      db.waConversation.count({ where: { unreadCount: { gt: 0 } } }),
-      db.waConversation.aggregate({ _max: { lastInboundAt: true } }),
-    ]);
-    return NextResponse.json(
-      { unread, lastInboundAt: latest._max.lastInboundAt?.toISOString() ?? null },
-      { headers: { "Cache-Control": "private, no-store" } },
-    );
+    const [row] = await db.$queryRaw<{ unread: number; last: Date | string | null }[]>`
+      SELECT COUNT(*) FILTER (WHERE "unreadCount" > 0)::int AS unread, MAX("lastInboundAt") AS last FROM "WaConversation"`;
+    const last = row?.last ? (row.last instanceof Date ? row.last.toISOString() : String(row.last)) : null;
+    return NextResponse.json({ unread: row?.unread ?? 0, lastInboundAt: last }, { headers: { "Cache-Control": "private, no-store" } });
   } catch {
     return NextResponse.json({ error: "indisponível" }, { status: 503 });
   }

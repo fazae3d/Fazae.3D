@@ -1,5 +1,5 @@
 import { db } from "../db";
-import { STORED_MEDIA_PREFIX, hasViewableMedia } from "../whatsapp/media";
+import { EXPIRED_MEDIA, STORED_MEDIA_PREFIX, hasViewableMedia } from "../whatsapp/media";
 import { getWhatsAppProvider, type MediaKind } from "../whatsapp/provider";
 import { storeDayKey } from "@/lib/store-time";
 import { usableName } from "@/lib/wa-cadence";
@@ -118,6 +118,8 @@ export async function getConversation(id: string): Promise<WaConversationView | 
 /** Arquivos de clientes abrem pela rota do painel (confere o login); só o que nós enviamos, como o PDF do orçamento, usa o endereço direto. */
 function mediaHref(m: { id: string; direction: string; mediaType: string | null; mediaUrl: string | null }): string | null {
   if (!hasViewableMedia(m.mediaType)) return null;
+  // Arquivo que passou do prazo de guarda e foi removido do armazenamento: o painel mostra um aviso no lugar.
+  if (m.mediaUrl === EXPIRED_MEDIA) return null;
   if (m.direction === "out" && m.mediaUrl && /^https?:\/\//i.test(m.mediaUrl)) return m.mediaUrl;
   return `/api/admin/whatsapp-media/${m.id}`;
 }

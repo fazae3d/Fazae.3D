@@ -57,7 +57,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="pt-BR" className={`${exo2.variable} ${inter.variable} h-full antialiased`}>
       <body className="min-h-full">
-        <SessionProvider>{children}</SessionProvider>
+        <SessionProvider refetchOnWindowFocus={false}>{children}</SessionProvider>
       </body>
     </html>
   );

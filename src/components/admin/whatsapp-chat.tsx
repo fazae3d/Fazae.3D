@@ -52,6 +52,9 @@ const MEDIA_TEXT: Record<string, string> = {
 
 function MediaBlock({ type, url, onOpen }: { type: string; url: string | null; onOpen?: () => void }) {
   const [failed, setFailed] = useState(false);
+  if (!url && type !== "location" && type !== "contact") {
+    return <p className="mb-1 text-xs italic text-graphite">[{MEDIA_TEXT[type] ?? "arquivo"} removido do painel para liberar espaço, ele continua no WhatsApp]</p>;
+  }
   if (!url || failed) return <p className="mb-1 text-xs italic text-graphite">[{MEDIA_TEXT[type] ?? "arquivo"}: não deu para carregar aqui, abra no WhatsApp para ver]</p>;
   if (type === "image" || type === "sticker") {
     return (
@@ -214,7 +217,7 @@ export function WhatsAppChat({
   useEffect(() => {
     const timer = setInterval(() => {
       if (!document.hidden) router.refresh();
-    }, 20_000);
+    }, 45_000);
     return () => clearInterval(timer);
   }, [router]);
 

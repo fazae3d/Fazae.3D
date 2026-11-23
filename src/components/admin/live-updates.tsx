@@ -4,9 +4,22 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { AdminIcon } from "./admin-icons";
 
-/** Consulta o servidor a cada 12 s com a aba à vista e a cada 60 s com ela escondida (menos chamadas ao servidor, que é cobrado por uso). */
-const POLL_VISIBLE_MS = 12_000;
-const POLL_HIDDEN_MS = 60_000;
+/**
+ * Cada consulta ao servidor é cobrada (Vercel e Supabase), então o ritmo acompanha o uso do painel:
+ * - aba à vista e com atividade recente: a cada 30 s;
+ * - aba escondida, ou sem ninguém mexendo há mais de 10 min: a cada 90 s (o aviso sonoro continua, com até 1,5 min de atraso);
+ * - sem ninguém mexendo há mais de 1 h (painel esquecido aberto): a cada 5 min.
+ * Qualquer clique, tecla ou toque, ou voltar para a aba, consulta na hora.
+ */
+const POLL_ACTIVE_MS = 30_000;
+const POLL_QUIET_MS = 90_000;
+const POLL_IDLE_MS = 300_000;
+const QUIET_AFTER_MS = 10 * 60_000;
+const IDLE_AFTER_MS = 60 * 60_000;
+/** A rodada das cadências (envio automático) só é pedida a cada tanto, não em toda consulta. */
+const TICK_EVERY_MS = 90_000;
+/** Depois de ficar parado, o primeiro movimento consulta na hora, mas no máximo 1 vez por minuto. */
+const WAKE_MIN_GAP_MS = 60_000;
 const SOUND_KEY = "admin-chat-sound";
 const SOUND_EVENT = "admin-chat-sound-change";
 
@@ -53,14 +66,14 @@ function playDing() {
 }
 
 /**
- * Mantém o painel em dia sem precisar recarregar: a cada 5 segundos pergunta ao servidor se chegou mensagem nova de cliente.
+ * Mantém o painel em dia sem precisar recarregar: pergunta ao servidor se chegou mensagem nova de cliente.
  * Se chegou (ou se o total de não lidas mudou), atualiza a tela atual (conversa, lista, balão do menu) e, se o som estiver ligado,
  * toca o aviso. A primeira consulta só serve de ponto de partida: abrir o painel não toca som.
  */
 export function LiveUpdates() {
   const router = useRouter();
   const last = useRef<{ unread: number; lastInboundAt: string | null } | null>(null);
-  const polls = useRef(0);
+  const lastTick = useRef(0);
 
   // Navegadores só deixam tocar som depois que a pessoa mexeu na página uma vez: no primeiro clique/tecla liberamos o áudio.
   useEffect(() => {
@@ -79,12 +92,16 @@ export function LiveUpdates() {
 
   useEffect(() => {
     let stopped = false;
+    let lastActivity = Date.now();
+    let lastPollAt = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
     const poll = async () => {
+      lastPollAt = Date.now();
       try {
-        // A rodada das cadências só é pedida de vez em quando (a cada 3ª consulta, ou sempre com a aba escondida).
-        polls.current += 1;
-        const withTick = document.hidden || polls.current % 3 === 1;
-        const res = await fetch(`/api/admin/live${withTick ? "?tick=1" : ""}`, { cache: "no-store" });
+        const withTick = Date.now() - lastTick.current >= TICK_EVERY_MS;
+        if (withTick) lastTick.current = Date.now();
+        const res = await fetch("/api/admin/live" + (withTick ? "?tick=1" : ""), { cache: "no-store" });
         if (!res.ok || stopped) return;
         const data = (await res.json()) as { unread: number; lastInboundAt: string | null };
         const before = last.current;
@@ -97,22 +114,43 @@ export function LiveUpdates() {
         // sem internet ou servidor ocupado: tenta de novo no próximo ciclo
       }
     };
-    let timer: ReturnType<typeof setTimeout>;
+
+    const delay = () => {
+      const idleFor = Date.now() - lastActivity;
+      if (idleFor > IDLE_AFTER_MS) return POLL_IDLE_MS;
+      if (document.hidden || idleFor > QUIET_AFTER_MS) return POLL_QUIET_MS;
+      return POLL_ACTIVE_MS;
+    };
+
     const loop = async () => {
       await poll();
-      if (!stopped) timer = setTimeout(loop, document.hidden ? POLL_HIDDEN_MS : POLL_VISIBLE_MS);
+      if (!stopped) timer = setTimeout(loop, delay());
     };
     void loop();
+
+    const wake = () => {
+      if (stopped || Date.now() - lastPollAt < WAKE_MIN_GAP_MS) return;
+      clearTimeout(timer);
+      void loop();
+    };
+    const onActivity = () => {
+      const wasQuiet = Date.now() - lastActivity > QUIET_AFTER_MS;
+      lastActivity = Date.now();
+      if (wasQuiet) wake();
+    };
     const onVisible = () => {
       if (!document.hidden) {
-        clearTimeout(timer);
-        void loop();
+        lastActivity = Date.now();
+        wake();
       }
     };
+    const events = ["pointerdown", "keydown", "touchstart", "wheel"] as const;
+    for (const name of events) window.addEventListener(name, onActivity, { passive: true });
     document.addEventListener("visibilitychange", onVisible);
     return () => {
       stopped = true;
       clearTimeout(timer);
+      for (const name of events) window.removeEventListener(name, onActivity);
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [router]);

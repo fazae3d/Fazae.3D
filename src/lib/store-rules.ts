@@ -38,6 +38,10 @@ export type StoreRules = {
     queueNoticeAuto: boolean;
     productionNoticeAuto: boolean;
     readyNoticeAuto: boolean;
+    /** Dias que o painel guarda fotos e áudios das conversas (0 = para sempre). Depois disso o arquivo sai do painel e continua no WhatsApp. */
+    mediaKeepDays: number;
+    /** Igual, para vídeos e documentos (pesam muito mais e gastam o espaço do armazenamento). */
+    bigFileKeepDays: number;
   };
   reviews: { rewardValue: number; rewardMinSubtotal: number };
   finance: { growthMultiplier: number; growthMonths: number; autoPayInstallments: boolean };
@@ -71,7 +75,7 @@ export const DEFAULT_RULES: StoreRules = {
   payments: { installments: 3, welcomeCouponCode: "FAZAE10", welcomeCouponText: "10% OFF na primeira compra" },
   pix: { key: "", depositPct: 50 },
   storefront: { lowStockThreshold: 5, scarcityThreshold: 2, returnDays: 7 },
-  automation: { abandonedCartHours: 2, abandonedCartSecondDays: 3, pendingOrderExpireDays: 4, reactivationDays: 120, reminderCooldownDays: 30, sendGapMinMinutes: 3, sendGapMaxMinutes: 8, queueNoticeAuto: false, productionNoticeAuto: false, readyNoticeAuto: false },
+  automation: { abandonedCartHours: 2, abandonedCartSecondDays: 3, pendingOrderExpireDays: 4, reactivationDays: 120, reminderCooldownDays: 30, sendGapMinMinutes: 3, sendGapMaxMinutes: 8, queueNoticeAuto: false, productionNoticeAuto: false, readyNoticeAuto: false, mediaKeepDays: 90, bigFileKeepDays: 14 },
   reviews: { rewardValue: 5, rewardMinSubtotal: 30 },
   finance: { growthMultiplier: 5, growthMonths: 12, autoPayInstallments: true },
   quote: {
@@ -98,7 +102,7 @@ export const RULE_GROUPS: { key: RuleGroupKey; title: string; description: strin
   { key: "frete", title: "Frete e entrega", description: "Valores e prazos usados quando o CEP não permite calcular o frete real, e a entrega própria na sua região." },
   { key: "pagamento", title: "Pagamento e promoções", description: "Parcelamento mostrado na loja e o cupom de boas-vindas (barra de anúncios, carrinho, newsletter e e-mails)." },
   { key: "vitrine", title: "Vitrine", description: "Quando aparecem os selos de estoque e o prazo de troca citado no site." },
-  { key: "automacao", title: "Lembretes e prazos automáticos", description: "Carrinho abandonado, Pix parado, pedidos sem pagamento e clientes que sumiram." },
+  { key: "automacao", title: "Lembretes e prazos automáticos", description: "Carrinho abandonado, Pix parado, pedidos sem pagamento, clientes que sumiram e o prazo de guarda dos arquivos do WhatsApp." },
   { key: "clientes", title: "Avaliações e recompensa", description: "Cupom que o cliente ganha ao avaliar um pedido." },
   { key: "financas", title: "Finanças", description: "Meta de crescimento e como as parcelas do cartão são contadas no caixa." },
   { key: "orcamento", title: "Orçamento padrão", description: "Valores que já vêm preenchidos ao criar um orçamento novo (dá para mudar em cada um)." },
@@ -184,6 +188,28 @@ export const RULE_FIELDS: FieldSpec[] = [
     max: 480,
     integer: true,
     unit: "min",
+  },
+  {
+    path: "automation.bigFileKeepDays",
+    group: "automacao",
+    label: "Guardar vídeos e documentos das conversas por",
+    hint: "O armazenamento do painel é cobrado pelo espaço usado e vídeos pesam muito. Depois deste prazo o vídeo ou documento sai do painel (a mensagem fica e o arquivo continua no WhatsApp). A limpeza roda 1 vez por dia. 0 = guardar para sempre.",
+    kind: "number",
+    min: 0,
+    max: 3650,
+    integer: true,
+    unit: "dias",
+  },
+  {
+    path: "automation.mediaKeepDays",
+    group: "automacao",
+    label: "Guardar fotos e áudios das conversas por",
+    hint: "Mesmo funcionamento, para fotos e áudios (pesam menos, então o prazo pode ser maior). 0 = guardar para sempre.",
+    kind: "number",
+    min: 0,
+    max: 3650,
+    integer: true,
+    unit: "dias",
   },
   {
     path: "automation.queueNoticeAuto",

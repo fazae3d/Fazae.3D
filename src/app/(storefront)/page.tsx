@@ -73,7 +73,7 @@ export const metadata = {
   alternates: { canonical: "/" },
 };
 
-export const revalidate = 60;
+export const revalidate = 3600;
 
 /** Produtos em destaque na home: mais pedidos primeiro, depois novidades, depois o resto; esgotados e rascunhos ficam de fora. */
 function pickShelf(products: Product[]) {

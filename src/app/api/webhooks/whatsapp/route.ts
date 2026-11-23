@@ -4,7 +4,7 @@ import { parseUazapiMessage, parseUazapiStatusUpdate } from "@/lib/whatsapp";
 import { applyStatusUpdate, recordInboundMessage } from "@/server/repositories/whatsapp-repository";
 import { touchWebhook } from "@/server/repositories/wa-cadence-repository";
 import { maybeAutoReply } from "@/server/whatsapp/automation";
-import { ensureMessageMedia, hasViewableMedia } from "@/server/whatsapp/media";
+import { ensureMessageMedia, storeOnArrival } from "@/server/whatsapp/media";
 import { db } from "@/server/db";
 
 export const dynamic = "force-dynamic";
@@ -42,9 +42,9 @@ export async function POST(request: NextRequest) {
     const message = parseUazapiMessage(payload);
     if (message) {
       const recorded = await recordInboundMessage(message);
-      // Guarda a foto/áudio/documento no nosso armazenamento logo que chega (o endereço da uazapi vence em 2 dias). Se falhar, o painel
-      // tenta de novo na primeira vez que alguém abrir a mensagem.
-      if (!recorded.duplicate && hasViewableMedia(message.mediaType)) {
+      // Guarda a foto/áudio no nosso armazenamento logo que chega (o endereço da uazapi vence em 2 dias). Vídeo e documento só são
+      // guardados quando alguém abre (muitos nunca são abertos). Se falhar, o painel tenta de novo na primeira vez que abrirem.
+      if (!recorded.duplicate && storeOnArrival(message.mediaType)) {
         after(async () => {
           try {
             const row = await db.waMessage.findUnique({ where: { providerId: message.providerId }, select: { id: true } });

@@ -21,6 +21,11 @@ export default function robots(): MetadataRoute.Robots {
           "/redefinir-senha",
         ],
       },
+      {
+        // Rastreadores de ferramentas de SEO e coletores de dados: não trazem cliente e gastam banda e processamento do servidor.
+        userAgent: ["AhrefsBot", "SemrushBot", "MJ12bot", "DotBot", "BLEXBot", "PetalBot", "Bytespider", "DataForSeoBot", "serpstatbot"],
+        disallow: "/",
+      },
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,
   };
