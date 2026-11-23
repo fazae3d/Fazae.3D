@@ -9,6 +9,9 @@ import { loginSchema } from "@/lib/validation";
 const LOGIN_LIMIT = 20;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 
+/** Papel de cada usuário guardado na memória da instância por 60 s: o painel chama o login muitas vezes e cada chamada ia ao banco. */
+const roleCache = new Map<string, { role: "customer" | "admin"; at: number }>();
+
 export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
   ...authConfig,
   events: {
@@ -63,9 +66,15 @@ export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
       const token = await authConfig.callbacks.jwt(params);
       if (token.id && (params.trigger === "update" || !token.roleCheckedAt || Date.now() - token.roleCheckedAt > 60_000)) {
         try {
-          const { db } = await import("@/server/db");
-          const row = await db.user.findUnique({ where: { id: token.id }, select: { role: true } });
-          token.role = row?.role ?? "customer";
+          const cached = params.trigger === "update" ? undefined : roleCache.get(token.id);
+          if (cached && Date.now() - cached.at < 60_000) {
+            token.role = cached.role;
+          } else {
+            const { db } = await import("@/server/db");
+            const row = await db.user.findUnique({ where: { id: token.id }, select: { role: true } });
+            token.role = row?.role ?? "customer";
+            roleCache.set(token.id, { role: token.role, at: Date.now() });
+          }
           token.roleCheckedAt = Date.now();
         } catch (error) {
           console.error("[auth] não foi possível reconferir o papel no banco", error);

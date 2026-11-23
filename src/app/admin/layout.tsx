@@ -25,8 +25,11 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-/** Contadores do menu: o que está esperando ação (pedidos pagos sem envio, orçamentos aguardando resposta). */
+/** Contadores do menu: o que está esperando ação (pedidos pagos sem envio, orçamentos aguardando resposta). Guardados 20 s na memória: cada tela do painel pedia tudo de novo. */
+let badgesCache: { at: number; value: Record<string, number> } | null = null;
+
 async function loadNavBadges(): Promise<Record<string, number>> {
+  if (badgesCache && Date.now() - badgesCache.at < 20_000) return badgesCache.value;
   try {
     const [toShip, quotesSent, unreadChats, inProduction, rules] = await Promise.all([
       db.order.count({ where: { status: { in: ["Pagamento aprovado", "Em preparação"] }, tracking: null } }),
@@ -42,7 +45,9 @@ async function loadNavBadges(): Promise<Record<string, number>> {
       const deadline = (o.productionDeadline ?? addBusinessDays(o.createdAt, rules.production.deadlineBusinessDays)).toISOString();
       return deadlineStatus(deadline, now, alertWithin).level !== "ok";
     }).length;
-    return { pedidos: toShip, orcamentos: quotesSent, conversas: unreadChats, producao: nearOrLate };
+    const value = { pedidos: toShip, orcamentos: quotesSent, conversas: unreadChats, producao: nearOrLate };
+    badgesCache = { at: Date.now(), value };
+    return value;
   } catch {
     return {};
   }
